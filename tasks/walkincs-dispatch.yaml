@@ -1,0 +1,103 @@
+# Walk in CS — 10 task definitions for batch dispatch
+# Usage: npx tsx src/cli.ts batch tasks/
+
+title: "Seed Database — Shantou + Chaozhou"
+prompt: |
+  Run bash backend/scripts/jules-verify.sh to:
+  1. Install PostgreSQL, create walkincs database
+  2. Push schema: npx drizzle-kit push --config=backend/drizzle.config.ts
+  3. Seed Shantou (48 spots) + Chaozhou (10 spots)
+  4. Start API and verify endpoints
+  5. Commit backend/SEED-VERIFICATION.md
+  Environment: DATABASE_URL=postgres://walkincs:walkincs@localhost:5432/walkincs
+
+---
+title: "Enrich Chaozhou Spots — Web Search"
+prompt: |
+  Search web for Chaozhou spots:
+  1. npm i -D playwright && npx playwright install chromium
+  2. npx tsx backend/scripts/enrich-spots.ts chaozhou
+  3. Review data/enrichment-chaozhou.json, update seed-chaozhou.ts descriptions
+  4. Download real images for spots, save to miniprogram/images/web/
+  5. Commit all changes
+
+---
+title: "Enrich Shantou Spots — Web Search"
+prompt: |
+  Search web for better Shantou spot descriptions:
+  1. npm i -D playwright && npx playwright install chromium
+  2. Create backend/scripts/enrich-shantou.ts targeting spots from miniprogram/utils/spots.ts (ids 1-23, 101-125)
+  3. Search Baidu Baike for each spot, extract summaries
+  4. Save to data/enrichment-shantou.json
+  5. Commit new files only
+
+---
+title: "GPS Coordinate Verification"
+prompt: |
+  Verify all spot GPS coordinates:
+  1. Read miniprogram/utils/spots.ts for all coordinates
+  2. Use Playwright to search Baidu Maps for each spot
+  3. Compare coordinates, flag any >500m off
+  4. Write data/coordinate-verification.json
+  5. Commit new files only
+
+---
+title: "WeChat Privacy Policy + Review Notes"
+prompt: |
+  Create WeChat review materials:
+  1. miniprogram/privacy-policy.html — Chinese privacy policy (location, storage, 24h TTL, Open-Meteo, user rights)
+  2. docs/wechat-review-notes.md — review prep (category, test accounts, features, rejection risks)
+  3. docs/wechat-domain-whitelist.md — all domains needed
+  4. Commit new files only
+
+---
+title: "Production Deployment Guide"
+prompt: |
+  Create docs/deployment-guide.md:
+  - Prerequisites: Docker, domain, ICP, HTTPS
+  - docker compose up -d
+  - drizzle-kit push
+  - seed scripts
+  - Verify with curl
+  - WeChat settings
+  - Troubleshooting
+  Commit new file only.
+
+---
+title: "Visitor Info — Opening Hours & Tickets"
+prompt: |
+  Research practical visitor info for all spots:
+  1. npm i -D playwright && npx playwright install chromium
+  2. Create backend/scripts/research-visitor-info.ts
+  3. Search each spot for opening hours, ticket prices, phone
+  4. Save to data/visitor-info.json
+  5. Commit new files only
+
+---
+title: "Chaozhou Area Descriptions"
+prompt: |
+  Enrich 4 Chaozhou areas:
+  1. Read backend/scripts/seed-chaozhou.ts areas
+  2. Search web for each area characteristics
+  3. Write data/chaozhou-area-enrichment.json with enriched_summary, highlights, walking_tips
+  4. Commit new file only
+
+---
+title: "Image Compression"
+prompt: |
+  Compress all spot images:
+  1. Use sharp to compress miniprogram/images/real/ and miniprogram/images/web/
+  2. Quality 75, max width 1200px
+  3. Report before/after sizes
+  4. Ensure total < 2MB
+  5. Commit compressed images
+
+---
+title: "Web Companion City Switcher"
+prompt: |
+  Add city switcher to web companion:
+  1. Read web/main.js, web/spots-data.js, web/api-client.js
+  2. Add city dropdown in index.html header
+  3. Switch city via setWebCitySlug(), clear cache, reload
+ 4. Persist selection in localStorage
+  5. Commit web/ files only
