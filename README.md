@@ -335,7 +335,7 @@ I have a Node.js backend that needs to be migrated from Express to Fastify.
 The repo is at sources/github/myorg/backend, branch main.
 
 Please:
-1. Analyse the codebase and identify the independent migration units
+1. Analyze the codebase and identify the independent migration units
 2. Create a tasks/ directory with one YAML file per unit
 3. Each YAML should have a clear title and detailed step-by-step prompt
 4. Make sure the tasks can run in parallel (no shared state conflicts)
