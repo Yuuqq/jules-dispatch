@@ -1,64 +1,76 @@
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { parse as parseYaml } from 'yaml';
+import { parse as parseYaml, parseAllDocuments } from 'yaml';
 import type { JulesConfig, TaskDefinition } from './types.js';
 
 export function loadConfig(projectDir: string): JulesConfig {
   const envPath = resolve(projectDir, '.env');
-  if (!existsSync(envPath)) {
-    console.error('No .env file found. Create one from .env.example');
-    process.exit(1);
+
+  if (existsSync(envPath)) {
+    const envContent = readFileSync(envPath, 'utf8');
+    for (const line of envContent.split('\n')) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('#')) continue;
+      const eq = trimmed.indexOf('=');
+      if (eq === -1) continue;
+      const key = trimmed.slice(0, eq).trim();
+      const value = trimmed.slice(eq + 1).trim();
+      if (!process.env[key]) process.env[key] = value;
+    }
   }
 
-  const envContent = readFileSync(envPath, 'utf8');
-  const env: Record<string, string> = {};
-  for (const line of envContent.split('\n')) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith('#')) continue;
-    const eq = trimmed.indexOf('=');
-    if (eq === -1) continue;
-    env[trimmed.slice(0, eq).trim()] = trimmed.slice(eq + 1).trim();
-  }
-
-  const apiKey = env.JULES_API_KEY || process.env.JULES_API_KEY || '';
+  const apiKey = process.env.JULES_API_KEY ?? '';
   if (!apiKey) {
-    console.error('JULES_API_KEY is required in .env');
+    console.error('JULES_API_KEY is required. Set it in .env or as an environment variable.');
     process.exit(1);
   }
 
   return {
     apiKey,
-    defaultSource: env.JULES_DEFAULT_SOURCE || '',
-    defaultBranch: env.JULES_DEFAULT_BRANCH || 'main',
-    autoMode: (env.JULES_AUTO_MODE as 'AUTO_CREATE_PR' | '') || 'AUTO_CREATE_PR',
+    defaultSource: process.env.JULES_DEFAULT_SOURCE ?? '',
+    defaultBranch: process.env.JULES_DEFAULT_BRANCH ?? 'main',
+    autoMode: (process.env.JULES_AUTO_MODE as JulesConfig['autoMode']) ?? 'AUTO_CREATE_PR',
   };
 }
 
-export function loadTask(filePath: string): TaskDefinition {
+export function loadTasks(filePath: string): TaskDefinition[] {
   const content = readFileSync(filePath, 'utf8');
 
   if (filePath.endsWith('.yaml') || filePath.endsWith('.yml')) {
-    const parsed = parseYaml(content) as TaskDefinition;
-    return validateTask(parsed, filePath);
+    const docs = parseAllDocuments(content);
+    if (docs.length === 0) throw new Error(`No YAML documents found in ${filePath}`);
+    return docs.map(doc => validateTask(doc.toJS() as TaskDefinition, filePath));
   }
 
-  const parsed = JSON.parse(content) as TaskDefinition;
-  return validateTask(parsed, filePath);
+  const parsed = JSON.parse(content) as TaskDefinition | TaskDefinition[];
+  const tasks = Array.isArray(parsed) ? parsed : [parsed];
+  return tasks.map(t => validateTask(t, filePath));
 }
 
-export function loadTasksFromDir(dir: string): Array<{ file: string; task: TaskDefinition }> {
-  const { readdirSync } = require('node:fs');
+export function loadTask(filePath: string): TaskDefinition {
+  const tasks = loadTasks(filePath);
+  if (tasks.length > 1) {
+    console.warn(
+      `Warning: ${filePath} contains ${tasks.length} task documents. ` +
+      `Only the first will be dispatched. Use "batch" to dispatch all.`,
+    );
+  }
+  return tasks[0];
+}
+
+export function loadTasksFromDir(dir: string): Array<{ file: string; tasks: TaskDefinition[] }> {
   const files = readdirSync(dir)
-    .filter((f: string) => f.endsWith('.yaml') || f.endsWith('.yml') || f.endsWith('.json'))
+    .filter(f => f.endsWith('.yaml') || f.endsWith('.yml') || f.endsWith('.json'))
     .sort();
 
-  return files.map((f: string) => ({
+  return files.map(f => ({
     file: f,
-    task: loadTask(resolve(dir, f)),
+    tasks: loadTasks(resolve(dir, f)),
   }));
 }
 
 function validateTask(task: TaskDefinition, filePath: string): TaskDefinition {
+  if (!task || typeof task !== 'object') throw new Error(`Invalid task definition in ${filePath}`);
   if (!task.title) throw new Error(`Missing "title" in ${filePath}`);
   if (!task.prompt) throw new Error(`Missing "prompt" in ${filePath}`);
   return task;
