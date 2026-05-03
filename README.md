@@ -9,6 +9,10 @@
 
 🌐 **Languages**: **English** · [简体中文](README.zh-CN.md)
 
+<p align="center">
+  <img src="docs/banner.png" alt="jules-dispatch banner — one orchestrator AI fanning out tasks to many parallel Jules workers, each producing a PR" width="100%" />
+</p>
+
 ---
 
 ## What Is This?
@@ -22,6 +26,34 @@
 - Plug into **Claude Code** or **Codex** as an MCP server — your AI assistant calls Jules as a tool
 
 It turns Jules from a "one task at a time" tool into a **massively parallel coding workforce**, controlled by either humans on the CLI or other AIs over MCP.
+
+---
+
+## 🏗 How It Works
+
+```mermaid
+flowchart LR
+    O["🧠 Orchestrator<br/>(Claude / Codex / you)"]
+    O -->|writes| T["📄 tasks/*.yaml"]
+    T --> D["⚡ jules-dispatch batch"]
+    D -->|parallel| J1["🤖 Jules #1"]
+    D -->|parallel| J2["🤖 Jules #2"]
+    D -->|parallel| J3["🤖 Jules #3"]
+    D -->|parallel| J4["🤖 Jules #N"]
+    J1 --> P1["🔀 PR #1"]
+    J2 --> P2["🔀 PR #2"]
+    J3 --> P3["🔀 PR #3"]
+    J4 --> P4["🔀 PR #N"]
+
+    classDef orch fill:#7c3aed,stroke:#5b21b6,color:#fff
+    classDef tool fill:#0891b2,stroke:#0e7490,color:#fff
+    classDef worker fill:#f59e0b,stroke:#b45309,color:#fff
+    classDef pr fill:#10b981,stroke:#047857,color:#fff
+    class O orch
+    class D tool
+    class J1,J2,J3,J4 worker
+    class P1,P2,P3,P4 pr
+```
 
 ---
 
@@ -57,6 +89,31 @@ It turns Jules from a "one task at a time" tool into a **massively parallel codi
 ## 🤖 Use Inside Claude Code or Codex (MCP)
 
 The MCP server exposes Jules as a set of tools your coding AI can call directly.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor U as 👤 You
+    participant CC as 💬 Claude Code / Codex
+    participant MCP as ⚡ jules-dispatch (MCP)
+    participant J as ☁️ Google Jules
+
+    U->>CC: "Add tests to 5 modules"
+    CC->>MCP: jules_dispatch_batch(tasks)
+    MCP->>J: POST /sessions × 5
+    J-->>MCP: 5 session IDs
+    MCP-->>CC: {dispatched: 5}
+
+    CC->>MCP: jules_wait_for_completion(ids)
+    loop poll until done
+        MCP->>J: GET /sessions/{id}
+    end
+    MCP-->>CC: {completed: [...]}
+
+    CC->>MCP: jules_status(ids)
+    MCP-->>CC: {prUrls: [...]}
+    CC-->>U: ✅ "Done. PRs: #42, #43, #44, #45, #46"
+```
 
 ### Install for Claude Code
 
@@ -251,6 +308,34 @@ jules-dispatch wait "$ID" --interval 10000 --timeout 1800000
 jules-dispatch tail abc123                        # human-readable stream
 jules-dispatch tail abc123 --json                 # NDJSON event stream
 ```
+
+---
+
+## 🔄 Session Lifecycle
+
+jules-dispatch tracks every Jules session through its full lifecycle and surfaces each state through the CLI / MCP:
+
+```mermaid
+stateDiagram-v2
+    [*] --> PENDING
+    PENDING --> RUNNING
+    RUNNING --> AWAITING_PLAN_APPROVAL: requirePlanApproval = true
+    AWAITING_PLAN_APPROVAL --> RUNNING: approve
+    AWAITING_PLAN_APPROVAL --> CANCELLED: cancel
+    RUNNING --> COMPLETED: success ✓
+    RUNNING --> FAILED: error ✗
+    RUNNING --> CANCELLED: cancel
+    COMPLETED --> [*]
+    FAILED --> [*]
+    CANCELLED --> [*]
+```
+
+| State | CLI command | MCP tool |
+|---|---|---|
+| `AWAITING_PLAN_APPROVAL` | `plan` / `approve` | `jules_get_plan` / `jules_approve_plan` |
+| `RUNNING` | `tail` / `message` | `jules_list_activities` / `jules_send_message` |
+| `COMPLETED` | `get` / `status` | `jules_get_session` / `jules_status` |
+| `FAILED` / `CANCELLED` | `cancel` | `jules_cancel_session` |
 
 ---
 
