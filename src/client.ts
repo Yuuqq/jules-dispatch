@@ -1,6 +1,8 @@
 import type { JulesConfig, JulesSession, JulesActivity } from './types.js';
 
 const BASE_URL = 'https://jules.googleapis.com/v1alpha';
+const MAX_RETRIES = 3;
+const RETRY_DELAY_MS = 1000;
 
 export class JulesClient {
   private apiKey: string;
@@ -9,7 +11,7 @@ export class JulesClient {
     this.apiKey = config.apiKey;
   }
 
-  private async request<T>(path: string, options?: RequestInit): Promise<T> {
+  private async request<T>(path: string, options?: RequestInit, retries = MAX_RETRIES): Promise<T> {
     const url = `${BASE_URL}${path}`;
     const headers: Record<string, string> = {
       'X-Goog-Api-Key': this.apiKey,
@@ -17,11 +19,22 @@ export class JulesClient {
     if (options?.body) {
       headers['Content-Type'] = 'application/json';
     }
+
     const res = await fetch(url, { ...options, headers });
+
+    if (res.status === 429 || res.status >= 500) {
+      if (retries > 0) {
+        const delay = RETRY_DELAY_MS * (MAX_RETRIES - retries + 1);
+        await sleep(delay);
+        return this.request<T>(path, options, retries - 1);
+      }
+    }
+
     if (!res.ok) {
       const body = await res.text();
-      throw new Error(`Jules API ${res.status}: ${body.slice(0, 300)}`);
+      throw new Error(`Jules API ${res.status} at ${path}: ${body.slice(0, 300)}`);
     }
+
     return res.json() as Promise<T>;
   }
 
@@ -45,7 +58,7 @@ export class JulesClient {
           source: params.source,
           githubRepoContext: { startingBranch: params.branch },
         },
-        ...(params.autoMode ? { automationMode: params.autoMode } : {}),
+        ...(params.autoMode && params.autoMode !== 'NONE' ? { automationMode: params.autoMode } : {}),
         ...(params.requirePlanApproval ? { requirePlanApproval: true } : {}),
         title: params.title,
       }),
@@ -77,4 +90,8 @@ export class JulesClient {
       body: JSON.stringify({}),
     });
   }
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
