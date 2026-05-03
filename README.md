@@ -7,6 +7,8 @@
 [![MCP](https://img.shields.io/badge/MCP-server-purple)](https://modelcontextprotocol.io/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
 
+🌐 **Languages**: **English** · [简体中文](README.zh-CN.md)
+
 ---
 
 ## What Is This?
