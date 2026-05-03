@@ -2,7 +2,7 @@
 
 > **Batch-dispatch tasks to [Google Jules](https://jules.google.com/) in parallel — and use it as an MCP tool inside [Claude Code](https://docs.anthropic.com/en/docs/claude-code) or [OpenAI Codex CLI](https://github.com/openai/codex).**
 
-[![npm version](https://img.shields.io/badge/npm-1.1.0-blue)](https://www.npmjs.com/package/jules-dispatch)
+[![npm version](https://img.shields.io/badge/npm-1.2.0-blue)](https://www.npmjs.com/package/jules-dispatch)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue?logo=typescript)](https://www.typescriptlang.org/)
 [![MCP](https://img.shields.io/badge/MCP-server-purple)](https://modelcontextprotocol.io/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
@@ -54,6 +54,37 @@ flowchart LR
     class J1,J2,J3,J4 worker
     class P1,P2,P3,P4 pr
 ```
+
+---
+
+## ✨ What's New in 1.2 — AI-Powered Task Planning
+
+Stop hand-writing task YAML. Give jules-dispatch **one sentence** and let an LLM expand it into N parallel Jules sessions.
+
+```bash
+$ jules-dispatch auto "Migrate every Express route to Fastify and add request-validation tests"
+
+Planning with openrouter/auto...
+
+Planned 6 task(s):
+  1. Migrate auth routes (/api/auth/*) to Fastify
+  2. Migrate user routes (/api/users/*) to Fastify
+  3. Migrate billing routes (/api/billing/*) to Fastify
+  4. Replace Express middleware with Fastify hooks
+  5. Update server bootstrap to use Fastify instance
+  6. Add Vitest request-validation tests for all migrated routes
+
+Dispatch all 6 task(s)? [y/N]
+```
+
+Powered by **[OpenRouter](https://openrouter.ai)** — pick any of 370+ models (Claude, GPT, Gemini, Grok, DeepSeek, Qwen, Llama, GLM, Kimi, …) via `OPENROUTER_MODEL` or `--openrouter-model`. Default is `openrouter/auto`.
+
+| Command / Tool | What it does |
+|---|---|
+| `jules-dispatch plan-tasks "<intent>"` | Plan only — print or write tasks to a YAML file |
+| `jules-dispatch auto "<intent>"` | Plan + dispatch in one shot (with confirmation) |
+| MCP `jules_plan_tasks` | Same planning, exposed to Claude Code / Codex |
+| MCP `jules_auto` | One-shot plan + dispatch, exposed to Claude Code / Codex |
 
 ---
 
@@ -248,6 +279,8 @@ jules-dispatch batch tasks/ --parallel 10
 | Command | What it does |
 |---|---|
 | `dispatch <taskFile>` | Dispatch a single task. Use `-` to read from stdin. |
+| `plan-tasks <description>` | Use OpenRouter LLM to expand an intent into N task drafts (no dispatch) |
+| `auto <description>` | LLM-plan + dispatch in one shot (with confirmation) |
 | `batch [taskDir]` | Dispatch all `.yaml`/`.yml`/`.json` files in a directory |
 | `status` | Summary of recent sessions (or specific `--ids`) |
 | `get <sessionId>` | Full details of one session |
