@@ -1,5 +1,6 @@
 import { writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
+import chalk from 'chalk';
 import type { JulesConfig, CollectResult } from './types.js';
 import { JulesClient } from './client.js';
 
@@ -19,18 +20,24 @@ export async function collectStatus(
   for (const session of filtered) {
     let lastActivity = '';
     let activityCount = 0;
+    let isCompleted = false;
+
     try {
-      const activities = await client.listActivities(session.id, 5);
-      activityCount = activities.activities.length;
-      const completed = activities.activities.find(a => a.sessionCompleted);
-      const progress = activities.activities.filter(a => a.progressUpdated).pop();
-      lastActivity = completed ? 'Completed' : (progress?.progressUpdated?.title || 'Unknown');
+      const { activities } = await client.listActivities(session.id, 10);
+      activityCount = activities.length;
+
+      const completedActivity = activities.find(a => a.sessionCompleted !== undefined);
+      const latestProgress = activities.filter(a => a.progressUpdated).pop();
+
+      isCompleted = completedActivity !== undefined;
+      lastActivity = isCompleted
+        ? 'Completed'
+        : latestProgress?.progressUpdated?.title ?? 'In progress';
     } catch {
       lastActivity = 'Error fetching activities';
     }
 
     const pr = session.outputs?.find(o => o.pullRequest);
-    const isCompleted = lastActivity === 'Completed';
 
     results.push({
       sessionId: session.id,
@@ -43,34 +50,33 @@ export async function collectStatus(
     });
   }
 
-  // Print summary
   const completed = results.filter(r => r.status === 'completed');
   const running = results.filter(r => r.status === 'running');
 
-  console.log(`\nStatus: ${completed.length} completed, ${running.length} running\n`);
+  console.log(`\n${chalk.bold(`Status: ${chalk.green(`${completed.length} completed`)}, ${chalk.yellow(`${running.length} running`)}`)}\n`);
 
   if (completed.length > 0) {
-    console.log('Completed:');
+    console.log(chalk.bold('Completed:'));
     for (const r of completed) {
-      console.log(`  ✓ ${r.title}`);
-      if (r.prUrl) console.log(`    PR: ${r.prUrl}`);
+      console.log(`  ${chalk.green('✓')} ${r.title}`);
+      if (r.prUrl) console.log(`    ${chalk.cyan('PR:')} ${r.prUrl}`);
     }
   }
 
   if (running.length > 0) {
-    console.log('\nRunning:');
+    console.log(`\n${chalk.bold('Running:')}`);
     for (const r of running) {
-      console.log(`  ○ ${r.title} — ${r.lastActivity}`);
-      console.log(`    ${`https://jules.google.com/session/${r.sessionId}`}`);
+      console.log(`  ${chalk.yellow('○')} ${r.title} ${chalk.dim(`— ${r.lastActivity}`)}`);
+      console.log(`    ${chalk.dim(`https://jules.google.com/session/${r.sessionId}`)}`);
     }
   }
 
-  // Write report if output specified
-  const outputPath = options?.output || resolve('.dispatch-logs', `collect-${Date.now()}.json`);
-  const outputDir = resolve(outputPath, '..');
-  if (!existsSync(outputDir)) mkdirSync(outputDir, { recursive: true });
-  writeFileSync(outputPath, JSON.stringify(results, null, 2));
-  console.log(`\nReport: ${outputPath}`);
+  if (options?.output) {
+    const outputDir = resolve(options.output, '..');
+    if (!existsSync(outputDir)) mkdirSync(outputDir, { recursive: true });
+    writeFileSync(options.output, JSON.stringify(results, null, 2));
+    console.log(chalk.dim(`\nReport: ${options.output}`));
+  }
 
   return results;
 }
@@ -85,32 +91,38 @@ export async function waitForCompletion(
   const timeout = options?.timeout ?? 600000;
   const start = Date.now();
 
-  console.log(`Waiting for ${sessionIds.length} sessions to complete (timeout: ${timeout / 1000}s)...\n`);
+  console.log(chalk.bold(`\nWaiting for ${sessionIds.length} session(s) to complete (timeout: ${timeout / 1000}s)...\n`));
 
   while (Date.now() - start < timeout) {
-    const sessions = await client.listSessions(100);
-    const targets = sessions.sessions.filter(s => sessionIds.includes(s.id));
+    const remaining: string[] = [];
 
-    const pending = targets.filter(s => {
-      // Check if session has completed output
-      const completed = s.outputs?.some(o => o.pullRequest);
-      return !completed;
-    });
+    for (const sessionId of sessionIds) {
+      try {
+        const { activities } = await client.listActivities(sessionId, 10);
+        const isCompleted = activities.some(a => a.sessionCompleted !== undefined);
+        if (!isCompleted) remaining.push(sessionId);
+      } catch {
+        remaining.push(sessionId);
+      }
+    }
 
-    if (pending.length === 0) {
-      console.log('All sessions completed!');
+    if (remaining.length === 0) {
+      console.log(chalk.green.bold('✓ All sessions completed!'));
       return;
     }
 
-    for (const s of pending) {
-      const pr = s.outputs?.find(o => o.pullRequest);
-      const icon = pr ? '✓' : '○';
-      console.log(`  ${icon} ${s.title}`);
-    }
-    console.log(`\n${pending.length} still running. Next check in ${interval / 1000}s...\n`);
+    const elapsed = Math.round((Date.now() - start) / 1000);
+    console.log(
+      chalk.dim(`  ${remaining.length} session(s) still running`) +
+      ` (${elapsed}s elapsed, next check in ${interval / 1000}s)`,
+    );
 
-    await new Promise(r => setTimeout(r, interval));
+    await sleep(interval);
   }
 
-  console.log('Timeout reached. Some sessions may still be running.');
+  console.log(chalk.yellow('Timeout reached. Some sessions may still be running.'));
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
