@@ -1,7 +1,7 @@
 {
   "name": "jules-dispatch",
-  "version": "1.1.0",
-  "description": "Batch dispatch to Google Jules + MCP server for Claude Code & Codex",
+  "version": "1.2.0",
+  "description": "Batch dispatch to Google Jules + MCP server for Claude Code & Codex, with OpenRouter-powered task planning",
   "type": "module",
   "bin": {
     "jules-dispatch": "./dist/cli.js"
