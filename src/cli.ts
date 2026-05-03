@@ -15,9 +15,11 @@ const program = new Command();
 program
   .name('jules-dispatch')
   .description('Batch-dispatch tasks to Google Jules + MCP server for Claude Code / Codex')
-  .version('1.1.0')
+  .version('1.2.0')
   .option('-p, --project <dir>', 'project directory with .env', '.')
   .option('--api-key <key>', 'Jules API key (overrides JULES_API_KEY env var)')
+  .option('--openrouter-key <key>', 'OpenRouter API key (overrides OPENROUTER_API_KEY env var)')
+  .option('--openrouter-model <model>', 'OpenRouter model id (overrides OPENROUTER_MODEL env var, default: openrouter/auto)')
   .option('--json', 'machine-readable JSON output (one JSON object per command, NDJSON for streams)', false)
   .hook('preAction', (thisCommand) => {
     const opts = thisCommand.opts() as { json?: boolean };
@@ -325,6 +327,186 @@ program
       }
       await new Promise(r => setTimeout(r, interval));
     }
+  });
+
+// ---------- plan-tasks (OpenRouter) ----------
+
+program
+  .command('plan-tasks <description>')
+  .alias('plan-batch')
+  .description('Use an OpenRouter LLM to expand a high-level intent into N independent Jules tasks (does NOT dispatch). Use "-" to read description from stdin.')
+  .option('-n, --max <n>', 'maximum number of tasks to plan', '8')
+  .option('-s, --source <source>', 'override Jules source for generated tasks')
+  .option('-b, --branch <branch>', 'override branch for generated tasks')
+  .option('--context <text>', 'extra repo context to ground the planner (file tree, conventions, etc.)')
+  .option('--context-file <path>', 'read extra context from a file')
+  .option('-o, --output <file>', 'write generated tasks to a YAML file (multi-doc)')
+  .action(async (description: string, opts: { max: string; source?: string; branch?: string; context?: string; contextFile?: string; output?: string }) => {
+    const { planTasks, loadPlannerConfig } = await import('./planner.js');
+    const { stringify } = await import('yaml');
+    const { writeFileSync } = await import('node:fs');
+    const programOpts = program.opts() as { project: string; openrouterKey?: string; openrouterModel?: string };
+    const projectDir = resolve(programOpts.project);
+
+    // Side-effect: load .env so OPENROUTER_* vars are populated when not set in shell.
+    try { loadConfig(projectDir, { noExit: true }); } catch { /* JULES_API_KEY missing is ok for planning-only */ }
+
+    const desc = description === '-' ? readFileSync(0, 'utf8').trim() : description;
+    if (!desc) fail('Empty description', ExitCode.VALIDATION, 'EMPTY_DESC');
+
+    let context = opts.context;
+    if (opts.contextFile) context = readFileSync(resolve(opts.contextFile), 'utf8');
+
+    let plannerCfg;
+    try {
+      plannerCfg = loadPlannerConfig({
+        apiKeyOverride: programOpts.openrouterKey,
+        modelOverride: programOpts.openrouterModel,
+      });
+    } catch (err) {
+      fail((err as Error).message, ExitCode.AUTH, 'OPENROUTER_KEY_MISSING');
+    }
+
+    info(chalk.dim(`Planning with ${plannerCfg.model}...\n`));
+
+    let result;
+    try {
+      result = await planTasks(plannerCfg, {
+        description: desc,
+        source: opts.source,
+        branch: opts.branch,
+        maxTasks: parseInt(opts.max, 10),
+        context,
+      });
+    } catch (err) {
+      fail((err as Error).message, ExitCode.GENERIC, 'PLANNER_FAILED');
+    }
+
+    if (opts.output) {
+      const yamlOut = result.tasks.map(t => stringify(t)).join('---\n');
+      writeFileSync(resolve(opts.output), yamlOut);
+      info(chalk.green(`✓ Wrote ${result.tasks.length} task(s) to ${opts.output}\n`));
+    }
+
+    emit(
+      () => {
+        console.log(chalk.bold(`\n${result.tasks.length} task(s) planned by ${result.model}:\n`));
+        if (result.rationale) console.log(chalk.dim(`Rationale: ${result.rationale}\n`));
+        for (const [i, t] of result.tasks.entries()) {
+          console.log(`  ${chalk.cyan(`${i + 1}.`)} ${chalk.bold(t.title)}`);
+          const preview = t.prompt.split('\n')[0].slice(0, 100);
+          console.log(`     ${chalk.dim(preview)}${t.prompt.length > 100 ? '…' : ''}`);
+        }
+        if (result.usage?.totalTokens) {
+          console.log(chalk.dim(`\nTokens: ${result.usage.totalTokens} (in: ${result.usage.promptTokens}, out: ${result.usage.completionTokens})`));
+        }
+        if (!opts.output) {
+          console.log(chalk.dim('\nNext: pipe into dispatch, save with --output, or use `auto` to plan + dispatch in one shot.'));
+        }
+      },
+      result,
+    );
+  });
+
+// ---------- auto (plan + dispatch) ----------
+
+program
+  .command('auto <description>')
+  .description('Plan tasks with OpenRouter AND dispatch them to Jules in one shot. Use "-" for stdin.')
+  .option('-n, --max <n>', 'maximum number of tasks', '8')
+  .option('-s, --source <source>', 'override Jules source')
+  .option('-b, --branch <branch>', 'override branch')
+  .option('--context <text>', 'extra repo context')
+  .option('--context-file <path>', 'read extra context from a file')
+  .option('--parallel <n>', 'max parallel dispatches', '10')
+  .option('--dry-run', 'print planned tasks but do not dispatch', false)
+  .option('-y, --yes', 'skip confirmation prompt before dispatching', false)
+  .action(async (description: string, opts: { max: string; source?: string; branch?: string; context?: string; contextFile?: string; parallel: string; dryRun: boolean; yes: boolean }) => {
+    const { planTasks, loadPlannerConfig } = await import('./planner.js');
+    const { config, client } = getConfig();
+    const programOpts = program.opts() as { openrouterKey?: string; openrouterModel?: string };
+
+    const desc = description === '-' ? readFileSync(0, 'utf8').trim() : description;
+    if (!desc) fail('Empty description', ExitCode.VALIDATION, 'EMPTY_DESC');
+
+    let context = opts.context;
+    if (opts.contextFile) context = readFileSync(resolve(opts.contextFile), 'utf8');
+
+    let plannerCfg;
+    try {
+      plannerCfg = loadPlannerConfig({
+        apiKeyOverride: programOpts.openrouterKey,
+        modelOverride: programOpts.openrouterModel,
+      });
+    } catch (err) {
+      fail((err as Error).message, ExitCode.AUTH, 'OPENROUTER_KEY_MISSING');
+    }
+
+    info(chalk.dim(`Planning with ${plannerCfg.model}...\n`));
+
+    let plan;
+    try {
+      plan = await planTasks(plannerCfg, {
+        description: desc,
+        source: opts.source ?? config.defaultSource,
+        branch: opts.branch ?? config.defaultBranch,
+        maxTasks: parseInt(opts.max, 10),
+        context,
+      });
+    } catch (err) {
+      fail((err as Error).message, ExitCode.GENERIC, 'PLANNER_FAILED');
+    }
+
+    info(chalk.bold(`\nPlanned ${plan.tasks.length} task(s):\n`));
+    for (const [i, t] of plan.tasks.entries()) {
+      info(`  ${chalk.cyan(`${i + 1}.`)} ${chalk.bold(t.title)}`);
+    }
+
+    if (opts.dryRun) {
+      emit(() => info(chalk.yellow('\n--dry-run: not dispatching.')), { ...plan, dispatched: false });
+      return;
+    }
+
+    if (!opts.yes && !isJson() && process.stdin.isTTY) {
+      info(chalk.yellow(`\nDispatch all ${plan.tasks.length} task(s)? [y/N] `));
+      const answer = await new Promise<string>(r => {
+        process.stdin.once('data', d => r(d.toString().trim().toLowerCase()));
+      });
+      if (answer !== 'y' && answer !== 'yes') {
+        info(chalk.dim('Aborted.'));
+        process.exit(ExitCode.OK);
+      }
+    }
+
+    info(chalk.dim('\nDispatching...\n'));
+    const parallel = parseInt(opts.parallel, 10);
+    const results = [];
+    for (let i = 0; i < plan.tasks.length; i += parallel) {
+      const slice = plan.tasks.slice(i, i + parallel);
+      const r = await Promise.all(
+        slice.map(t => dispatchTaskDefinition(client, config, t, '<auto>')),
+      );
+      results.push(...r);
+    }
+
+    const dispatched = results.filter(r => r.status === 'dispatched');
+    const failed = results.filter(r => r.status === 'failed');
+
+    emit(
+      () => {
+        console.log(chalk.bold(`\n${dispatched.length}/${results.length} dispatched`));
+        for (const r of dispatched) {
+          console.log(`  ${chalk.green('✓')} ${r.title}  ${chalk.dim(r.sessionUrl)}`);
+        }
+        for (const r of failed) {
+          console.log(`  ${chalk.red('✗')} ${r.title}  ${chalk.red(r.error ?? '')}`);
+        }
+      },
+      { plan, results, summary: { total: results.length, dispatched: dispatched.length, failed: failed.length } },
+    );
+
+    if (failed.length > 0 && dispatched.length > 0) process.exit(ExitCode.PARTIAL);
+    if (failed.length > 0) process.exit(ExitCode.GENERIC);
   });
 
 // ---------- mcp server ----------
