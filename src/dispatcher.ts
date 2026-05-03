@@ -1,8 +1,9 @@
 import { resolve } from 'node:path';
-import { writeFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs';
+import { writeFileSync, existsSync, mkdirSync } from 'node:fs';
+import chalk from 'chalk';
 import type { JulesConfig, DispatchResult, TaskDefinition } from './types.js';
 import { JulesClient } from './client.js';
-import { loadTask } from './config.js';
+import { loadTask, loadTasksFromDir } from './config.js';
 
 export async function dispatchTask(
   client: JulesClient,
@@ -12,13 +13,30 @@ export async function dispatchTask(
 ): Promise<DispatchResult> {
   const absPath = resolve(taskFile);
   const task = loadTask(absPath);
+  return dispatchTaskDefinition(client, config, task, absPath, options);
+}
 
-  const source = options?.source || task.source || config.defaultSource;
-  const branch = options?.branch || task.branch || config.defaultBranch;
+export async function dispatchTaskDefinition(
+  client: JulesClient,
+  config: JulesConfig,
+  task: TaskDefinition,
+  taskFile: string,
+  options?: { source?: string; branch?: string },
+): Promise<DispatchResult> {
+  const source = options?.source ?? task.source ?? config.defaultSource;
+  const branch = options?.branch ?? task.branch ?? config.defaultBranch;
   const autoMode = task.autoMode ?? config.autoMode;
 
   if (!source) {
-    return { taskFile, sessionId: '', sessionUrl: '', title: task.title, status: 'failed', error: 'No source configured. Set JULES_DEFAULT_SOURCE or add source to task.' };
+    return {
+      taskFile,
+      taskTitle: task.title,
+      sessionId: '',
+      sessionUrl: '',
+      title: task.title,
+      status: 'failed',
+      error: 'No source configured. Set JULES_DEFAULT_SOURCE in .env or add "source" to the task file.',
+    };
   }
 
   try {
@@ -33,6 +51,7 @@ export async function dispatchTask(
 
     return {
       taskFile,
+      taskTitle: task.title,
       sessionId: session.id,
       sessionUrl: session.url,
       title: task.title,
@@ -41,6 +60,7 @@ export async function dispatchTask(
   } catch (err) {
     return {
       taskFile,
+      taskTitle: task.title,
       sessionId: '',
       sessionUrl: '',
       title: task.title,
@@ -56,46 +76,57 @@ export async function dispatchBatch(
   taskDir: string,
   options?: { source?: string; branch?: string; parallel?: number },
 ): Promise<DispatchResult[]> {
-  const { readdirSync } = require('node:fs');
-  const files = readdirSync(taskDir)
-    .filter((f: string) => f.endsWith('.yaml') || f.endsWith('.yml') || f.endsWith('.json'))
-    .sort();
+  const taskFiles = loadTasksFromDir(taskDir);
 
-  if (files.length === 0) {
-    console.log('No task files found in', taskDir);
+  if (taskFiles.length === 0) {
+    console.log(chalk.yellow('No task files found in'), taskDir);
     return [];
   }
 
-  console.log(`Dispatching ${files.length} tasks...\n`);
+  const allTasks: Array<{ file: string; task: TaskDefinition }> = [];
+  for (const { file, tasks } of taskFiles) {
+    for (const task of tasks) {
+      allTasks.push({ file: resolve(taskDir, file), task });
+    }
+  }
+
+  console.log(chalk.bold(`Dispatching ${allTasks.length} task(s) from ${taskFiles.length} file(s)...\n`));
 
   const parallel = options?.parallel ?? 10;
   const results: DispatchResult[] = [];
 
-  // Dispatch in batches to respect parallelism limit
-  for (let i = 0; i < files.length; i += parallel) {
-    const batch = files.slice(i, i + parallel);
+  for (let i = 0; i < allTasks.length; i += parallel) {
+    const batch = allTasks.slice(i, i + parallel);
     const batchResults = await Promise.all(
-      batch.map((f: string) =>
-        dispatchTask(client, config, resolve(taskDir, f), options),
+      batch.map(({ file, task }) =>
+        dispatchTaskDefinition(client, config, task, file, options),
       ),
     );
     results.push(...batchResults);
 
     for (const r of batchResults) {
-      const icon = r.status === 'dispatched' ? '✓' : '✗';
-      console.log(`  ${icon} ${r.title}`);
-      if (r.sessionUrl) console.log(`    ${r.sessionUrl}`);
-      if (r.error) console.log(`    Error: ${r.error}`);
+      if (r.status === 'dispatched') {
+        console.log(`  ${chalk.green('✓')} ${chalk.bold(r.title)}`);
+        if (r.sessionUrl) console.log(`    ${chalk.dim(r.sessionUrl)}`);
+      } else {
+        console.log(`  ${chalk.red('✗')} ${chalk.bold(r.title)}`);
+        if (r.error) console.log(`    ${chalk.red('Error:')} ${r.error}`);
+      }
     }
   }
 
-  // Write dispatch log
   const logDir = resolve(taskDir, '..', '.dispatch-logs');
   if (!existsSync(logDir)) mkdirSync(logDir, { recursive: true });
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
   const logFile = resolve(logDir, `dispatch-${timestamp}.json`);
   writeFileSync(logFile, JSON.stringify(results, null, 2));
-  console.log(`\nDispatch log: ${logFile}`);
+
+  console.log(`\n${chalk.dim('━'.repeat(36))}`);
+  const dispatched = results.filter(r => r.status === 'dispatched');
+  const failed = results.filter(r => r.status === 'failed');
+  console.log(` ${chalk.green.bold(`Dispatched: ${dispatched.length}`)}, ${failed.length > 0 ? chalk.red.bold(`Failed: ${failed.length}`) : `Failed: 0`}`);
+  console.log(`${chalk.dim('━'.repeat(36))}`);
+  console.log(chalk.dim(`\nDispatch log: ${logFile}`));
 
   return results;
 }
