@@ -3,6 +3,7 @@ export interface JulesConfig {
   defaultSource: string;
   defaultBranch: string;
   autoMode: 'AUTO_CREATE_PR' | 'NONE' | '';
+  projectDir?: string;
 }
 
 export interface TaskDefinition {
@@ -35,7 +36,19 @@ export interface JulesSession {
     };
   }>;
   createTime?: string;
-  state?: string;
+  state?: 'STATE_UNSPECIFIED' | 'PENDING' | 'RUNNING' | 'AWAITING_PLAN_APPROVAL' | 'AWAITING_USER_INPUT' | 'COMPLETED' | 'FAILED' | 'CANCELLED' | string;
+}
+
+export interface JulesPlanStep {
+  id: string;
+  title: string;
+  description?: string;
+  index?: number;
+}
+
+export interface JulesPlan {
+  id: string;
+  steps: JulesPlanStep[];
 }
 
 export interface JulesActivity {
@@ -43,10 +56,12 @@ export interface JulesActivity {
   id: string;
   createTime: string;
   originator: 'user' | 'agent';
-  planGenerated?: { plan: { id: string; steps: Array<{ id: string; title: string; index?: number }> } };
+  planGenerated?: { plan: JulesPlan };
   progressUpdated?: { title: string; description?: string };
   sessionCompleted?: Record<string, unknown>;
+  sessionFailed?: { reason?: string; message?: string };
   artifacts?: Array<Record<string, unknown>>;
+  message?: { text?: string };
 }
 
 export interface DispatchResult {
@@ -62,9 +77,10 @@ export interface DispatchResult {
 export interface CollectResult {
   sessionId: string;
   title: string;
-  status: 'running' | 'completed' | 'failed';
+  status: 'running' | 'completed' | 'failed' | 'awaiting_plan' | 'cancelled';
   prUrl?: string;
   prTitle?: string;
   lastActivity?: string;
   activities: number;
+  state?: string;
 }
