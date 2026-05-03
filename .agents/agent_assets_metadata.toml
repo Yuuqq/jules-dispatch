@@ -1,0 +1,8 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "gChouWBpvUPDAqW9HmyL-"
+uri = "file://attached_assets/jules-dispatch-banner.png"
+type = "image"
+title = "jules dispatch banner"
