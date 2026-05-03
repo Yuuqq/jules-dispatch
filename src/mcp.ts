@@ -5,6 +5,7 @@ import { resolve } from 'node:path';
 import { loadConfig, loadTasksFromString } from './config.js';
 import { JulesClient, deriveStatus } from './client.js';
 import { dispatchTaskDefinition } from './dispatcher.js';
+import { planTasks, loadPlannerConfig } from './planner.js';
 import type { TaskDefinition, DispatchResult } from './types.js';
 
 export interface McpServerOptions {
@@ -22,7 +23,7 @@ export async function runMcpServer(options: McpServerOptions): Promise<void> {
 
   const server = new McpServer({
     name: 'jules-dispatch',
-    version: '1.1.0',
+    version: '1.2.0',
   });
 
   // Helper: wrap any handler so thrown errors become MCP isError responses
@@ -285,6 +286,71 @@ export async function runMcpServer(options: McpServerOptions): Promise<void> {
         cancelled: [...cancelled],
         stillRunning,
         timedOut: stillRunning.length > 0,
+      };
+    },
+  );
+
+  // ---------- Planner (OpenRouter) ----------
+
+  tool(
+    'jules_plan_tasks',
+    'Use an OpenRouter LLM to expand a high-level intent into N independent, parallelizable Jules tasks. Returns the planned tasks WITHOUT dispatching. Pipe into jules_dispatch_batch to actually run them. Requires OPENROUTER_API_KEY in the environment.',
+    {
+      description: z.string().describe('High-level intent, e.g. "migrate all Express routes to Fastify and add tests"'),
+      maxTasks: z.number().int().min(1).max(50).optional().default(8),
+      source: z.string().optional().describe('Jules source (defaults to JULES_DEFAULT_SOURCE)'),
+      branch: z.string().optional().describe('Starting branch (defaults to JULES_DEFAULT_BRANCH)'),
+      context: z.string().optional().describe('Extra repo context for grounding (file tree, conventions, etc.)'),
+      model: z.string().optional().describe('OpenRouter model id (defaults to OPENROUTER_MODEL or openrouter/auto)'),
+    },
+    async (args) => {
+      const cfg = loadPlannerConfig({ modelOverride: args.model });
+      return planTasks(cfg, {
+        description: args.description,
+        source: args.source ?? config.defaultSource,
+        branch: args.branch ?? config.defaultBranch,
+        maxTasks: args.maxTasks,
+        context: args.context,
+      });
+    },
+  );
+
+  tool(
+    'jules_auto',
+    'PLAN with an OpenRouter LLM AND DISPATCH the resulting tasks to Jules in a single tool call. Returns planned tasks plus dispatch results. Use this when you want one-shot fan-out without a separate dispatch step.',
+    {
+      description: z.string(),
+      maxTasks: z.number().int().min(1).max(50).optional().default(8),
+      source: z.string().optional(),
+      branch: z.string().optional(),
+      context: z.string().optional(),
+      model: z.string().optional(),
+      parallel: z.number().int().min(1).max(50).optional().default(10),
+    },
+    async (args) => {
+      const cfg = loadPlannerConfig({ modelOverride: args.model });
+      const plan = await planTasks(cfg, {
+        description: args.description,
+        source: args.source ?? config.defaultSource,
+        branch: args.branch ?? config.defaultBranch,
+        maxTasks: args.maxTasks,
+        context: args.context,
+      });
+
+      const parallel = args.parallel ?? 10;
+      const results: DispatchResult[] = [];
+      for (let i = 0; i < plan.tasks.length; i += parallel) {
+        const slice = plan.tasks.slice(i, i + parallel);
+        const r = await Promise.all(
+          slice.map(t => dispatchTaskDefinition(client, config, t, '<mcp-auto>')),
+        );
+        results.push(...r);
+      }
+      const dispatched = results.filter(r => r.status === 'dispatched').length;
+      return {
+        plan: { model: plan.model, rationale: plan.rationale, tasks: plan.tasks, usage: plan.usage },
+        summary: { total: results.length, dispatched, failed: results.length - dispatched },
+        results,
       };
     },
   );
