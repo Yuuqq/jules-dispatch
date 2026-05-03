@@ -4,6 +4,7 @@ import chalk from 'chalk';
 import type { JulesConfig, DispatchResult, TaskDefinition } from './types.js';
 import { JulesClient } from './client.js';
 import { loadTask, loadTasksFromDir } from './config.js';
+import { isJson, emit, info } from './output.js';
 
 export async function dispatchTask(
   client: JulesClient,
@@ -70,16 +71,24 @@ export async function dispatchTaskDefinition(
   }
 }
 
+export interface DispatchBatchOptions {
+  source?: string;
+  branch?: string;
+  parallel?: number;
+  /** Where to write the dispatch log JSON. Default: `<projectDir>/.dispatch-logs`. Pass `false` to disable. */
+  logDir?: string | false;
+}
+
 export async function dispatchBatch(
   client: JulesClient,
   config: JulesConfig,
   taskDir: string,
-  options?: { source?: string; branch?: string; parallel?: number },
+  options: DispatchBatchOptions = {},
 ): Promise<DispatchResult[]> {
   const taskFiles = loadTasksFromDir(taskDir);
 
   if (taskFiles.length === 0) {
-    console.log(chalk.yellow('No task files found in'), taskDir);
+    info(chalk.yellow('No task files found in ') + taskDir);
     return [];
   }
 
@@ -90,9 +99,9 @@ export async function dispatchBatch(
     }
   }
 
-  console.log(chalk.bold(`Dispatching ${allTasks.length} task(s) from ${taskFiles.length} file(s)...\n`));
+  info(chalk.bold(`Dispatching ${allTasks.length} task(s) from ${taskFiles.length} file(s)...\n`));
 
-  const parallel = options?.parallel ?? 10;
+  const parallel = options.parallel ?? 10;
   const results: DispatchResult[] = [];
 
   for (let i = 0; i < allTasks.length; i += parallel) {
@@ -104,29 +113,50 @@ export async function dispatchBatch(
     );
     results.push(...batchResults);
 
-    for (const r of batchResults) {
-      if (r.status === 'dispatched') {
-        console.log(`  ${chalk.green('✓')} ${chalk.bold(r.title)}`);
-        if (r.sessionUrl) console.log(`    ${chalk.dim(r.sessionUrl)}`);
-      } else {
-        console.log(`  ${chalk.red('✗')} ${chalk.bold(r.title)}`);
-        if (r.error) console.log(`    ${chalk.red('Error:')} ${r.error}`);
+    if (!isJson()) {
+      for (const r of batchResults) {
+        if (r.status === 'dispatched') {
+          console.log(`  ${chalk.green('✓')} ${chalk.bold(r.title)}`);
+          if (r.sessionUrl) console.log(`    ${chalk.dim(r.sessionUrl)}`);
+        } else {
+          console.log(`  ${chalk.red('✗')} ${chalk.bold(r.title)}`);
+          if (r.error) console.log(`    ${chalk.red('Error:')} ${r.error}`);
+        }
       }
     }
   }
 
-  const logDir = resolve(taskDir, '..', '.dispatch-logs');
-  if (!existsSync(logDir)) mkdirSync(logDir, { recursive: true });
-  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const logFile = resolve(logDir, `dispatch-${timestamp}.json`);
-  writeFileSync(logFile, JSON.stringify(results, null, 2));
+  // Write dispatch log under the project dir, not next to taskDir.
+  let logFile: string | null = null;
+  if (options.logDir !== false) {
+    const projectRoot = config.projectDir ?? process.cwd();
+    const logDir = options.logDir ?? resolve(projectRoot, '.dispatch-logs');
+    if (!existsSync(logDir)) mkdirSync(logDir, { recursive: true });
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    logFile = resolve(logDir, `dispatch-${timestamp}.json`);
+    writeFileSync(logFile, JSON.stringify(results, null, 2));
+  }
 
-  console.log(`\n${chalk.dim('━'.repeat(36))}`);
   const dispatched = results.filter(r => r.status === 'dispatched');
   const failed = results.filter(r => r.status === 'failed');
-  console.log(` ${chalk.green.bold(`Dispatched: ${dispatched.length}`)}, ${failed.length > 0 ? chalk.red.bold(`Failed: ${failed.length}`) : `Failed: 0`}`);
-  console.log(`${chalk.dim('━'.repeat(36))}`);
-  console.log(chalk.dim(`\nDispatch log: ${logFile}`));
+
+  emit(
+    () => {
+      console.log(`\n${chalk.dim('━'.repeat(36))}`);
+      console.log(
+        ` ${chalk.green.bold(`Dispatched: ${dispatched.length}`)}, ${
+          failed.length > 0 ? chalk.red.bold(`Failed: ${failed.length}`) : `Failed: 0`
+        }`,
+      );
+      console.log(`${chalk.dim('━'.repeat(36))}`);
+      if (logFile) console.log(chalk.dim(`\nDispatch log: ${logFile}`));
+    },
+    {
+      summary: { total: results.length, dispatched: dispatched.length, failed: failed.length },
+      results,
+      logFile,
+    },
+  );
 
   return results;
 }
