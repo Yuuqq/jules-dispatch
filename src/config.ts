@@ -1,35 +1,52 @@
 import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { parse as parseYaml, parseAllDocuments } from 'yaml';
+import { parseAllDocuments } from 'yaml';
 import type { JulesConfig, TaskDefinition } from './types.js';
 
-export function loadConfig(projectDir: string): JulesConfig {
+export interface LoadConfigOptions {
+  apiKeyOverride?: string;
+  /** When true, do not exit on missing API key; throw instead. Used by MCP server. */
+  noExit?: boolean;
+}
+
+export function loadConfig(projectDir: string, options: LoadConfigOptions = {}): JulesConfig {
   const envPath = resolve(projectDir, '.env');
 
   if (existsSync(envPath)) {
     const envContent = readFileSync(envPath, 'utf8');
-    for (const line of envContent.split('\n')) {
-      const trimmed = line.trim();
-      if (!trimmed || trimmed.startsWith('#')) continue;
-      const eq = trimmed.indexOf('=');
+    for (const rawLine of envContent.split('\n')) {
+      let line = rawLine.trim();
+      if (!line || line.startsWith('#')) continue;
+      if (line.startsWith('export ')) line = line.slice(7).trim();
+      const eq = line.indexOf('=');
       if (eq === -1) continue;
-      const key = trimmed.slice(0, eq).trim();
-      const value = trimmed.slice(eq + 1).trim();
+      const key = line.slice(0, eq).trim();
+      let value = line.slice(eq + 1).trim();
+      if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+        value = value.slice(1, -1);
+      }
       if (!process.env[key]) process.env[key] = value;
     }
   }
 
-  const apiKey = process.env.JULES_API_KEY ?? '';
+  const apiKey = options.apiKeyOverride ?? process.env.JULES_API_KEY ?? '';
   if (!apiKey) {
-    console.error('JULES_API_KEY is required. Set it in .env or as an environment variable.');
-    process.exit(1);
+    const msg = 'JULES_API_KEY is required. Set it in .env, pass --api-key, or set the JULES_API_KEY environment variable.';
+    if (options.noExit) throw new Error(msg);
+    console.error(msg);
+    process.exit(2);
   }
+
+  // Normalise empty string autoMode to a meaningful default.
+  const rawAuto = (process.env.JULES_AUTO_MODE ?? '').trim();
+  const autoMode = (rawAuto === '' ? 'AUTO_CREATE_PR' : rawAuto) as JulesConfig['autoMode'];
 
   return {
     apiKey,
     defaultSource: process.env.JULES_DEFAULT_SOURCE ?? '',
     defaultBranch: process.env.JULES_DEFAULT_BRANCH ?? 'main',
-    autoMode: (process.env.JULES_AUTO_MODE as JulesConfig['autoMode']) ?? 'AUTO_CREATE_PR',
+    autoMode,
+    projectDir,
   };
 }
 
@@ -37,18 +54,20 @@ export function loadTasks(filePath: string): TaskDefinition[] {
   const content = readFileSync(filePath, 'utf8');
 
   if (filePath.endsWith('.yaml') || filePath.endsWith('.yml')) {
-    const docs = parseAllDocuments(content);
+    const docs = parseAllDocuments(content).filter(d => d.contents !== null);
     if (docs.length === 0) throw new Error(`No YAML documents found in ${filePath}`);
     return docs.map(doc => validateTask(doc.toJS() as TaskDefinition, filePath));
   }
 
   const parsed = JSON.parse(content) as TaskDefinition | TaskDefinition[];
   const tasks = Array.isArray(parsed) ? parsed : [parsed];
+  if (tasks.length === 0) throw new Error(`No tasks found in ${filePath}`);
   return tasks.map(t => validateTask(t, filePath));
 }
 
 export function loadTask(filePath: string): TaskDefinition {
   const tasks = loadTasks(filePath);
+  if (tasks.length === 0) throw new Error(`No tasks found in ${filePath}`);
   if (tasks.length > 1) {
     console.warn(
       `Warning: ${filePath} contains ${tasks.length} task documents. ` +
@@ -56,6 +75,17 @@ export function loadTask(filePath: string): TaskDefinition {
     );
   }
   return tasks[0];
+}
+
+export function loadTasksFromString(content: string, format: 'yaml' | 'json' = 'yaml'): TaskDefinition[] {
+  if (format === 'yaml') {
+    const docs = parseAllDocuments(content).filter(d => d.contents !== null);
+    if (docs.length === 0) throw new Error('No YAML documents found in input');
+    return docs.map(doc => validateTask(doc.toJS() as TaskDefinition, '<stdin>'));
+  }
+  const parsed = JSON.parse(content) as TaskDefinition | TaskDefinition[];
+  const tasks = Array.isArray(parsed) ? parsed : [parsed];
+  return tasks.map(t => validateTask(t, '<stdin>'));
 }
 
 export function loadTasksFromDir(dir: string): Array<{ file: string; tasks: TaskDefinition[] }> {
@@ -69,7 +99,7 @@ export function loadTasksFromDir(dir: string): Array<{ file: string; tasks: Task
   }));
 }
 
-function validateTask(task: TaskDefinition, filePath: string): TaskDefinition {
+export function validateTask(task: TaskDefinition, filePath: string): TaskDefinition {
   if (!task || typeof task !== 'object') throw new Error(`Invalid task definition in ${filePath}`);
   if (!task.title) throw new Error(`Missing "title" in ${filePath}`);
   if (!task.prompt) throw new Error(`Missing "prompt" in ${filePath}`);
