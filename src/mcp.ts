@@ -5,7 +5,7 @@ import { resolve } from 'node:path';
 import { loadConfig, loadTasksFromString } from './config.js';
 import { JulesClient, deriveStatus } from './client.js';
 import { dispatchTaskDefinition } from './dispatcher.js';
-import { planTasks, loadPlannerConfig } from './planner.js';
+import { planTasks, loadPlannerConfig, isPlannerConfigured } from './planner.js';
 import type { TaskDefinition, DispatchResult } from './types.js';
 
 export interface McpServerOptions {
@@ -290,21 +290,29 @@ export async function runMcpServer(options: McpServerOptions): Promise<void> {
     },
   );
 
-  // ---------- Planner (OpenRouter) ----------
+  // ---------- Planner (OPTIONAL — any OpenAI-compatible LLM) ----------
+  // Only registered if a planner-capable API key is present at startup.
+  // This keeps the tool list clean for users who only want raw dispatch.
 
+  if (isPlannerConfigured()) {
+    registerPlannerTools();
+  }
+
+  function registerPlannerTools(): void {
   tool(
     'jules_plan_tasks',
-    'Use an OpenRouter LLM to expand a high-level intent into N independent, parallelizable Jules tasks. Returns the planned tasks WITHOUT dispatching. Pipe into jules_dispatch_batch to actually run them. Requires OPENROUTER_API_KEY in the environment.',
+    'OPTIONAL: Use any OpenAI-compatible LLM (OpenAI / OpenRouter / Ollama / vLLM / Groq / etc.) to expand a high-level intent into N independent, parallelizable Jules tasks. Returns the planned tasks WITHOUT dispatching. Pipe into jules_dispatch_batch to actually run them.',
     {
       description: z.string().describe('High-level intent, e.g. "migrate all Express routes to Fastify and add tests"'),
       maxTasks: z.number().int().min(1).max(50).optional().default(8),
       source: z.string().optional().describe('Jules source (defaults to JULES_DEFAULT_SOURCE)'),
       branch: z.string().optional().describe('Starting branch (defaults to JULES_DEFAULT_BRANCH)'),
       context: z.string().optional().describe('Extra repo context for grounding (file tree, conventions, etc.)'),
-      model: z.string().optional().describe('OpenRouter model id (defaults to OPENROUTER_MODEL or openrouter/auto)'),
+      model: z.string().optional().describe('LLM model id (defaults to LLM_MODEL or gpt-4o-mini)'),
+      baseUrl: z.string().optional().describe('OpenAI-compatible base URL (defaults to LLM_BASE_URL or https://api.openai.com/v1)'),
     },
     async (args) => {
-      const cfg = loadPlannerConfig({ modelOverride: args.model });
+      const cfg = loadPlannerConfig({ modelOverride: args.model, baseUrlOverride: args.baseUrl });
       return planTasks(cfg, {
         description: args.description,
         source: args.source ?? config.defaultSource,
@@ -317,7 +325,7 @@ export async function runMcpServer(options: McpServerOptions): Promise<void> {
 
   tool(
     'jules_auto',
-    'PLAN with an OpenRouter LLM AND DISPATCH the resulting tasks to Jules in a single tool call. Returns planned tasks plus dispatch results. Use this when you want one-shot fan-out without a separate dispatch step.',
+    'OPTIONAL: PLAN with any OpenAI-compatible LLM AND DISPATCH the resulting tasks to Jules in a single tool call. Returns planned tasks plus dispatch results. Use this when you want one-shot fan-out without a separate dispatch step.',
     {
       description: z.string(),
       maxTasks: z.number().int().min(1).max(50).optional().default(8),
@@ -325,10 +333,11 @@ export async function runMcpServer(options: McpServerOptions): Promise<void> {
       branch: z.string().optional(),
       context: z.string().optional(),
       model: z.string().optional(),
+      baseUrl: z.string().optional(),
       parallel: z.number().int().min(1).max(50).optional().default(10),
     },
     async (args) => {
-      const cfg = loadPlannerConfig({ modelOverride: args.model });
+      const cfg = loadPlannerConfig({ modelOverride: args.model, baseUrlOverride: args.baseUrl });
       const plan = await planTasks(cfg, {
         description: args.description,
         source: args.source ?? config.defaultSource,
@@ -354,6 +363,7 @@ export async function runMcpServer(options: McpServerOptions): Promise<void> {
       };
     },
   );
+  } // end registerPlannerTools
 
   await server.connect(new StdioServerTransport());
 
