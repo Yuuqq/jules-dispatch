@@ -18,8 +18,9 @@ program
   .version('1.2.0')
   .option('-p, --project <dir>', 'project directory with .env', '.')
   .option('--api-key <key>', 'Jules API key (overrides JULES_API_KEY env var)')
-  .option('--openrouter-key <key>', 'OpenRouter API key (overrides OPENROUTER_API_KEY env var)')
-  .option('--openrouter-model <model>', 'OpenRouter model id (overrides OPENROUTER_MODEL env var, default: openrouter/auto)')
+  .option('--llm-key <key>', '[optional planner] LLM API key (overrides LLM_API_KEY / OPENAI_API_KEY)')
+  .option('--llm-base-url <url>', '[optional planner] OpenAI-compatible base URL (default: https://api.openai.com/v1)')
+  .option('--llm-model <model>', '[optional planner] model id (default: gpt-4o-mini)')
   .option('--json', 'machine-readable JSON output (one JSON object per command, NDJSON for streams)', false)
   .hook('preAction', (thisCommand) => {
     const opts = thisCommand.opts() as { json?: boolean };
@@ -329,12 +330,12 @@ program
     }
   });
 
-// ---------- plan-tasks (OpenRouter) ----------
+// ---------- plan-tasks (optional LLM planner) ----------
 
 program
   .command('plan-tasks <description>')
   .alias('plan-batch')
-  .description('Use an OpenRouter LLM to expand a high-level intent into N independent Jules tasks (does NOT dispatch). Use "-" to read description from stdin.')
+  .description('[OPTIONAL] Use any OpenAI-compatible LLM to expand a high-level intent into N independent Jules tasks (does NOT dispatch). Use "-" to read description from stdin.')
   .option('-n, --max <n>', 'maximum number of tasks to plan', '8')
   .option('-s, --source <source>', 'override Jules source for generated tasks')
   .option('-b, --branch <branch>', 'override branch for generated tasks')
@@ -345,10 +346,10 @@ program
     const { planTasks, loadPlannerConfig } = await import('./planner.js');
     const { stringify } = await import('yaml');
     const { writeFileSync } = await import('node:fs');
-    const programOpts = program.opts() as { project: string; openrouterKey?: string; openrouterModel?: string };
+    const programOpts = program.opts() as { project: string; llmKey?: string; llmBaseUrl?: string; llmModel?: string };
     const projectDir = resolve(programOpts.project);
 
-    // Side-effect: load .env so OPENROUTER_* vars are populated when not set in shell.
+    // Side-effect: load .env so LLM_* vars are populated when not set in shell.
     try { loadConfig(projectDir, { noExit: true }); } catch { /* JULES_API_KEY missing is ok for planning-only */ }
 
     const desc = description === '-' ? readFileSync(0, 'utf8').trim() : description;
@@ -360,11 +361,12 @@ program
     let plannerCfg;
     try {
       plannerCfg = loadPlannerConfig({
-        apiKeyOverride: programOpts.openrouterKey,
-        modelOverride: programOpts.openrouterModel,
+        apiKeyOverride: programOpts.llmKey,
+        baseUrlOverride: programOpts.llmBaseUrl,
+        modelOverride: programOpts.llmModel,
       });
     } catch (err) {
-      fail((err as Error).message, ExitCode.AUTH, 'OPENROUTER_KEY_MISSING');
+      fail((err as Error).message, ExitCode.AUTH, 'LLM_KEY_MISSING');
     }
 
     info(chalk.dim(`Planning with ${plannerCfg.model}...\n`));
@@ -412,7 +414,7 @@ program
 
 program
   .command('auto <description>')
-  .description('Plan tasks with OpenRouter AND dispatch them to Jules in one shot. Use "-" for stdin.')
+  .description('[OPTIONAL] Plan tasks with any OpenAI-compatible LLM AND dispatch them to Jules in one shot. Use "-" for stdin.')
   .option('-n, --max <n>', 'maximum number of tasks', '8')
   .option('-s, --source <source>', 'override Jules source')
   .option('-b, --branch <branch>', 'override branch')
@@ -424,7 +426,7 @@ program
   .action(async (description: string, opts: { max: string; source?: string; branch?: string; context?: string; contextFile?: string; parallel: string; dryRun: boolean; yes: boolean }) => {
     const { planTasks, loadPlannerConfig } = await import('./planner.js');
     const { config, client } = getConfig();
-    const programOpts = program.opts() as { openrouterKey?: string; openrouterModel?: string };
+    const programOpts = program.opts() as { llmKey?: string; llmBaseUrl?: string; llmModel?: string };
 
     const desc = description === '-' ? readFileSync(0, 'utf8').trim() : description;
     if (!desc) fail('Empty description', ExitCode.VALIDATION, 'EMPTY_DESC');
@@ -435,11 +437,12 @@ program
     let plannerCfg;
     try {
       plannerCfg = loadPlannerConfig({
-        apiKeyOverride: programOpts.openrouterKey,
-        modelOverride: programOpts.openrouterModel,
+        apiKeyOverride: programOpts.llmKey,
+        baseUrlOverride: programOpts.llmBaseUrl,
+        modelOverride: programOpts.llmModel,
       });
     } catch (err) {
-      fail((err as Error).message, ExitCode.AUTH, 'OPENROUTER_KEY_MISSING');
+      fail((err as Error).message, ExitCode.AUTH, 'LLM_KEY_MISSING');
     }
 
     info(chalk.dim(`Planning with ${plannerCfg.model}...\n`));
