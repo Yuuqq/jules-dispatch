@@ -9,6 +9,10 @@
 
 🌐 **Languages**: [English](README.md) · **简体中文**
 
+<p align="center">
+  <img src="docs/banner.png" alt="jules-dispatch 横幅 — 一个编排 AI 把任务并行分发给多个 Jules worker，各自产出 PR" width="100%" />
+</p>
+
 ---
 
 ## 这是什么？
@@ -22,6 +26,34 @@
 - 接入 **Claude Code** 或 **Codex** 作为 MCP 服务器——你的 AI 助手把 Jules 当工具调用
 
 它把 Jules 从「一次只能跑一个任务」变成由你（或别的 AI）指挥的**大规模并行编码工作流**。
+
+---
+
+## 🏗 它是怎么工作的
+
+```mermaid
+flowchart LR
+    O["🧠 编排 AI<br/>(Claude / Codex / 你)"]
+    O -->|生成| T["📄 tasks/*.yaml"]
+    T --> D["⚡ jules-dispatch batch"]
+    D -->|并发| J1["🤖 Jules #1"]
+    D -->|并发| J2["🤖 Jules #2"]
+    D -->|并发| J3["🤖 Jules #3"]
+    D -->|并发| J4["🤖 Jules #N"]
+    J1 --> P1["🔀 PR #1"]
+    J2 --> P2["🔀 PR #2"]
+    J3 --> P3["🔀 PR #3"]
+    J4 --> P4["🔀 PR #N"]
+
+    classDef orch fill:#7c3aed,stroke:#5b21b6,color:#fff
+    classDef tool fill:#0891b2,stroke:#0e7490,color:#fff
+    classDef worker fill:#f59e0b,stroke:#b45309,color:#fff
+    classDef pr fill:#10b981,stroke:#047857,color:#fff
+    class O orch
+    class D tool
+    class J1,J2,J3,J4 worker
+    class P1,P2,P3,P4 pr
+```
 
 ---
 
@@ -57,6 +89,31 @@
 ## 🤖 在 Claude Code 或 Codex 里使用（MCP）
 
 MCP 服务器把 Jules 暴露成一组工具，让你的编码 AI 直接调用。
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor U as 👤 你
+    participant CC as 💬 Claude Code / Codex
+    participant MCP as ⚡ jules-dispatch (MCP)
+    participant J as ☁️ Google Jules
+
+    U->>CC: 「给 5 个模块加测试」
+    CC->>MCP: jules_dispatch_batch(任务列表)
+    MCP->>J: POST /sessions × 5
+    J-->>MCP: 5 个 session ID
+    MCP-->>CC: {dispatched: 5}
+
+    CC->>MCP: jules_wait_for_completion(ids)
+    loop 轮询直到完成
+        MCP->>J: GET /sessions/{id}
+    end
+    MCP-->>CC: {completed: [...]}
+
+    CC->>MCP: jules_status(ids)
+    MCP-->>CC: {prUrls: [...]}
+    CC-->>U: ✅「完成。PR: #42, #43, #44, #45, #46」
+```
 
 ### 配置 Claude Code
 
@@ -251,6 +308,34 @@ jules-dispatch wait "$ID" --interval 10000 --timeout 1800000
 jules-dispatch tail abc123                        # 人类可读流
 jules-dispatch tail abc123 --json                 # NDJSON 事件流
 ```
+
+---
+
+## 🔄 会话生命周期
+
+jules-dispatch 追踪每个 Jules 会话的完整生命周期，并在 CLI / MCP 里暴露每个状态：
+
+```mermaid
+stateDiagram-v2
+    [*] --> PENDING
+    PENDING --> RUNNING
+    RUNNING --> AWAITING_PLAN_APPROVAL: requirePlanApproval = true
+    AWAITING_PLAN_APPROVAL --> RUNNING: approve 审批
+    AWAITING_PLAN_APPROVAL --> CANCELLED: cancel 取消
+    RUNNING --> COMPLETED: 成功 ✓
+    RUNNING --> FAILED: 失败 ✗
+    RUNNING --> CANCELLED: cancel 取消
+    COMPLETED --> [*]
+    FAILED --> [*]
+    CANCELLED --> [*]
+```
+
+| 状态 | CLI 命令 | MCP 工具 |
+|---|---|---|
+| `AWAITING_PLAN_APPROVAL` | `plan` / `approve` | `jules_get_plan` / `jules_approve_plan` |
+| `RUNNING` | `tail` / `message` | `jules_list_activities` / `jules_send_message` |
+| `COMPLETED` | `get` / `status` | `jules_get_session` / `jules_status` |
+| `FAILED` / `CANCELLED` | `cancel` | `jules_cancel_session` |
 
 ---
 
