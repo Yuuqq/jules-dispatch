@@ -2,7 +2,7 @@
 
 > **批量并发派发任务到 [Google Jules](https://jules.google.com/)，并作为 MCP 工具直接接入 [Claude Code](https://docs.anthropic.com/en/docs/claude-code) 和 [OpenAI Codex CLI](https://github.com/openai/codex)。**
 
-[![npm version](https://img.shields.io/badge/npm-1.1.0-blue)](https://www.npmjs.com/package/jules-dispatch)
+[![npm version](https://img.shields.io/badge/npm-1.2.0-blue)](https://www.npmjs.com/package/jules-dispatch)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue?logo=typescript)](https://www.typescriptlang.org/)
 [![MCP](https://img.shields.io/badge/MCP-server-purple)](https://modelcontextprotocol.io/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
@@ -54,6 +54,37 @@ flowchart LR
     class J1,J2,J3,J4 worker
     class P1,P2,P3,P4 pr
 ```
+
+---
+
+## ✨ 1.2 版本新特性 — AI 自动规划任务
+
+不用再手写任务 YAML。给 jules-dispatch **一句话**，让 LLM 自动展开成 N 个并发 Jules 会话。
+
+```bash
+$ jules-dispatch auto "把所有 Express 路由迁移到 Fastify 并补上请求校验测试"
+
+Planning with openrouter/auto...
+
+规划出 6 个任务：
+  1. 迁移 auth 路由 (/api/auth/*) 到 Fastify
+  2. 迁移 user 路由 (/api/users/*) 到 Fastify
+  3. 迁移 billing 路由 (/api/billing/*) 到 Fastify
+  4. 用 Fastify hooks 替换 Express middleware
+  5. 重写 server 启动脚本以使用 Fastify 实例
+  6. 给所有迁移后的路由加 Vitest 请求校验测试
+
+Dispatch all 6 task(s)? [y/N]
+```
+
+由 **[OpenRouter](https://openrouter.ai)** 驱动 — 370+ 模型任选（Claude、GPT、Gemini、Grok、DeepSeek、Qwen、Llama、GLM、Kimi…），通过 `OPENROUTER_MODEL` 或 `--openrouter-model` 切换。默认 `openrouter/auto`。
+
+| 命令 / 工具 | 作用 |
+|---|---|
+| `jules-dispatch plan-tasks "<意图>"` | 只规划，打印或写入 YAML 文件 |
+| `jules-dispatch auto "<意图>"` | 规划 + 派发一气呵成（带确认提示） |
+| MCP `jules_plan_tasks` | 同样的规划能力，暴露给 Claude Code / Codex |
+| MCP `jules_auto` | 一步到位的「规划+派发」，暴露给 Claude Code / Codex |
 
 ---
 
@@ -248,6 +279,8 @@ jules-dispatch batch tasks/ --parallel 10
 | 命令 | 功能 |
 |---|---|
 | `dispatch <taskFile>` | 派发单个任务文件，`-` 表示从 stdin 读取 |
+| `plan-tasks <description>` | 用 OpenRouter LLM 把一句话意图展开成 N 个任务草稿（不派发） |
+| `auto <description>` | LLM 规划 + 派发一气呵成（带确认提示） |
 | `batch [taskDir]` | 派发目录下所有 `.yaml`/`.yml`/`.json` 文件 |
 | `status` | 查看最近会话摘要（或指定 `--ids`） |
 | `get <sessionId>` | 查看单个会话完整详情 |
