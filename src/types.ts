@@ -2,7 +2,7 @@ export interface JulesConfig {
   apiKey: string;
   defaultSource: string;
   defaultBranch: string;
-  autoMode: 'AUTO_CREATE_PR' | '';
+  autoMode: 'AUTO_CREATE_PR' | 'NONE' | '';
 }
 
 export interface TaskDefinition {
@@ -10,7 +10,7 @@ export interface TaskDefinition {
   prompt: string;
   source?: string;
   branch?: string;
-  autoMode?: 'AUTO_CREATE_PR' | '';
+  autoMode?: 'AUTO_CREATE_PR' | 'NONE' | '';
   requirePlanApproval?: boolean;
 }
 
@@ -35,6 +35,7 @@ export interface JulesSession {
     };
   }>;
   createTime?: string;
+  state?: string;
 }
 
 export interface JulesActivity {
@@ -50,6 +51,7 @@ export interface JulesActivity {
 
 export interface DispatchResult {
   taskFile: string;
+  taskTitle: string;
   sessionId: string;
   sessionUrl: string;
   title: string;
