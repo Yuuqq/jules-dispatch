@@ -57,14 +57,16 @@ flowchart LR
 
 ---
 
-## ✨ 1.2 版本新特性 — AI 自动规划任务
+## ✨ 1.2 版本新特性 — 可选的 AI 任务规划（自带 LLM）
+
+> **完全可选**。所有核心命令不需要任何 LLM key 就能用。只想用原始派发功能的可以跳过本节。
 
 不用再手写任务 YAML。给 jules-dispatch **一句话**，让 LLM 自动展开成 N 个并发 Jules 会话。
 
 ```bash
 $ jules-dispatch auto "把所有 Express 路由迁移到 Fastify 并补上请求校验测试"
 
-Planning with openrouter/auto...
+Planning with gpt-4o-mini...
 
 规划出 6 个任务：
   1. 迁移 auth 路由 (/api/auth/*) 到 Fastify
@@ -77,14 +79,24 @@ Planning with openrouter/auto...
 Dispatch all 6 task(s)? [y/N]
 ```
 
-由 **[OpenRouter](https://openrouter.ai)** 驱动 — 370+ 模型任选（Claude、GPT、Gemini、Grok、DeepSeek、Qwen、Llama、GLM、Kimi…），通过 `OPENROUTER_MODEL` 或 `--openrouter-model` 切换。默认 `openrouter/auto`。
+**自带 LLM** — 兼容任何 OpenAI 协议的 `/chat/completions` 接口：
+
+| 提供商 | `LLM_BASE_URL` | `LLM_MODEL` 示例 |
+|---|---|---|
+| **OpenAI**（默认） | *(留空 — 默认 `https://api.openai.com/v1`)* | `gpt-4o-mini`、`gpt-4o`、`o3-mini` |
+| **OpenRouter** | `https://openrouter.ai/api/v1` | `openrouter/auto`、`anthropic/claude-opus-4.7` |
+| **Ollama**（本地，免费） | `http://localhost:11434/v1` | `llama3.1`、`qwen2.5-coder:32b` |
+| **Groq** | `https://api.groq.com/openai/v1` | `llama-3.3-70b-versatile` |
+| **Together / Fireworks / DeepInfra / vLLM / LiteLLM / Azure OpenAI** | *(各自端点)* | *(各自模型 id)* |
+
+通过环境变量配置（`LLM_API_KEY`、`LLM_BASE_URL`、`LLM_MODEL`）或命令行参数（`--llm-key`、`--llm-base-url`、`--llm-model`）。`OPENAI_API_KEY` 和 `OPENROUTER_API_KEY` 也作为回退被识别。
 
 | 命令 / 工具 | 作用 |
 |---|---|
 | `jules-dispatch plan-tasks "<意图>"` | 只规划，打印或写入 YAML 文件 |
 | `jules-dispatch auto "<意图>"` | 规划 + 派发一气呵成（带确认提示） |
-| MCP `jules_plan_tasks` | 同样的规划能力，暴露给 Claude Code / Codex |
-| MCP `jules_auto` | 一步到位的「规划+派发」，暴露给 Claude Code / Codex |
+| MCP `jules_plan_tasks` | 同样的规划能力，暴露给 Claude Code / Codex *（只有配置了 LLM key 才会注册）* |
+| MCP `jules_auto` | 一步到位的「规划+派发」 *（只有配置了 LLM key 才会注册）* |
 
 ---
 
