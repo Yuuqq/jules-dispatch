@@ -57,14 +57,16 @@ flowchart LR
 
 ---
 
-## ✨ What's New in 1.2 — AI-Powered Task Planning
+## ✨ What's New in 1.2 — Optional AI Task Planning (BYO LLM)
+
+> **Entirely optional.** All core commands work without any LLM key. Skip this section if you only want raw dispatch.
 
 Stop hand-writing task YAML. Give jules-dispatch **one sentence** and let an LLM expand it into N parallel Jules sessions.
 
 ```bash
 $ jules-dispatch auto "Migrate every Express route to Fastify and add request-validation tests"
 
-Planning with openrouter/auto...
+Planning with gpt-4o-mini...
 
 Planned 6 task(s):
   1. Migrate auth routes (/api/auth/*) to Fastify
@@ -77,14 +79,24 @@ Planned 6 task(s):
 Dispatch all 6 task(s)? [y/N]
 ```
 
-Powered by **[OpenRouter](https://openrouter.ai)** — pick any of 370+ models (Claude, GPT, Gemini, Grok, DeepSeek, Qwen, Llama, GLM, Kimi, …) via `OPENROUTER_MODEL` or `--openrouter-model`. Default is `openrouter/auto`.
+**Bring your own LLM** — works with any OpenAI-compatible `/chat/completions` endpoint:
+
+| Provider | `LLM_BASE_URL` | Example `LLM_MODEL` |
+|---|---|---|
+| **OpenAI** (default) | *(omit — defaults to `https://api.openai.com/v1`)* | `gpt-4o-mini`, `gpt-4o`, `o3-mini` |
+| **OpenRouter** | `https://openrouter.ai/api/v1` | `openrouter/auto`, `anthropic/claude-opus-4.7` |
+| **Ollama** (local, free) | `http://localhost:11434/v1` | `llama3.1`, `qwen2.5-coder:32b` |
+| **Groq** | `https://api.groq.com/openai/v1` | `llama-3.3-70b-versatile` |
+| **Together / Fireworks / DeepInfra / vLLM / LiteLLM / Azure OpenAI** | *(their endpoint)* | *(their model id)* |
+
+Configure via env vars (`LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL`) or per-invocation flags (`--llm-key`, `--llm-base-url`, `--llm-model`). `OPENAI_API_KEY` and `OPENROUTER_API_KEY` are also recognised as fallbacks.
 
 | Command / Tool | What it does |
 |---|---|
 | `jules-dispatch plan-tasks "<intent>"` | Plan only — print or write tasks to a YAML file |
 | `jules-dispatch auto "<intent>"` | Plan + dispatch in one shot (with confirmation) |
-| MCP `jules_plan_tasks` | Same planning, exposed to Claude Code / Codex |
-| MCP `jules_auto` | One-shot plan + dispatch, exposed to Claude Code / Codex |
+| MCP `jules_plan_tasks` | Same planning, exposed to Claude Code / Codex *(only registered if an LLM key is configured)* |
+| MCP `jules_auto` | One-shot plan + dispatch *(only registered if an LLM key is configured)* |
 
 ---
 
