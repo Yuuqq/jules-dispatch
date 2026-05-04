@@ -2,132 +2,537 @@
 
 import { Command } from 'commander';
 import { resolve } from 'node:path';
-import { loadConfig } from './config.js';
+import { readFileSync } from 'node:fs';
+import chalk from 'chalk';
+import { loadConfig, loadTasksFromString } from './config.js';
 import { JulesClient } from './client.js';
-import { dispatchTask, dispatchBatch } from './dispatcher.js';
+import { dispatchTask, dispatchBatch, dispatchTaskDefinition } from './dispatcher.js';
 import { collectStatus, waitForCompletion } from './collector.js';
+import { setOutputMode, isJson, emit, emitError, info, ExitCode } from './output.js';
 
 const program = new Command();
 
 program
   .name('jules-dispatch')
-  .description('Batch dispatch tasks to Google Jules API')
-  .version('1.0.0')
-  .option('-p, --project <dir>', 'project directory with .env', '.');
+  .description('Batch-dispatch tasks to Google Jules + MCP server for Claude Code / Codex')
+  .version('1.2.0')
+  .option('-p, --project <dir>', 'project directory with .env', '.')
+  .option('--api-key <key>', 'Jules API key (overrides JULES_API_KEY env var)')
+  .option('--llm-key <key>', '[optional planner] LLM API key (overrides LLM_API_KEY / OPENAI_API_KEY)')
+  .option('--llm-base-url <url>', '[optional planner] OpenAI-compatible base URL (default: https://api.openai.com/v1)')
+  .option('--llm-model <model>', '[optional planner] model id (default: gpt-4o-mini)')
+  .option('--json', 'machine-readable JSON output (one JSON object per command, NDJSON for streams)', false)
+  .hook('preAction', (thisCommand) => {
+    const opts = thisCommand.opts() as { json?: boolean };
+    if (opts.json) setOutputMode('json');
+  });
 
-// Dispatch a single task file
+function getConfig(): { config: ReturnType<typeof loadConfig>; client: JulesClient } {
+  const opts = program.opts() as { project: string; apiKey?: string };
+  const config = loadConfig(resolve(opts.project), { apiKeyOverride: opts.apiKey });
+  return { config, client: new JulesClient(config) };
+}
+
+function fail(message: string, code: number = ExitCode.GENERIC, errCode?: string): never {
+  emitError(message, errCode);
+  process.exit(code);
+}
+
+// ---------- dispatch ----------
+
 program
   .command('dispatch <taskFile>')
-  .description('Dispatch a single task file to Jules')
+  .description('Dispatch a single task file to Jules. Use "-" to read from stdin.')
   .option('-s, --source <source>', 'override source (e.g. sources/github/owner/repo)')
   .option('-b, --branch <branch>', 'override branch')
-  .action(async (opts, cmd) => {
-    const projectDir = cmd.parent?.opts().project || '.';
-    const config = loadConfig(resolve(projectDir));
-    const client = new JulesClient(config);
-    const taskFile = resolve(opts.taskFile);
+  .option('--format <fmt>', 'stdin format: yaml|json', 'yaml')
+  .action(async (taskFile: string, opts: { source?: string; branch?: string; format: string }) => {
+    const { config, client } = getConfig();
 
-    console.log(`Dispatching: ${taskFile}\n`);
-    const result = await dispatchTask(client, config, taskFile, { source: opts.source, branch: opts.branch });
+    let result;
+    if (taskFile === '-') {
+      const content = readFileSync(0, 'utf8');
+      const tasks = loadTasksFromString(content, opts.format as 'yaml' | 'json');
+      if (tasks.length === 0) fail('No tasks found in stdin', ExitCode.VALIDATION, 'NO_TASKS');
+      info(chalk.dim('Dispatching from stdin\n'));
+      result = await dispatchTaskDefinition(client, config, tasks[0], '<stdin>', {
+        source: opts.source,
+        branch: opts.branch,
+      });
+    } else {
+      info(chalk.dim(`Dispatching: ${taskFile}\n`));
+      result = await dispatchTask(client, config, resolve(taskFile), {
+        source: opts.source,
+        branch: opts.branch,
+      });
+    }
 
     if (result.status === 'dispatched') {
-      console.log(`✓ ${result.title}`);
-      console.log(`  Session: ${result.sessionUrl}`);
+      emit(
+        () => {
+          console.log(`${chalk.green('✓')} ${chalk.bold(result.title)}`);
+          console.log(`  ${chalk.dim('Session:')} ${result.sessionUrl}`);
+          console.log(`  ${chalk.dim('ID:')}      ${result.sessionId}`);
+        },
+        result,
+      );
     } else {
-      console.error(`✗ ${result.title}: ${result.error}`);
-      process.exit(1);
+      emit(() => console.error(`${chalk.red('✗')} ${chalk.bold(result.title)}: ${result.error}`), result);
+      process.exit(ExitCode.GENERIC);
     }
   });
 
-// Batch dispatch all tasks in a directory
+// ---------- batch ----------
+
 program
   .command('batch [taskDir]')
-  .description('Dispatch all .yaml/.json task files in a directory')
-  .option('-s, --source <source>', 'override source')
-  .option('-b, --branch <branch>', 'override branch')
+  .description('Dispatch all .yaml/.yml/.json task files in a directory (supports multi-document YAML)')
+  .option('-s, --source <source>', 'override source for all tasks')
+  .option('-b, --branch <branch>', 'override branch for all tasks')
   .option('-n, --parallel <n>', 'max parallel dispatches', '10')
-  .action(async (taskDir, opts, cmd) => {
-    const projectDir = cmd.parent?.opts().project || '.';
-    const config = loadConfig(resolve(projectDir));
-    const client = new JulesClient(config);
-    const dir = resolve(taskDir || resolve(projectDir, 'tasks'));
+  .option('--no-log', 'do not write dispatch log file')
+  .action(async (taskDir: string | undefined, opts: { source?: string; branch?: string; parallel: string; log: boolean }) => {
+    const { config, client } = getConfig();
+    const projectDir = (program.opts() as { project: string }).project;
+    const dir = resolve(taskDir ?? resolve(projectDir, 'tasks'));
 
     const results = await dispatchBatch(client, config, dir, {
       source: opts.source,
       branch: opts.branch,
-      parallel: parseInt(opts.parallel),
+      parallel: parseInt(opts.parallel, 10),
+      logDir: opts.log === false ? false : undefined,
     });
 
-    const dispatched = results.filter(r => r.status === 'dispatched');
-    const failed = results.filter(r => r.status === 'failed');
-
-    console.log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-    console.log(` Dispatched: ${dispatched.length}, Failed: ${failed.length}`);
-    console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+    const failed = results.filter(r => r.status === 'failed').length;
+    if (failed > 0 && results.length > failed) process.exit(ExitCode.PARTIAL);
+    if (failed > 0) process.exit(ExitCode.GENERIC);
   });
 
-// Check status of running sessions
+// ---------- status ----------
+
 program
   .command('status')
   .description('Check status of recent Jules sessions')
   .option('-i, --ids <ids...>', 'specific session IDs to check')
-  .option('-o, --output <file>', 'output JSON report to file')
-  .action(async (opts, cmd) => {
-    const projectDir = cmd.parent?.opts().project || '.';
-    const config = loadConfig(resolve(projectDir));
-    const client = new JulesClient(config);
-
+  .option('-o, --output <file>', 'save JSON report to file')
+  .option('--scan <n>', 'how many recent sessions to scan when no --ids given', '100')
+  .action(async (opts: { ids?: string[]; output?: string; scan: string }) => {
+    const { config, client } = getConfig();
     await collectStatus(client, config, {
       sessionIds: opts.ids,
       output: opts.output,
+      scanLimit: parseInt(opts.scan, 10),
     });
   });
 
-// Wait for sessions to complete
+// ---------- get ----------
+
 program
-  .command('wait [ids...]')
-  .description('Wait for sessions to complete')
-  .option('--interval <ms>', 'poll interval in ms', '30000')
-  .option('--timeout <ms>', 'max wait time in ms', '600000')
-  .action(async (ids, opts, cmd) => {
-    const projectDir = cmd.parent?.opts().project || '.';
-    const config = loadConfig(resolve(projectDir));
-    const client = new JulesClient(config);
-
-    await waitForCompletion(client, config, ids, {
-      interval: parseInt(opts.interval),
-      timeout: parseInt(opts.timeout),
-    });
-  });
-
-// List available sources
-program
-  .command('sources')
-  .description('List available GitHub sources')
-  .action(async (_, cmd) => {
-    const projectDir = cmd.parent?.opts().project || '.';
-    const config = loadConfig(resolve(projectDir));
-    const client = new JulesClient(config);
-
-    const { sources } = await client.listSources();
-    console.log(`\n${sources.length} sources:\n`);
-    for (const s of sources) {
-      const repo = s.githubRepo ? `${s.githubRepo.owner}/${s.githubRepo.repo}` : s.id;
-      console.log(`  ${repo}`);
+  .command('get <sessionId>')
+  .description('Get full details of a single session')
+  .action(async (sessionId: string) => {
+    const { client } = getConfig();
+    try {
+      const session = await client.getSession(sessionId);
+      emit(
+        () => {
+          console.log(chalk.bold(session.title));
+          console.log(`  ${chalk.dim('ID:')}     ${session.id}`);
+          console.log(`  ${chalk.dim('State:')}  ${session.state ?? 'unknown'}`);
+          console.log(`  ${chalk.dim('URL:')}    ${session.url}`);
+          console.log(`  ${chalk.dim('Source:')} ${session.sourceContext?.source ?? '<unknown>'}`);
+          const pr = session.outputs?.find(o => o.pullRequest);
+          if (pr?.pullRequest) console.log(`  ${chalk.cyan('PR:')}     ${pr.pullRequest.url}`);
+        },
+        session,
+      );
+    } catch (err) {
+      fail((err as Error).message, ExitCode.GENERIC);
     }
   });
 
-// Send a message to a running session
-program
-  .command('message <sessionId> <text>')
-  .description('Send a follow-up message to a session')
-  .action(async (sessionId, text, _, cmd) => {
-    const projectDir = cmd.parent?.opts().project || '.';
-    const config = loadConfig(resolve(projectDir));
-    const client = new JulesClient(config);
+// ---------- wait ----------
 
-    await client.sendMessage(sessionId, text);
-    console.log('Message sent. Use `status` to see the response.');
+program
+  .command('wait [ids...]')
+  .description('Poll until the specified sessions finish')
+  .option('--interval <ms>', 'poll interval in ms', '30000')
+  .option('--timeout <ms>', 'max wait time in ms', '600000')
+  .option('--fail-fast', 'exit immediately on first failed session', false)
+  .action(async (ids: string[], opts: { interval: string; timeout: string; failFast: boolean }) => {
+    const { config, client } = getConfig();
+
+    if (ids.length === 0) fail('No session IDs provided. Usage: wait <id1> [id2...]', ExitCode.VALIDATION, 'NO_IDS');
+
+    const result = await waitForCompletion(client, config, ids, {
+      interval: parseInt(opts.interval, 10),
+      timeout: parseInt(opts.timeout, 10),
+      failFast: opts.failFast,
+    });
+
+    if (result.timedOut) process.exit(ExitCode.TIMEOUT);
+    if (result.failed.length > 0) process.exit(ExitCode.GENERIC);
   });
 
-program.parse();
+// ---------- sources ----------
+
+program
+  .command('sources')
+  .description('List all GitHub sources connected to Jules (auto-paginates)')
+  .action(async () => {
+    const { client } = getConfig();
+    const sources: Awaited<ReturnType<typeof client.listSources>>['sources'] = [];
+    for await (const s of client.iterateSources()) sources.push(s);
+
+    emit(
+      () => {
+        console.log(`\n${chalk.bold(`${sources.length} source(s):`)}\n`);
+        for (const s of sources) {
+          const repo = s.githubRepo ? `${s.githubRepo.owner}/${s.githubRepo.repo}` : s.id;
+          console.log(`  ${chalk.cyan(repo)} ${chalk.dim(`(${s.name})`)}`);
+        }
+      },
+      { sources },
+    );
+  });
+
+// ---------- message ----------
+
+program
+  .command('message <sessionId> <text>')
+  .description('Send a follow-up message to a running Jules session')
+  .action(async (sessionId: string, text: string) => {
+    const { client } = getConfig();
+    try {
+      await client.sendMessage(sessionId, text);
+      emit(
+        () => console.log(chalk.green('✓ Message sent.') + chalk.dim(' Use `status` to check the response.')),
+        { ok: true, sessionId },
+      );
+    } catch (err) {
+      fail((err as Error).message, ExitCode.GENERIC);
+    }
+  });
+
+// ---------- plan ----------
+
+program
+  .command('plan <sessionId>')
+  .description('Show the latest generated plan for a session')
+  .action(async (sessionId: string) => {
+    const { client } = getConfig();
+    try {
+      const plan = await client.getLatestPlan(sessionId);
+      if (!plan) {
+        emit(
+          () => console.log(chalk.yellow('No plan generated yet for this session.')),
+          { plan: null },
+        );
+        return;
+      }
+      emit(
+        () => {
+          console.log(chalk.bold(`\nPlan ${plan.id}\n`));
+          for (const [i, step] of plan.steps.entries()) {
+            console.log(`  ${chalk.cyan(`${i + 1}.`)} ${step.title}`);
+            if (step.description) console.log(`     ${chalk.dim(step.description)}`);
+          }
+          console.log(chalk.dim(`\nApprove with: jules-dispatch approve ${sessionId}`));
+        },
+        { plan },
+      );
+    } catch (err) {
+      fail((err as Error).message, ExitCode.GENERIC);
+    }
+  });
+
+// ---------- approve ----------
+
+program
+  .command('approve <sessionId>')
+  .description('Approve the plan for a session waiting on plan approval')
+  .action(async (sessionId: string) => {
+    const { client } = getConfig();
+    try {
+      await client.approvePlan(sessionId);
+      emit(
+        () => console.log(chalk.green('✓ Plan approved.')),
+        { ok: true, sessionId },
+      );
+    } catch (err) {
+      fail((err as Error).message, ExitCode.GENERIC);
+    }
+  });
+
+// ---------- cancel ----------
+
+program
+  .command('cancel <sessionId>')
+  .description('Cancel a running Jules session')
+  .action(async (sessionId: string) => {
+    const { client } = getConfig();
+    try {
+      await client.cancelSession(sessionId);
+      emit(
+        () => console.log(chalk.green('✓ Session cancelled.')),
+        { ok: true, sessionId },
+      );
+    } catch (err) {
+      fail((err as Error).message, ExitCode.GENERIC);
+    }
+  });
+
+// ---------- tail ----------
+
+program
+  .command('tail <sessionId>')
+  .description('Tail activity log for a session in real time (until completion or Ctrl+C)')
+  .option('--interval <ms>', 'poll interval', '5000')
+  .action(async (sessionId: string, opts: { interval: string }) => {
+    const { client } = getConfig();
+    const interval = parseInt(opts.interval, 10);
+    const seen = new Set<string>();
+
+    info(chalk.dim(`Tailing ${sessionId} (Ctrl+C to stop)...\n`));
+
+    while (true) {
+      try {
+        const session = await client.getSession(sessionId);
+        const { activities } = await client.listActivities(sessionId, 30);
+
+        const newActs = activities.slice().reverse().filter(a => !seen.has(a.id));
+        for (const a of newActs) {
+          seen.add(a.id);
+          if (isJson()) {
+            process.stdout.write(JSON.stringify({ event: 'activity', activity: a }) + '\n');
+          } else {
+            const ts = a.createTime?.slice(11, 19) ?? '';
+            const who = a.originator === 'agent' ? chalk.cyan('agent') : chalk.magenta('user ');
+            let line = `${chalk.dim(ts)} ${who}`;
+            if (a.planGenerated) line += ` ${chalk.bold('plan generated')} (${a.planGenerated.plan.steps.length} steps)`;
+            else if (a.progressUpdated) line += ` ${a.progressUpdated.title}`;
+            else if (a.sessionCompleted) line += ` ${chalk.green('session completed')}`;
+            else if (a.sessionFailed) line += ` ${chalk.red('session failed:')} ${a.sessionFailed.message ?? ''}`;
+            else if (a.message?.text) line += ` ${chalk.dim(a.message.text.slice(0, 200))}`;
+            console.log(line);
+          }
+        }
+
+        const state = (session.state ?? '').toUpperCase();
+        if (['COMPLETED', 'FAILED', 'CANCELLED', 'CANCELED'].includes(state)) {
+          info(chalk.bold(`\nSession ended: ${state}`));
+          process.exit(state === 'COMPLETED' ? ExitCode.OK : ExitCode.GENERIC);
+        }
+      } catch (err) {
+        if (!isJson()) console.error(chalk.red(`Tail error: ${(err as Error).message}`));
+      }
+      await new Promise(r => setTimeout(r, interval));
+    }
+  });
+
+// ---------- plan-tasks (optional LLM planner) ----------
+
+program
+  .command('plan-tasks <description>')
+  .alias('plan-batch')
+  .description('[OPTIONAL] Use any OpenAI-compatible LLM to expand a high-level intent into N independent Jules tasks (does NOT dispatch). Use "-" to read description from stdin.')
+  .option('-n, --max <n>', 'maximum number of tasks to plan', '8')
+  .option('-s, --source <source>', 'override Jules source for generated tasks')
+  .option('-b, --branch <branch>', 'override branch for generated tasks')
+  .option('--context <text>', 'extra repo context to ground the planner (file tree, conventions, etc.)')
+  .option('--context-file <path>', 'read extra context from a file')
+  .option('-o, --output <file>', 'write generated tasks to a YAML file (multi-doc)')
+  .action(async (description: string, opts: { max: string; source?: string; branch?: string; context?: string; contextFile?: string; output?: string }) => {
+    const { planTasks, loadPlannerConfig } = await import('./planner.js');
+    const { stringify } = await import('yaml');
+    const { writeFileSync } = await import('node:fs');
+    const programOpts = program.opts() as { project: string; llmKey?: string; llmBaseUrl?: string; llmModel?: string };
+    const projectDir = resolve(programOpts.project);
+
+    // Side-effect: load .env so LLM_* vars are populated when not set in shell.
+    try { loadConfig(projectDir, { noExit: true }); } catch { /* JULES_API_KEY missing is ok for planning-only */ }
+
+    const desc = description === '-' ? readFileSync(0, 'utf8').trim() : description;
+    if (!desc) fail('Empty description', ExitCode.VALIDATION, 'EMPTY_DESC');
+
+    let context = opts.context;
+    if (opts.contextFile) context = readFileSync(resolve(opts.contextFile), 'utf8');
+
+    let plannerCfg;
+    try {
+      plannerCfg = loadPlannerConfig({
+        apiKeyOverride: programOpts.llmKey,
+        baseUrlOverride: programOpts.llmBaseUrl,
+        modelOverride: programOpts.llmModel,
+      });
+    } catch (err) {
+      fail((err as Error).message, ExitCode.AUTH, 'LLM_KEY_MISSING');
+    }
+
+    info(chalk.dim(`Planning with ${plannerCfg.model}...\n`));
+
+    let result;
+    try {
+      result = await planTasks(plannerCfg, {
+        description: desc,
+        source: opts.source,
+        branch: opts.branch,
+        maxTasks: parseInt(opts.max, 10),
+        context,
+      });
+    } catch (err) {
+      fail((err as Error).message, ExitCode.GENERIC, 'PLANNER_FAILED');
+    }
+
+    if (opts.output) {
+      const yamlOut = result.tasks.map(t => stringify(t)).join('---\n');
+      writeFileSync(resolve(opts.output), yamlOut);
+      info(chalk.green(`✓ Wrote ${result.tasks.length} task(s) to ${opts.output}\n`));
+    }
+
+    emit(
+      () => {
+        console.log(chalk.bold(`\n${result.tasks.length} task(s) planned by ${result.model}:\n`));
+        if (result.rationale) console.log(chalk.dim(`Rationale: ${result.rationale}\n`));
+        for (const [i, t] of result.tasks.entries()) {
+          console.log(`  ${chalk.cyan(`${i + 1}.`)} ${chalk.bold(t.title)}`);
+          const preview = t.prompt.split('\n')[0].slice(0, 100);
+          console.log(`     ${chalk.dim(preview)}${t.prompt.length > 100 ? '…' : ''}`);
+        }
+        if (result.usage?.totalTokens) {
+          console.log(chalk.dim(`\nTokens: ${result.usage.totalTokens} (in: ${result.usage.promptTokens}, out: ${result.usage.completionTokens})`));
+        }
+        if (!opts.output) {
+          console.log(chalk.dim('\nNext: pipe into dispatch, save with --output, or use `auto` to plan + dispatch in one shot.'));
+        }
+      },
+      result,
+    );
+  });
+
+// ---------- auto (plan + dispatch) ----------
+
+program
+  .command('auto <description>')
+  .description('[OPTIONAL] Plan tasks with any OpenAI-compatible LLM AND dispatch them to Jules in one shot. Use "-" for stdin.')
+  .option('-n, --max <n>', 'maximum number of tasks', '8')
+  .option('-s, --source <source>', 'override Jules source')
+  .option('-b, --branch <branch>', 'override branch')
+  .option('--context <text>', 'extra repo context')
+  .option('--context-file <path>', 'read extra context from a file')
+  .option('--parallel <n>', 'max parallel dispatches', '10')
+  .option('--dry-run', 'print planned tasks but do not dispatch', false)
+  .option('-y, --yes', 'skip confirmation prompt before dispatching', false)
+  .action(async (description: string, opts: { max: string; source?: string; branch?: string; context?: string; contextFile?: string; parallel: string; dryRun: boolean; yes: boolean }) => {
+    const { planTasks, loadPlannerConfig } = await import('./planner.js');
+    const { config, client } = getConfig();
+    const programOpts = program.opts() as { llmKey?: string; llmBaseUrl?: string; llmModel?: string };
+
+    const desc = description === '-' ? readFileSync(0, 'utf8').trim() : description;
+    if (!desc) fail('Empty description', ExitCode.VALIDATION, 'EMPTY_DESC');
+
+    let context = opts.context;
+    if (opts.contextFile) context = readFileSync(resolve(opts.contextFile), 'utf8');
+
+    let plannerCfg;
+    try {
+      plannerCfg = loadPlannerConfig({
+        apiKeyOverride: programOpts.llmKey,
+        baseUrlOverride: programOpts.llmBaseUrl,
+        modelOverride: programOpts.llmModel,
+      });
+    } catch (err) {
+      fail((err as Error).message, ExitCode.AUTH, 'LLM_KEY_MISSING');
+    }
+
+    info(chalk.dim(`Planning with ${plannerCfg.model}...\n`));
+
+    let plan;
+    try {
+      plan = await planTasks(plannerCfg, {
+        description: desc,
+        source: opts.source ?? config.defaultSource,
+        branch: opts.branch ?? config.defaultBranch,
+        maxTasks: parseInt(opts.max, 10),
+        context,
+      });
+    } catch (err) {
+      fail((err as Error).message, ExitCode.GENERIC, 'PLANNER_FAILED');
+    }
+
+    info(chalk.bold(`\nPlanned ${plan.tasks.length} task(s):\n`));
+    for (const [i, t] of plan.tasks.entries()) {
+      info(`  ${chalk.cyan(`${i + 1}.`)} ${chalk.bold(t.title)}`);
+    }
+
+    if (opts.dryRun) {
+      emit(() => info(chalk.yellow('\n--dry-run: not dispatching.')), { ...plan, dispatched: false });
+      return;
+    }
+
+    if (!opts.yes && !isJson() && process.stdin.isTTY) {
+      info(chalk.yellow(`\nDispatch all ${plan.tasks.length} task(s)? [y/N] `));
+      const answer = await new Promise<string>(r => {
+        process.stdin.once('data', d => r(d.toString().trim().toLowerCase()));
+      });
+      if (answer !== 'y' && answer !== 'yes') {
+        info(chalk.dim('Aborted.'));
+        process.exit(ExitCode.OK);
+      }
+    }
+
+    info(chalk.dim('\nDispatching...\n'));
+    const parallel = parseInt(opts.parallel, 10);
+    const results = [];
+    for (let i = 0; i < plan.tasks.length; i += parallel) {
+      const slice = plan.tasks.slice(i, i + parallel);
+      const r = await Promise.all(
+        slice.map(t => dispatchTaskDefinition(client, config, t, '<auto>')),
+      );
+      results.push(...r);
+    }
+
+    const dispatched = results.filter(r => r.status === 'dispatched');
+    const failed = results.filter(r => r.status === 'failed');
+
+    emit(
+      () => {
+        console.log(chalk.bold(`\n${dispatched.length}/${results.length} dispatched`));
+        for (const r of dispatched) {
+          console.log(`  ${chalk.green('✓')} ${r.title}  ${chalk.dim(r.sessionUrl)}`);
+        }
+        for (const r of failed) {
+          console.log(`  ${chalk.red('✗')} ${r.title}  ${chalk.red(r.error ?? '')}`);
+        }
+      },
+      { plan, results, summary: { total: results.length, dispatched: dispatched.length, failed: failed.length } },
+    );
+
+    if (failed.length > 0 && dispatched.length > 0) process.exit(ExitCode.PARTIAL);
+    if (failed.length > 0) process.exit(ExitCode.GENERIC);
+  });
+
+// ---------- mcp server ----------
+
+program
+  .command('mcp')
+  .description('Run as an MCP (Model Context Protocol) server over stdio for Claude Code / Codex')
+  .action(async () => {
+    // Lazy-import: the SDK is only loaded when actually running the MCP server,
+    // keeping CLI startup snappy.
+    const { runMcpServer } = await import('./mcp.js');
+    const opts = program.opts() as { project: string; apiKey?: string };
+    await runMcpServer({ projectDir: resolve(opts.project), apiKeyOverride: opts.apiKey });
+  });
+
+// ---------- error wrapping ----------
+
+process.on('unhandledRejection', (err) => {
+  emitError((err as Error)?.message ?? String(err), 'UNHANDLED');
+  process.exit(ExitCode.GENERIC);
+});
+
+program.parseAsync(process.argv).catch((err) => {
+  emitError((err as Error).message, 'CLI_ERROR');
+  process.exit(ExitCode.GENERIC);
+});

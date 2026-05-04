@@ -1,23 +1,117 @@
 # jules-dispatch 🚀
 
-> **Batch-dispatch tasks to [Google Jules](https://jules.google.com/) in parallel — and let AI agents like Claude or Codex run the whole show.**
+> **Batch-dispatch tasks to [Google Jules](https://jules.google.com/) in parallel — and use it as an MCP tool inside [Claude Code](https://docs.anthropic.com/en/docs/claude-code) or [OpenAI Codex CLI](https://github.com/openai/codex).**
 
-[![npm version](https://img.shields.io/badge/npm-1.0.0-blue)](https://www.npmjs.com/package/jules-dispatch)
+[![npm version](https://img.shields.io/badge/npm-1.2.0-blue)](https://www.npmjs.com/package/jules-dispatch)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue?logo=typescript)](https://www.typescriptlang.org/)
+[![MCP](https://img.shields.io/badge/MCP-server-purple)](https://modelcontextprotocol.io/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
+
+🌐 **Languages**: **English** · [简体中文](README.zh-CN.md)
+
+<p align="center">
+  <img src="docs/banner.png" alt="jules-dispatch banner — one orchestrator AI fanning out tasks to many parallel Jules workers, each producing a PR" width="100%" />
+</p>
 
 ---
 
 ## What Is This?
 
-**jules-dispatch** is a CLI + library that talks directly to the [Google Jules API](https://jules.google.com/) and lets you:
+**jules-dispatch** is a CLI **and** an [MCP server](https://modelcontextprotocol.io/) for the [Google Jules API](https://jules.google.com/) that lets you:
 
 - Fire off **10–100 Jules coding sessions in parallel** with a single command
-- Define tasks as simple **YAML files** — title, repo, branch, and a prompt
-- **Poll for completion** and collect generated PR links automatically
-- Let another AI (Claude, Codex, Gemini…) **act as the orchestrator** and dispatch the sub-tasks to Jules
+- Define tasks as simple **YAML files** — title, repo, branch, prompt
+- **Poll for completion** and collect generated PR links
+- Approve plans, send follow-up messages, cancel runaway sessions, tail live activity
+- Plug into **Claude Code** or **Codex** as an MCP server — your AI assistant calls Jules as a tool
 
-It turns Jules from a "one task at a time" tool into a **massively parallel coding workforce**.
+It turns Jules from a "one task at a time" tool into a **massively parallel coding workforce**, controlled by either humans on the CLI or other AIs over MCP.
+
+---
+
+## 🏗 How It Works
+
+```mermaid
+flowchart LR
+    O["🧠 Orchestrator<br/>(Claude / Codex / you)"]
+    O -->|writes| T["📄 tasks/*.yaml"]
+    T --> D["⚡ jules-dispatch batch"]
+    D -->|parallel| J1["🤖 Jules #1"]
+    D -->|parallel| J2["🤖 Jules #2"]
+    D -->|parallel| J3["🤖 Jules #3"]
+    D -->|parallel| J4["🤖 Jules #N"]
+    J1 --> P1["🔀 PR #1"]
+    J2 --> P2["🔀 PR #2"]
+    J3 --> P3["🔀 PR #3"]
+    J4 --> P4["🔀 PR #N"]
+
+    classDef orch fill:#7c3aed,stroke:#5b21b6,color:#fff
+    classDef tool fill:#0891b2,stroke:#0e7490,color:#fff
+    classDef worker fill:#f59e0b,stroke:#b45309,color:#fff
+    classDef pr fill:#10b981,stroke:#047857,color:#fff
+    class O orch
+    class D tool
+    class J1,J2,J3,J4 worker
+    class P1,P2,P3,P4 pr
+```
+
+---
+
+## ✨ What's New in 1.2 — Optional AI Task Planning (BYO LLM)
+
+> **Entirely optional.** All core commands work without any LLM key. Skip this section if you only want raw dispatch.
+
+Stop hand-writing task YAML. Give jules-dispatch **one sentence** and let an LLM expand it into N parallel Jules sessions.
+
+```bash
+$ jules-dispatch auto "Migrate every Express route to Fastify and add request-validation tests"
+
+Planning with gpt-4o-mini...
+
+Planned 6 task(s):
+  1. Migrate auth routes (/api/auth/*) to Fastify
+  2. Migrate user routes (/api/users/*) to Fastify
+  3. Migrate billing routes (/api/billing/*) to Fastify
+  4. Replace Express middleware with Fastify hooks
+  5. Update server bootstrap to use Fastify instance
+  6. Add Vitest request-validation tests for all migrated routes
+
+Dispatch all 6 task(s)? [y/N]
+```
+
+**Bring your own LLM** — works with any OpenAI-compatible `/chat/completions` endpoint:
+
+| Provider | `LLM_BASE_URL` | Example `LLM_MODEL` |
+|---|---|---|
+| **OpenAI** (default) | *(omit — defaults to `https://api.openai.com/v1`)* | `gpt-4o-mini`, `gpt-4o`, `o3-mini` |
+| **OpenRouter** | `https://openrouter.ai/api/v1` | `openrouter/auto`, `anthropic/claude-opus-4.7` |
+| **Ollama** (local, free) | `http://localhost:11434/v1` | `llama3.1`, `qwen2.5-coder:32b` |
+| **Groq** | `https://api.groq.com/openai/v1` | `llama-3.3-70b-versatile` |
+| **Together / Fireworks / DeepInfra / vLLM / LiteLLM / Azure OpenAI** | *(their endpoint)* | *(their model id)* |
+
+Configure via env vars (`LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL`) or per-invocation flags (`--llm-key`, `--llm-base-url`, `--llm-model`). `OPENAI_API_KEY` and `OPENROUTER_API_KEY` are also recognised as fallbacks.
+
+| Command / Tool | What it does |
+|---|---|
+| `jules-dispatch plan-tasks "<intent>"` | Plan only — print or write tasks to a YAML file |
+| `jules-dispatch auto "<intent>"` | Plan + dispatch in one shot (with confirmation) |
+| MCP `jules_plan_tasks` | Same planning, exposed to Claude Code / Codex *(only registered if an LLM key is configured)* |
+| MCP `jules_auto` | One-shot plan + dispatch *(only registered if an LLM key is configured)* |
+
+---
+
+## ✨ What's New in 1.1
+
+- 🧰 **MCP server** (`jules-dispatch mcp`) — 12 tools exposed to Claude Code, Codex, or any MCP-compatible client
+- 🤖 **`--json` mode** — machine-readable output on every command for AI agents and shell pipelines
+- ✅ **Plan approval workflow** — `plan`, `approve` commands + `requirePlanApproval: true` task option
+- 📡 **Live tailing** — `tail <id>` streams activity events as they happen
+- ❌ **Cancel sessions** — `cancel <id>` aborts runaway runs
+- 🔍 **Direct lookup** — `get <id>`, `status --ids` no longer limited to the recent page
+- 🛡️ **Real failure detection** — uses session.state, fails fast, distinct exit codes
+- ⚡ **Smart retries** — exponential backoff with jitter, honours `Retry-After`
+- 📥 **Stdin input** — `dispatch -` reads YAML/JSON from a pipe
+- 🔑 **`--api-key` flag** — pass keys per-invocation, no .env required
 
 ---
 
@@ -26,78 +120,103 @@ It turns Jules from a "one task at a time" tool into a **massively parallel codi
 | Feature | Details |
 |---|---|
 | ⚡ Parallel dispatch | Saturate Jules with N sessions at once (`--parallel 20`) |
-| 📋 YAML task files | Human-readable, git-committable task definitions |
-| 🔄 Status polling | Wait for sessions + auto-detect created PRs |
-| 💬 Follow-up messages | Send new instructions to a running session |
-| 🤖 AI-orchestrator friendly | Claude / Codex generate the YAML, you run `batch` |
-| 📝 Dispatch logs | JSON log of every session ID for auditing |
+| 📋 YAML task files | Multi-document YAML supported (`---` separators) |
+| 🔄 Status polling | Auto-detects PRs, plan approvals, failures |
+| 💬 Plan & message control | Approve plans, send follow-up messages, cancel sessions |
+| 🤖 MCP server | Drop into Claude Code or Codex as a tool |
+| 📦 Structured output | `--json` mode for clean piping into agents and scripts |
+| 📝 Dispatch logs | JSON audit trail of every dispatch run |
 
 ---
 
-## 🏗 How It Works
+## 🤖 Use Inside Claude Code or Codex (MCP)
 
+The MCP server exposes Jules as a set of tools your coding AI can call directly.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor U as 👤 You
+    participant CC as 💬 Claude Code / Codex
+    participant MCP as ⚡ jules-dispatch (MCP)
+    participant J as ☁️ Google Jules
+
+    U->>CC: "Add tests to 5 modules"
+    CC->>MCP: jules_dispatch_batch(tasks)
+    MCP->>J: POST /sessions × 5
+    J-->>MCP: 5 session IDs
+    MCP-->>CC: {dispatched: 5}
+
+    CC->>MCP: jules_wait_for_completion(ids)
+    loop poll until done
+        MCP->>J: GET /sessions/{id}
+    end
+    MCP-->>CC: {completed: [...]}
+
+    CC->>MCP: jules_status(ids)
+    MCP-->>CC: {prUrls: [...]}
+    CC-->>U: ✅ "Done. PRs: #42, #43, #44, #45, #46"
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                      Your Workflow                          │
-│                                                             │
-│  Claude / Codex                                             │
-│  ┌──────────────┐                                           │
-│  │ 1. Analyse   │  "Break this epic into 10 sub-tasks"      │
-│  │    the epic  │                                           │
-│  │ 2. Write     │──► tasks/01-auth.yaml                     │
-│  │    task YAMLs│    tasks/02-payments.yaml                 │
-│  │              │    tasks/03-notifications.yaml  …         │
-│  └──────────────┘                                           │
-│         │                                                   │
-│         ▼                                                   │
-│  jules-dispatch batch tasks/ --parallel 10                  │
-│         │                                                   │
-│         ▼                                                   │
-│  ┌──────┬──────┬──────┬──────┐                              │
-│  │Jules │Jules │Jules │Jules │  … all running in parallel   │
-│  │  #1  │  #2  │  #3  │  #4  │                              │
-│  └──┬───┴──┬───┴──┬───┴──┬───┘                              │
-│     │      │      │      │                                  │
-│     ▼      ▼      ▼      ▼                                  │
-│   PR #1  PR #2  PR #3  PR #4   ← auto-created in GitHub     │
-└─────────────────────────────────────────────────────────────┘
+
+### Install for Claude Code
+
+```bash
+npm install -g jules-dispatch
 ```
 
+Add to `~/.config/claude-code/mcp.json` (or use `claude mcp add`):
+
+```json
+{
+  "mcpServers": {
+    "jules-dispatch": {
+      "command": "jules-dispatch",
+      "args": ["--project", "/path/to/your/project", "mcp"],
+      "env": {
+        "JULES_API_KEY": "your-api-key-here",
+        "JULES_DEFAULT_SOURCE": "sources/github/owner/repo",
+        "JULES_DEFAULT_BRANCH": "main"
+      }
+    }
+  }
+}
+```
+
+Then in Claude Code: *"Dispatch 5 Jules tasks to add tests to the auth, payments, users, sessions, and audit modules."* — Claude calls `jules_dispatch_batch` and reports back the session IDs.
+
+### Install for OpenAI Codex CLI
+
+Add to `~/.codex/config.toml`:
+
+```toml
+[mcp_servers.jules-dispatch]
+command = "jules-dispatch"
+args = ["--project", "/path/to/your/project", "mcp"]
+env = { JULES_API_KEY = "your-api-key-here", JULES_DEFAULT_SOURCE = "sources/github/owner/repo" }
+```
+
+### MCP Tools Exposed
+
+| Tool | What it does |
+|---|---|
+| `jules_list_sources` | List GitHub repos connected to Jules |
+| `jules_dispatch_task` | Create one Jules session |
+| `jules_dispatch_batch` | Create N sessions in parallel (accepts array or YAML/JSON string) |
+| `jules_get_session` | Full session details (state, PR, etc.) |
+| `jules_list_sessions` | Recent sessions, paginated |
+| `jules_status` | Compact status summary for a list of session IDs |
+| `jules_list_activities` | Activity log for a session |
+| `jules_get_plan` | Latest generated plan (steps + descriptions) |
+| `jules_approve_plan` | Approve a pending plan |
+| `jules_send_message` | Send a follow-up message to a running session |
+| `jules_cancel_session` | Cancel a running session |
+| `jules_wait_for_completion` | Block until N sessions finish (or timeout) |
+
+All tool outputs are JSON; errors are returned as MCP `isError` results with `{message, status, name}`.
+
 ---
 
-## 🎯 Use Cases
-
-### 1. AI-Orchestrated Parallel Development (the killer use case)
-
-Give your Claude / Codex / Gemini agent this tool and tell it:
-
-> *"Split this 2-week epic into independent sub-tasks, write a `tasks/` folder with one YAML per task, then run `jules-dispatch batch tasks/`."*
-
-The orchestrating AI decomposes the work → **Jules agents execute everything in parallel** → PRs appear in GitHub.
-
-### 2. One-Shot Project Bootstrapping
-
-Going from zero to a full project skeleton? Write 10 task YAMLs (schema, seed data, API, tests, docs, CI…) and dispatch them all at once. Jules creates a PR for each piece.
-
-### 3. Bulk Documentation / Research
-
-Need 20 pages of technical documentation written? One task file per page, one `batch` command. Jules researches and writes them all concurrently.
-
-### 4. Codebase-Wide Refactors
-
-Breaking a monolith into services, or migrating from one library to another? Scope each migration unit as a task. Jules works on all of them in parallel on separate branches.
-
-### 5. Automated QA Expansion
-
-Describe each module that needs tests as a task YAML. Run `batch`. Jules writes and commits the test suites. You review the PRs.
-
-### 6. Scheduled / CI-Driven Automation
-
-Drop `jules-dispatch batch tasks/nightly/` into a GitHub Actions cron job. Night runs spawn Jules sessions, morning brings you fresh PRs.
-
----
-
-## 🚀 Quick Start
+## 🚀 Quick Start (Plain CLI)
 
 ### Prerequisites
 
@@ -120,7 +239,6 @@ cp .env.example .env
 ```
 
 ```env
-# .env
 JULES_API_KEY=your-api-key-here
 JULES_DEFAULT_SOURCE=sources/github/YOUR_ORG/YOUR_REPO
 JULES_DEFAULT_BRANCH=main
@@ -135,39 +253,25 @@ title: "Add Dark Mode Support"
 prompt: |
   Add a dark mode toggle to the React app:
   1. Add a ThemeContext with light/dark state
-  2. Wrap App with ThemeProvider in index.tsx
-  3. Add a toggle button in the Header component
-  4. Store preference in localStorage
-  5. Apply CSS variables for the dark theme
-  6. Commit and open a PR
+  2. Wrap App with ThemeProvider
+  3. Add a toggle button in the Header
+  4. Persist preference in localStorage
+  5. Open a PR
 ```
 
 ### 4. Dispatch it
 
 ```bash
-npx tsx src/cli.ts dispatch tasks/add-dark-mode.yaml
+jules-dispatch dispatch tasks/add-dark-mode.yaml
 # ✓ Add Dark Mode Support
 #   Session: https://jules.google.com/session/abc123
+#   ID:      abc123
 ```
 
 ### 5. Or batch-dispatch everything at once
 
 ```bash
-npx tsx src/cli.ts batch tasks/ --parallel 10
-# Dispatching 8 tasks...
-#
-#   ✓ Add Dark Mode Support
-#     https://jules.google.com/session/abc123
-#   ✓ Fix Login Bug
-#     https://jules.google.com/session/def456
-#   ✓ Write API Docs
-#     https://jules.google.com/session/ghi789
-#   …
-#
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-#  Dispatched: 8, Failed: 0
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# Dispatch log: .dispatch-logs/dispatch-2025-05-01T12-00-00.json
+jules-dispatch batch tasks/ --parallel 10
 ```
 
 ---
@@ -179,128 +283,122 @@ npx tsx src/cli.ts batch tasks/ --parallel 10
 | Flag | Default | Description |
 |---|---|---|
 | `-p, --project <dir>` | `.` | Directory containing your `.env` file |
+| `--api-key <key>` |   | Jules API key (overrides `JULES_API_KEY`) |
+| `--json` | off | Machine-readable output. NDJSON for streaming commands. |
 
----
+### Commands
 
-### `dispatch <taskFile>`
-
-Dispatch a single task file.
-
-```bash
-npx tsx src/cli.ts dispatch tasks/my-task.yaml
-npx tsx src/cli.ts dispatch tasks/my-task.yaml --source sources/github/org/other-repo --branch develop
-```
-
-| Flag | Description |
+| Command | What it does |
 |---|---|
-| `-s, --source <source>` | Override the GitHub source |
-| `-b, --branch <branch>` | Override the target branch |
+| `dispatch <taskFile>` | Dispatch a single task. Use `-` to read from stdin. |
+| `plan-tasks <description>` | Use OpenRouter LLM to expand an intent into N task drafts (no dispatch) |
+| `auto <description>` | LLM-plan + dispatch in one shot (with confirmation) |
+| `batch [taskDir]` | Dispatch all `.yaml`/`.yml`/`.json` files in a directory |
+| `status` | Summary of recent sessions (or specific `--ids`) |
+| `get <sessionId>` | Full details of one session |
+| `wait <ids...>` | Poll until sessions finish (or timeout) |
+| `tail <sessionId>` | Live-stream activity events for a session |
+| `plan <sessionId>` | Show the most recent generated plan |
+| `approve <sessionId>` | Approve a pending plan |
+| `message <sessionId> <text>` | Send a follow-up message |
+| `cancel <sessionId>` | Cancel a running session |
+| `sources` | List connected GitHub repos (auto-paginates) |
+| `mcp` | Run as an MCP server over stdio |
+
+### Exit codes (for shell scripts and agents)
+
+| Code | Meaning |
+|---|---|
+| `0` | Success |
+| `1` | Generic error |
+| `2` | Auth / config error (missing API key) |
+| `3` | Validation error (bad task file, bad args) |
+| `4` | Partial failure (some `batch` tasks failed) |
+| `5` | Timeout (`wait` ran out of time) |
+
+### `dispatch` examples
+
+```bash
+# Override repo/branch
+jules-dispatch dispatch tasks/my-task.yaml \
+  --source sources/github/org/other-repo --branch develop
+
+# Read from stdin
+echo 'title: Quick fix\nprompt: Fix typo in README' | jules-dispatch dispatch -
+
+# JSON output (great for piping)
+jules-dispatch dispatch tasks/my-task.yaml --json | jq -r '.sessionId'
+```
+
+### `batch` examples
+
+```bash
+jules-dispatch batch tasks/                       # default tasks/ dir
+jules-dispatch batch tasks/ --parallel 20         # 20 concurrent
+jules-dispatch batch tasks/ --no-log              # don't write dispatch log
+jules-dispatch batch tasks/ --json                # one JSON summary at the end
+```
+
+### `wait` example
+
+```bash
+# Chain dispatch → wait via JSON output:
+ID=$(jules-dispatch dispatch tasks/x.yaml --json | jq -r '.sessionId')
+jules-dispatch wait "$ID" --interval 10000 --timeout 1800000
+```
+
+### `tail` example
+
+```bash
+jules-dispatch tail abc123                        # human-readable stream
+jules-dispatch tail abc123 --json                 # NDJSON event stream
+```
 
 ---
 
-### `batch [taskDir]`
+## 🔄 Session Lifecycle
 
-Dispatch all `.yaml` / `.yml` / `.json` files in a directory.
+jules-dispatch tracks every Jules session through its full lifecycle and surfaces each state through the CLI / MCP:
 
-```bash
-npx tsx src/cli.ts batch tasks/
-npx tsx src/cli.ts batch tasks/ --parallel 20
-npx tsx src/cli.ts batch tasks/ --source sources/github/org/repo --branch feature/my-branch
+```mermaid
+stateDiagram-v2
+    [*] --> PENDING
+    PENDING --> RUNNING
+    RUNNING --> AWAITING_PLAN_APPROVAL: requirePlanApproval = true
+    AWAITING_PLAN_APPROVAL --> RUNNING: approve
+    AWAITING_PLAN_APPROVAL --> CANCELLED: cancel
+    RUNNING --> COMPLETED: success ✓
+    RUNNING --> FAILED: error ✗
+    RUNNING --> CANCELLED: cancel
+    COMPLETED --> [*]
+    FAILED --> [*]
+    CANCELLED --> [*]
 ```
 
-| Flag | Default | Description |
+| State | CLI command | MCP tool |
 |---|---|---|
-| `-s, --source <source>` | from `.env` | Override source for all tasks |
-| `-b, --branch <branch>` | from `.env` | Override branch for all tasks |
-| `-n, --parallel <n>` | `10` | Max concurrent Jules sessions |
-
----
-
-### `status`
-
-Check the status of recent Jules sessions and see which PRs were created.
-
-```bash
-npx tsx src/cli.ts status
-npx tsx src/cli.ts status --ids SESSION_ID1 SESSION_ID2
-npx tsx src/cli.ts status --output report.json
-```
-
-Sample output:
-```
-Status: 3 completed, 2 running
-
-Completed:
-  ✓ Add Dark Mode Support
-    PR: https://github.com/org/repo/pull/42
-  ✓ Fix Login Bug
-    PR: https://github.com/org/repo/pull/43
-
-Running:
-  ○ Write API Docs — Generating documentation…
-    https://jules.google.com/session/ghi789
-```
-
----
-
-### `wait [ids...]`
-
-Poll until the specified sessions finish (or timeout is reached).
-
-```bash
-npx tsx src/cli.ts wait SESSION_ID1 SESSION_ID2
-npx tsx src/cli.ts wait SESSION_ID1 --interval 15000 --timeout 1800000
-```
-
-| Flag | Default | Description |
-|---|---|---|
-| `--interval <ms>` | `30000` | Poll interval in milliseconds |
-| `--timeout <ms>` | `600000` | Max wait time in milliseconds |
-
----
-
-### `message <sessionId> <text>`
-
-Send a follow-up instruction to a running Jules session.
-
-```bash
-npx tsx src/cli.ts message SESSION_ID "Also add unit tests for the new functions."
-```
-
----
-
-### `sources`
-
-List all GitHub repositories connected to your Jules account.
-
-```bash
-npx tsx src/cli.ts sources
-# 3 sources:
-#   myorg/frontend
-#   myorg/backend
-#   myorg/docs
-```
+| `AWAITING_PLAN_APPROVAL` | `plan` / `approve` | `jules_get_plan` / `jules_approve_plan` |
+| `RUNNING` | `tail` / `message` | `jules_list_activities` / `jules_send_message` |
+| `COMPLETED` | `get` / `status` | `jules_get_session` / `jules_status` |
+| `FAILED` / `CANCELLED` | `cancel` | `jules_cancel_session` |
 
 ---
 
 ## 📄 Task File Format
 
-Tasks are plain YAML (or JSON). Fields:
-
 ```yaml
 title: "Human-readable task name"           # required
 prompt: |                                   # required
   Detailed instructions for Jules.
-  Can be multi-line. The more specific,
-  the better the output.
+  The more specific, the better the output.
 
 source: "sources/github/owner/repo"         # optional — overrides .env default
 branch: "main"                              # optional — overrides .env default
 autoMode: "AUTO_CREATE_PR"                  # optional — AUTO_CREATE_PR | NONE
-requirePlanApproval: false                  # optional — pause and wait for plan OK
+requirePlanApproval: false                  # optional — pause for plan OK
 ```
 
-**Multiple tasks in one file** using YAML `---` separators:
+**Multiple tasks in one file** (YAML `---` separators):
 
 ```yaml
 title: "Task 1"
@@ -308,45 +406,30 @@ prompt: "Do thing A"
 ---
 title: "Task 2"
 prompt: "Do thing B"
----
-title: "Task 3"
-prompt: "Do thing C"
 ```
 
-**JSON format** also supported:
+JSON also works:
 
 ```json
-{
-  "title": "Fix the thing",
-  "prompt": "Find the bug in src/auth.ts and fix it."
-}
+{ "title": "Fix the thing", "prompt": "Find the bug in src/auth.ts and fix it." }
 ```
 
 ---
 
-## 🤖 Using with Claude / Codex as Orchestrator
+## 🤖 AI-Orchestrated Parallel Development
 
-The real power of jules-dispatch comes from combining it with a coding AI that can generate the task files.
+The killer use case: combine jules-dispatch with **Claude Code** or **Codex**.
 
-**Example prompt to Claude:**
+> *"I have a Node.js backend that needs to be migrated from Express to Fastify. Analyse the codebase, split the work into independent migration units, and dispatch them all to Jules in parallel using the jules-dispatch MCP tools. Then poll for completion and report back the PR URLs."*
 
-```
-I have a Node.js backend that needs to be migrated from Express to Fastify.
-The repo is at sources/github/myorg/backend, branch main.
+With the MCP server installed, your assistant will:
 
-Please:
-1. Analyze the codebase and identify the independent migration units
-2. Create a tasks/ directory with one YAML file per unit
-3. Each YAML should have a clear title and detailed step-by-step prompt
-4. Make sure the tasks can run in parallel (no shared state conflicts)
-5. Then run: npx tsx src/cli.ts batch tasks/ --parallel 8
-```
+1. Analyse your codebase
+2. Call `jules_dispatch_batch` with N task definitions
+3. Call `jules_wait_for_completion` to block until they finish
+4. Call `jules_status` to extract the PR URLs
 
-Claude (or Codex) will:
-1. Read the codebase
-2. Write `tasks/01-migrate-routes.yaml`, `tasks/02-migrate-middleware.yaml`, etc.
-3. Execute the batch dispatch command
-4. Jules handles all the actual code changes in parallel
+You get **N parallel coding agents** orchestrated by **one strategic agent**, hands-free.
 
 ---
 
@@ -355,17 +438,17 @@ Claude (or Codex) will:
 ```
 jules-dispatch/
 ├── src/
-│   ├── cli.ts          CLI entry point (Commander)
-│   ├── client.ts       Jules REST API client
+│   ├── cli.ts          CLI entry (Commander)
+│   ├── client.ts       Jules REST client (retries, pagination)
 │   ├── config.ts       .env + task file loading
-│   ├── dispatcher.ts   Single and batch task dispatch
-│   ├── collector.ts    Status polling and completion waiting
-│   └── types.ts        TypeScript type definitions
-├── tasks/
-│   ├── example.yaml    Starter task example
-│   └── *.yaml          Your task definitions live here
+│   ├── dispatcher.ts   Task dispatch logic
+│   ├── collector.ts    Status polling & wait
+│   ├── output.ts       Text vs JSON output mode
+│   ├── mcp.ts          MCP server (stdio transport)
+│   └── types.ts        TypeScript types
+├── tasks/              Your task YAMLs live here
 ├── .env.example        Environment variable template
-└── .dispatch-logs/     Auto-created — JSON logs of every dispatch run
+└── .dispatch-logs/     JSON audit trail
 ```
 
 ---
@@ -375,9 +458,9 @@ jules-dispatch/
 ```bash
 npm install
 npm run build     # compile TypeScript → dist/
-npm run dev       # run CLI directly with tsx (no build step)
-npm run lint      # ESLint
-npm run test      # Vitest
+npm run dev       # run CLI directly with tsx
+npm run lint
+npm run test
 ```
 
 ---
@@ -385,12 +468,6 @@ npm run test      # Vitest
 ## 📜 License
 
 MIT — see [LICENSE](LICENSE)
-
----
-
-## 🌟 Star History
-
-If this project saves you time, please ⭐ star it — it helps others discover it!
 
 ---
 

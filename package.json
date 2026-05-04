@@ -1,7 +1,7 @@
 {
   "name": "jules-dispatch",
-  "version": "1.0.0",
-  "description": "Batch dispatch tasks to Google Jules API and collect results locally for review",
+  "version": "1.2.0",
+  "description": "Batch dispatch to Google Jules + MCP server for Claude Code & Codex, with OpenRouter-powered task planning",
   "type": "module",
   "bin": {
     "jules-dispatch": "./dist/cli.js"
@@ -13,12 +13,15 @@
     "test": "vitest"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "chalk": "^5.3.0",
     "commander": "^12.0.0",
     "dotenv": "^16.4.0",
-    "yaml": "^2.4.0"
+    "yaml": "^2.4.0",
+    "zod": "^4.4.2"
   },
   "devDependencies": {
+    "@replit/connectors-sdk": "^0.4.0",
     "@types/node": "^20.0.0",
     "tsx": "^4.7.0",
     "typescript": "^5.4.0",
