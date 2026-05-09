@@ -1,3 +1,4 @@
+import { debug, timed, verbose } from './log.js';
 import type { JulesConfig, JulesSession, JulesActivity, JulesPlan } from './types.js';
 
 const BASE_URL = 'https://jules.googleapis.com/v1alpha';
@@ -19,12 +20,23 @@ export class JulesClient {
 
   private async request<T>(path: string, options?: RequestInit, retries = MAX_RETRIES): Promise<T> {
     const url = `${BASE_URL}${path}`;
+    const method = options?.method ?? 'GET';
     const headers: Record<string, string> = { 'X-Goog-Api-Key': this.apiKey };
     if (options?.body) headers['Content-Type'] = 'application/json';
 
-    const res = await fetch(url, { ...options, headers });
+    verbose(`→ ${method} ${path}`);
+    debug('request', {
+      url,
+      method,
+      body: options?.body ? String(options.body).slice(0, 500) : undefined,
+    });
+
+    const res = await timed(`${method} ${path}`, () => fetch(url, { ...options, headers }));
+
+    verbose(`← ${res.status} ${method} ${path}`);
 
     if ((res.status === 429 || res.status >= 500) && retries > 0) {
+      debug('retrying', { status: res.status, retriesLeft: retries - 1 });
       const retryAfter = res.headers.get('retry-after');
       const attempt = MAX_RETRIES - retries;
       const expBackoff = BASE_DELAY_MS * Math.pow(2, attempt);
@@ -38,6 +50,7 @@ export class JulesClient {
 
     if (!res.ok) {
       const body = await res.text();
+      debug('error response', { status: res.status, body: body.slice(0, 300) });
       const err = new Error(`Jules API ${res.status} at ${path}: ${body.slice(0, 400)}`) as Error & { status?: number };
       err.status = res.status;
       throw err;

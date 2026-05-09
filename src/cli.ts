@@ -9,6 +9,7 @@ import { JulesClient } from './client.js';
 import { dispatchTask, dispatchBatch, dispatchTaskDefinition } from './dispatcher.js';
 import { collectStatus, waitForCompletion } from './collector.js';
 import { setOutputMode, isJson, emit, emitError, info, ExitCode } from './output.js';
+import { setVerbose } from './log.js';
 
 const program = new Command();
 
@@ -22,9 +23,11 @@ program
   .option('--llm-base-url <url>', '[optional planner] OpenAI-compatible base URL (default: https://api.openai.com/v1)')
   .option('--llm-model <model>', '[optional planner] model id (default: gpt-4o-mini)')
   .option('--json', 'machine-readable JSON output (one JSON object per command, NDJSON for streams)', false)
+  .option('-V, --verbose', 'log HTTP requests, timing, and error stacks to stderr (or set JULES_DISPATCH_VERBOSE=1)')
   .hook('preAction', (thisCommand) => {
-    const opts = thisCommand.opts() as { json?: boolean };
+    const opts = thisCommand.opts() as { json?: boolean; verbose?: boolean };
     if (opts.json) setOutputMode('json');
+    if (opts.verbose) setVerbose(true);
   });
 
 function getConfig(): { config: ReturnType<typeof loadConfig>; client: JulesClient } {
