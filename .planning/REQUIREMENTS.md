@@ -51,20 +51,20 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| MCP-09 | TBD | — |
-| MCP-10 | TBD | — |
-| MCP-11 | TBD | — |
-| POLL-01 | TBD | — |
-| DEP-01 | TBD | — |
-| DOC-01 | TBD | — |
-| DOC-02 | TBD | — |
-| DOC-03 | TBD | — |
+| MCP-09 | Phase 11 | Pending |
+| MCP-10 | Phase 11 | Pending |
+| MCP-11 | Phase 14 | Pending |
+| POLL-01 | Phase 12 | Pending |
+| DEP-01 | Phase 13 | Pending |
+| DOC-01 | Phase 15 | Pending |
+| DOC-02 | Phase 15 | Pending |
+| DOC-03 | Phase 15 | Pending |
 
 **Coverage:**
 - v2 requirements: 8 total
-- Mapped to phases: 0 (pending roadmap)
-- Unmapped: 8
+- Mapped to phases: 8
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-05-11*
-*Last updated: 2026-05-11 after v2 milestone scoping*
+*Last updated: 2026-05-11 after v2 roadmap creation*

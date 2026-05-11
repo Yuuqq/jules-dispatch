@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-05-11)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 11 (MCP Response Helpers & Consolidated Tool Tests)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-05-11 — Milestone v2 started
+Status: Roadmap defined, ready for planning
+Last activity: 2026-05-11 — v2 roadmap created
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [░░░░░░░░░░] 0% (0/5 v2 phases)
 
 ## Accumulated Context
 
@@ -25,6 +25,7 @@ Progress: [░░░░░░░░░░] 0%
 - 14 MCP tools: 3 consolidated + 11 legacy (7 deprecated)
 - cli-table3 for status table rendering
 - Watch mode with SIGINT handler and auto-exit on terminal states
+- v2 phases: test first (11), then dedup (12), then refactor (13), then verify refactor (14), independent doctor (15)
 
 ### Blockers/Concerns
 
@@ -33,5 +34,6 @@ None.
 ## Session Continuity
 
 Last session: 2026-05-11
-Stopped at: v2 requirements definition
-Resume file: None
+Stopped at: v2 roadmap created
+Resume file: `.planning/ROADMAP.md`
+Next action: `/gsd-plan-phase 11`
