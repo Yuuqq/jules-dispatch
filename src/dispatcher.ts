@@ -106,6 +106,14 @@ export async function dispatchBatch(
 
   for (let i = 0; i < allTasks.length; i += parallel) {
     const batch = allTasks.slice(i, i + parallel);
+
+    if (!isJson()) {
+      for (let j = 0; j < batch.length; j++) {
+        const idx = i + j + 1;
+        process.stdout.write(`[${idx}/${allTasks.length}] ${batch[j].task.title}... `);
+      }
+    }
+
     const batchResults = await Promise.all(
       batch.map(({ file, task }) =>
         dispatchTaskDefinition(client, config, task, file, options),
@@ -116,13 +124,19 @@ export async function dispatchBatch(
     if (!isJson()) {
       for (const r of batchResults) {
         if (r.status === 'dispatched') {
-          console.log(`  ${chalk.green('✓')} ${chalk.bold(r.title)}`);
-          if (r.sessionUrl) console.log(`    ${chalk.dim(r.sessionUrl)}`);
+          console.log(chalk.green('dispatched'));
         } else {
-          console.log(`  ${chalk.red('✗')} ${chalk.bold(r.title)}`);
-          if (r.error) console.log(`    ${chalk.red('Error:')} ${r.error}`);
+          console.log(chalk.red(`failed (${r.error ?? 'unknown'})`));
         }
       }
+
+      const done = results.filter(r => r.status === 'dispatched').length;
+      const failed = results.filter(r => r.status === 'failed').length;
+      const pending = allTasks.length - results.length;
+      const parts = [chalk.green(`DONE ${done}`)];
+      if (failed > 0) parts.push(chalk.red(`FAILED ${failed}`));
+      if (pending > 0) parts.push(chalk.dim(`PENDING ${pending}`));
+      console.log(`  ${parts.join(' | ')}`);
     }
   }
 

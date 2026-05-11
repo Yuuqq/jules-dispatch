@@ -12,16 +12,16 @@ Incremental optimization of a working CLI/MCP server. The journey starts with ha
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Status Derivation Testing** - Unit tests for deriveStatus() covering all session states
-- [ ] **Phase 2: Retry & Network Resilience** - Test and fix retry logic including network-level fetch errors
-- [ ] **Phase 3: Collector Error Surfacing** - Replace silent error swallowing with logged, surfaced errors
-- [ ] **Phase 4: Batch Dispatch Testing** - Unit tests for chunking, partial failure, and error aggregation
-- [ ] **Phase 5: MCP Response Standardization** - Consistent response shapes, error recovery hints, and annotations across all MCP tools
-- [ ] **Phase 6: MCP Orchestration Tools** - New consolidated dispatch, monitor, and interact tools with rich descriptions
-- [ ] **Phase 7: MCP Backward Compatibility** - Old tool names aliased to new tools, zero breakage during transition
-- [ ] **Phase 8: CLI Status Table** - Color-coded status table with state grouping
-- [ ] **Phase 9: CLI Watch Mode** - Live-refreshing status dashboard at configurable interval
-- [ ] **Phase 10: CLI Batch Progress** - Live dispatch progress and compact summary line
+- [x] **Phase 1: Status Derivation Testing** - Unit tests for deriveStatus() covering all session states
+- [x] **Phase 2: Retry & Network Resilience** - Test and fix retry logic including network-level fetch errors
+- [x] **Phase 3: Collector Error Surfacing** - Replace silent error swallowing with logged, surfaced errors
+- [x] **Phase 4: Batch Dispatch Testing** - Unit tests for chunking, partial failure, and error aggregation
+- [x] **Phase 5: MCP Response Standardization** - Consistent response shapes, error recovery hints, and annotations across all MCP tools
+- [x] **Phase 6: MCP Orchestration Tools** - New consolidated dispatch, monitor, and interact tools with rich descriptions
+- [x] **Phase 7: MCP Backward Compatibility** - Old tool names aliased to new tools, zero breakage during transition
+- [x] **Phase 8: CLI Status Table** - Color-coded status table with state grouping
+- [x] **Phase 9: CLI Watch Mode** - Live-refreshing status dashboard at configurable interval
+- [x] **Phase 10: CLI Batch Progress** - Live dispatch progress and compact summary line
 
 ## Phase Details
 
@@ -37,7 +37,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: TBD
 
 Plans:
-- [ ] 01-01: Test deriveStatus() for all session states and edge cases
+- [x] 01-01: Test deriveStatus() for all session states and edge cases
 
 ### Phase 2: Retry & Network Resilience
 **Goal**: HTTP and network-level errors are both retried with tested, reliable backoff
@@ -51,8 +51,8 @@ Plans:
 **Plans**: TBD
 
 Plans:
-- [ ] 02-01: Test and fix HTTP retry logic (429, 5xx, Retry-After, max exhaustion)
-- [ ] 02-02: Extend retry to network-level fetch errors with same backoff strategy
+- [x] 02-01: Test and fix HTTP retry logic (429, 5xx, Retry-After, max exhaustion)
+- [x] 02-02: Extend retry to network-level fetch errors with same backoff strategy
 
 ### Phase 3: Collector Error Surfacing
 **Goal**: Users and agents see collector errors instead of silent failures
@@ -66,7 +66,7 @@ Plans:
 **Plans**: TBD
 
 Plans:
-- [ ] 03-01: Replace silent error swallowing in collector with logged, surfaced errors
+- [x] 03-01: Replace silent error swallowing in collector with logged, surfaced errors
 
 ### Phase 4: Batch Dispatch Testing
 **Goal**: Batch dispatch orchestration is verified correct for chunking and failure scenarios
@@ -80,7 +80,7 @@ Plans:
 **Plans**: TBD
 
 Plans:
-- [ ] 04-01: Test batch dispatch chunking, partial failure, and error aggregation
+- [x] 04-01: Test batch dispatch chunking, partial failure, and error aggregation
 
 ### Phase 5: MCP Response Standardization
 **Goal**: Every MCP tool returns consistent, agent-friendly responses with actionable error hints and correct annotations
@@ -95,10 +95,10 @@ Plans:
 **Plans**: TBD
 
 Plans:
-- [ ] 05-01: Standardize all MCP tool response shapes to { success, data?, error?, meta? }
-- [ ] 05-02: Add MCP annotations (readOnlyHint, destructiveHint, idempotentHint, openWorldHint) to all tools
-- [ ] 05-03: Rewrite tool descriptions with purpose, guidance, output shape, and cross-references
-- [ ] 05-04: Add recovery_hint to all error responses
+- [x] 05-01: Standardize all MCP tool response shapes to { success, data?, error?, meta? }
+- [x] 05-02: Add MCP annotations (readOnlyHint, destructiveHint, idempotentHint, openWorldHint) to all tools
+- [x] 05-03: Rewrite tool descriptions with purpose, guidance, output shape, and cross-references
+- [x] 05-04: Add recovery_hint to all error responses
 
 ### Phase 6: MCP Orchestration Tools
 **Goal**: AI agents can dispatch, monitor, and interact with sessions using single tool calls instead of composing fragmented tools
@@ -113,9 +113,9 @@ Plans:
 **Plans**: TBD
 
 Plans:
-- [ ] 06-01: Implement jules_dispatch consolidated tool (replaces dispatch_task + dispatch_batch)
-- [ ] 06-02: Implement jules_monitor consolidated tool (replaces status + wait_for_completion)
-- [ ] 06-03: Implement jules_interact consolidated tool (replaces get_session + get_plan + list_activities)
+- [x] 06-01: Implement jules_dispatch consolidated tool (replaces dispatch_task + dispatch_batch)
+- [x] 06-02: Implement jules_monitor consolidated tool (replaces status + wait_for_completion)
+- [x] 06-03: Implement jules_interact consolidated tool (replaces get_session + get_plan + list_activities)
 
 ### Phase 7: MCP Backward Compatibility
 **Goal**: Existing MCP integrations continue working unchanged during the tool consolidation transition
@@ -130,7 +130,7 @@ Plans:
 **Plans**: TBD
 
 Plans:
-- [ ] 07-01: Alias old tool names to new consolidated tools with deprecation descriptions
+- [x] 07-01: Alias old tool names to new consolidated tools with deprecation descriptions
 
 ### Phase 8: CLI Status Table
 **Goal**: Users can see all batch task states at a glance in a color-coded, grouped table
@@ -146,8 +146,8 @@ Plans:
 **UI hint**: yes
 
 Plans:
-- [ ] 08-01: Implement color-coded status table with state grouping
-- [ ] 08-02: Integrate cli-table3 and wire into existing status command
+- [x] 08-01: Implement color-coded status table with state grouping
+- [x] 08-02: Integrate cli-table3 and wire into existing status command
 
 ### Phase 9: CLI Watch Mode
 **Goal**: Users can monitor batch progress in real-time with an auto-refreshing terminal display
@@ -162,7 +162,7 @@ Plans:
 **UI hint**: yes
 
 Plans:
-- [ ] 09-01: Implement --watch mode with ANSI terminal refresh and clean exit
+- [x] 09-01: Implement --watch mode with ANSI terminal refresh and clean exit
 
 ### Phase 10: CLI Batch Progress
 **Goal**: Users see live progress feedback during batch dispatch operations
@@ -177,8 +177,8 @@ Plans:
 **UI hint**: yes
 
 Plans:
-- [ ] 10-01: Add per-task dispatch progress lines to batch command
-- [ ] 10-02: Add compact summary line during batch execution
+- [x] 10-01: Add per-task dispatch progress lines to batch command
+- [x] 10-02: Add compact summary line during batch execution
 
 ## Progress
 
@@ -187,13 +187,13 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Status Derivation Testing | 0/1 | Not started | - |
-| 2. Retry & Network Resilience | 0/2 | Not started | - |
-| 3. Collector Error Surfacing | 0/1 | Not started | - |
-| 4. Batch Dispatch Testing | 0/1 | Not started | - |
-| 5. MCP Response Standardization | 0/4 | Not started | - |
-| 6. MCP Orchestration Tools | 0/3 | Not started | - |
-| 7. MCP Backward Compatibility | 0/1 | Not started | - |
-| 8. CLI Status Table | 0/2 | Not started | - |
-| 9. CLI Watch Mode | 0/1 | Not started | - |
-| 10. CLI Batch Progress | 0/2 | Not started | - |
+| 1. Status Derivation Testing | 1/1 | Complete | 2026-05-11 |
+| 2. Retry & Network Resilience | 2/2 | Complete | 2026-05-11 |
+| 3. Collector Error Surfacing | 1/1 | Complete | 2026-05-11 |
+| 4. Batch Dispatch Testing | 1/1 | Complete | 2026-05-11 |
+| 5. MCP Response Standardization | 4/4 | Complete | 2026-05-11 |
+| 6. MCP Orchestration Tools | 3/3 | Complete | 2026-05-11 |
+| 7. MCP Backward Compatibility | 1/1 | Complete | 2026-05-11 |
+| 8. CLI Status Table | 2/2 | Complete | 2026-05-11 |
+| 9. CLI Watch Mode | 1/1 | Complete | 2026-05-11 |
+| 10. CLI Batch Progress | 2/2 | Complete | 2026-05-11 |

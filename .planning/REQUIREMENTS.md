@@ -9,30 +9,30 @@ Requirements for incremental optimization. Each maps to roadmap phases.
 
 ### MCP Tool Redesign
 
-- [ ] **MCP-01**: AI agent can dispatch 1-N tasks with a single tool call (`jules_dispatch` replaces `jules_dispatch_task` + `jules_dispatch_batch`)
-- [ ] **MCP-02**: AI agent can monitor batch status and optionally wait for completion in a single tool call (`jules_monitor` replaces `jules_status` + `jules_wait_for_completion`)
-- [ ] **MCP-03**: AI agent can get full session context (state, plan, recent activities, PR) in one call (`jules_interact` replaces `jules_get_session` + `jules_get_plan` + `jules_list_activities`)
-- [ ] **MCP-04**: Every MCP tool has `readOnlyHint`, `destructiveHint`, `idempotentHint`, and `openWorldHint` annotations set correctly
-- [ ] **MCP-05**: Every MCP tool description includes purpose, when-to-use guidance, expected output shape, and cross-references to related tools
-- [ ] **MCP-06**: Every MCP tool error response includes a `recovery_hint` field with suggested next action
-- [ ] **MCP-07**: All MCP tool responses follow a consistent `{ success, data?, error?, meta? }` shape
-- [ ] **MCP-08**: Existing tool names remain as aliases during transition (backward compatibility)
+- [x] **MCP-01**: AI agent can dispatch 1-N tasks with a single tool call (`jules_dispatch` replaces `jules_dispatch_task` + `jules_dispatch_batch`)
+- [x] **MCP-02**: AI agent can monitor batch status and optionally wait for completion in a single tool call (`jules_monitor` replaces `jules_status` + `jules_wait_for_completion`)
+- [x] **MCP-03**: AI agent can get full session context (state, plan, recent activities, PR) in one call (`jules_interact` replaces `jules_get_session` + `jules_get_plan` + `jules_list_activities`)
+- [x] **MCP-04**: Every MCP tool has `readOnlyHint`, `destructiveHint`, `idempotentHint`, and `openWorldHint` annotations set correctly
+- [x] **MCP-05**: Every MCP tool description includes purpose, when-to-use guidance, expected output shape, and cross-references to related tools
+- [x] **MCP-06**: Every MCP tool error response includes a `recovery_hint` field with suggested next action
+- [x] **MCP-07**: All MCP tool responses follow a consistent `{ success, data?, error?, meta? }` shape
+- [x] **MCP-08**: Existing tool names remain as aliases during transition (backward compatibility)
 
 ### Data Foundation
 
-- [ ] **DATA-01**: `deriveStatus()` has unit tests covering all Jules session states (PENDING, RUNNING, AWAITING_PLAN_APPROVAL, COMPLETED, FAILED, CANCELLED)
-- [ ] **DATA-02**: Retry logic has unit tests covering HTTP 429, 5xx, Retry-After header, max retry exhaustion
-- [ ] **DATA-03**: Network-level fetch errors (DNS, connection refused, timeout) are retried with the same backoff strategy as HTTP errors
-- [ ] **DATA-04**: Collector errors during activity fetching and wait polling are logged and surfaced to the user instead of silently swallowed
-- [ ] **DATA-05**: Batch dispatch orchestration has unit tests covering chunking, partial failure, and error aggregation
+- [x] **DATA-01**: `deriveStatus()` has unit tests covering all Jules session states (PENDING, RUNNING, AWAITING_PLAN_APPROVAL, COMPLETED, FAILED, CANCELLED)
+- [x] **DATA-02**: Retry logic has unit tests covering HTTP 429, 5xx, Retry-After header, max retry exhaustion
+- [x] **DATA-03**: Network-level fetch errors (DNS, connection refused, timeout) are retried with the same backoff strategy as HTTP errors
+- [x] **DATA-04**: Collector errors during activity fetching and wait polling are logged and surfaced to the user instead of silently swallowed
+- [x] **DATA-05**: Batch dispatch orchestration has unit tests covering chunking, partial failure, and error aggregation
 
 ### CLI Progress & Visibility
 
-- [ ] **CLI-01**: `jules-dispatch status` displays a color-coded table with columns: ID, title, state, elapsed time, PR URL
-- [ ] **CLI-02**: `jules-dispatch status --watch` refreshes the status table at a configurable interval with ANSI terminal refresh
-- [ ] **CLI-03**: `jules-dispatch status` groups sessions by state (running first, then pending, completed, failed, cancelled)
-- [ ] **CLI-04**: `jules-dispatch batch` shows live progress during dispatch (`[3/20] Task title... dispatched`)
-- [ ] **CLI-05**: `jules-dispatch batch` shows a compact summary line during execution (`DONE 5 | RUNNING 3 | FAILED 1 | PENDING 11`)
+- [x] **CLI-01**: `jules-dispatch status` displays a color-coded table with columns: ID, title, state, elapsed time, PR URL
+- [x] **CLI-02**: `jules-dispatch status --watch` refreshes the status table at a configurable interval with ANSI terminal refresh
+- [x] **CLI-03**: `jules-dispatch status` groups sessions by state (running first, then pending, completed, failed, cancelled)
+- [x] **CLI-04**: `jules-dispatch batch` shows live progress during dispatch (`[3/20] Task title... dispatched`)
+- [x] **CLI-05**: `jules-dispatch batch` shows a compact summary line during execution (`DONE 5 | RUNNING 3 | FAILED 1 | PENDING 11`)
 
 ## v2 Requirements
 
@@ -68,24 +68,24 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| MCP-01 | Phase 6 | Pending |
-| MCP-02 | Phase 6 | Pending |
-| MCP-03 | Phase 6 | Pending |
-| MCP-04 | Phase 5 | Pending |
-| MCP-05 | Phase 5 | Pending |
-| MCP-06 | Phase 5 | Pending |
-| MCP-07 | Phase 5 | Pending |
-| MCP-08 | Phase 7 | Pending |
-| DATA-01 | Phase 1 | Pending |
-| DATA-02 | Phase 2 | Pending |
-| DATA-03 | Phase 2 | Pending |
-| DATA-04 | Phase 3 | Pending |
-| DATA-05 | Phase 4 | Pending |
-| CLI-01 | Phase 8 | Pending |
-| CLI-02 | Phase 9 | Pending |
-| CLI-03 | Phase 8 | Pending |
-| CLI-04 | Phase 10 | Pending |
-| CLI-05 | Phase 10 | Pending |
+| MCP-01 | Phase 6 | ✅ Delivered |
+| MCP-02 | Phase 6 | ✅ Delivered |
+| MCP-03 | Phase 6 | ✅ Delivered |
+| MCP-04 | Phase 5 | ✅ Delivered |
+| MCP-05 | Phase 5 | ✅ Delivered |
+| MCP-06 | Phase 5 | ✅ Delivered |
+| MCP-07 | Phase 5 | ✅ Delivered |
+| MCP-08 | Phase 7 | ✅ Delivered |
+| DATA-01 | Phase 1 | ✅ Delivered |
+| DATA-02 | Phase 2 | ✅ Delivered |
+| DATA-03 | Phase 2 | ✅ Delivered |
+| DATA-04 | Phase 3 | ✅ Delivered |
+| DATA-05 | Phase 4 | ✅ Delivered |
+| CLI-01 | Phase 8 | ✅ Delivered |
+| CLI-02 | Phase 9 | ✅ Delivered |
+| CLI-03 | Phase 8 | ✅ Delivered |
+| CLI-04 | Phase 10 | ✅ Delivered |
+| CLI-05 | Phase 10 | ✅ Delivered |
 
 **Coverage:**
 - v1 requirements: 18 total

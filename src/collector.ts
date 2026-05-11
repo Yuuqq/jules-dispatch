@@ -1,8 +1,10 @@
 import { writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import chalk from 'chalk';
+import Table from 'cli-table3';
 import type { JulesConfig, CollectResult, JulesSession } from './types.js';
 import { JulesClient, deriveStatus } from './client.js';
+import { debug } from './log.js';
 import { isJson, emit, info } from './output.js';
 
 export interface CollectStatusOptions {
@@ -77,7 +79,8 @@ export async function collectStatus(
       }
       // Suppress unused warnings in strict mode.
       void completedAct;
-    } catch {
+    } catch (err) {
+      debug('activity fetch error', { sessionId: session.id, error: (err as Error).message });
       lastActivity = 'Error fetching activities';
       status = deriveStatus(session, []);
     }
@@ -93,6 +96,7 @@ export async function collectStatus(
       lastActivity,
       activities: activityCount,
       state: session.state,
+      createTime: session.createTime,
     });
   }
 
@@ -122,50 +126,73 @@ export async function collectStatus(
 }
 
 function printStatusText(results: CollectResult[]): void {
-  const completed = results.filter(r => r.status === 'completed');
-  const running = results.filter(r => r.status === 'running');
-  const failed = results.filter(r => r.status === 'failed');
-  const awaiting = results.filter(r => r.status === 'awaiting_plan');
-
-  const parts = [
-    chalk.green(`${completed.length} completed`),
-    chalk.yellow(`${running.length} running`),
-  ];
-  if (failed.length > 0) parts.push(chalk.red(`${failed.length} failed`));
-  if (awaiting.length > 0) parts.push(chalk.magenta(`${awaiting.length} awaiting plan`));
-
-  console.log(`\n${chalk.bold(`Status: ${parts.join(', ')}`)}\n`);
-
-  if (completed.length > 0) {
-    console.log(chalk.bold('Completed:'));
-    for (const r of completed) {
-      console.log(`  ${chalk.green('✓')} ${r.title}`);
-      if (r.prUrl) console.log(`    ${chalk.cyan('PR:')} ${r.prUrl}`);
-    }
+  if (results.length === 0) {
+    console.log(chalk.dim('No sessions found.'));
+    return;
   }
 
-  if (awaiting.length > 0) {
-    console.log(`\n${chalk.bold('Awaiting plan approval:')}`);
-    for (const r of awaiting) {
-      console.log(`  ${chalk.magenta('⏸')} ${r.title}`);
-      console.log(`    ${chalk.dim(`Run: jules-dispatch approve ${r.sessionId}`)}`);
-    }
+  const groupOrder = ['running', 'pending', 'awaiting_plan', 'completed', 'failed', 'cancelled'];
+  const sorted = [...results].sort((a, b) => {
+    const ai = groupOrder.indexOf(a.status);
+    const bi = groupOrder.indexOf(b.status);
+    return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi) || a.title.localeCompare(b.title);
+  });
+
+  const stateFormat: Record<string, { icon: string; label: string; color: (s: string) => string }> = {
+    running: { icon: '●', label: 'Running', color: chalk.green },
+    pending: { icon: '●', label: 'Pending', color: chalk.yellow },
+    awaiting_plan: { icon: '⏸', label: 'Await Plan', color: chalk.magenta },
+    completed: { icon: '✓', label: 'Done', color: chalk.blue },
+    failed: { icon: '✗', label: 'Failed', color: chalk.red },
+    cancelled: { icon: '⊘', label: 'Cancelled', color: chalk.gray },
+  };
+
+  const table = new Table({
+    head: ['ID', 'Title', 'State', 'Elapsed', 'PR'],
+    colWidths: [10, 25, 14, 9, 30],
+    style: { compact: true },
+    chars: {
+      top: '', 'top-mid': '', 'top-left': '', 'top-right': '',
+      bottom: '', 'bottom-mid': '', 'bottom-left': '', 'bottom-right': '',
+      left: '', 'left-mid': '', mid: '', 'mid-mid': '',
+      right: '', 'right-mid': '', middle: ' ',
+    },
+  });
+
+  for (const r of sorted) {
+    const fmt = stateFormat[r.status] ?? { icon: '?', label: r.status, color: chalk.white };
+    const stateCell = fmt.color(`${fmt.icon} ${fmt.label}`);
+    const idCell = chalk.dim(r.sessionId.slice(0, 8));
+    const titleCell = r.title.length > 23 ? r.title.slice(0, 22) + '…' : r.title;
+    const elapsed = r.createTime ? formatElapsed(r.createTime) : '—';
+    const prCell = r.prUrl ? r.prUrl.replace('https://github.com/', 'gh:') : '';
+    const prTruncated = prCell.length > 28 ? prCell.slice(0, 27) + '…' : prCell;
+
+    table.push([idCell, titleCell, stateCell, elapsed, prTruncated]);
   }
 
-  if (running.length > 0) {
-    console.log(`\n${chalk.bold('Running:')}`);
-    for (const r of running) {
-      console.log(`  ${chalk.yellow('○')} ${r.title} ${chalk.dim(`— ${r.lastActivity}`)}`);
-      console.log(`    ${chalk.dim(`https://jules.google.com/session/${r.sessionId}`)}`);
-    }
-  }
+  console.log(table.toString());
 
-  if (failed.length > 0) {
-    console.log(`\n${chalk.bold(chalk.red('Failed:'))}`);
-    for (const r of failed) {
-      console.log(`  ${chalk.red('✗')} ${r.title} ${chalk.dim(`— ${r.lastActivity}`)}`);
-    }
-  }
+  const counts = groupOrder
+    .filter(g => results.some(r => r.status === g))
+    .map(g => {
+      const n = results.filter(r => r.status === g).length;
+      const fmt = stateFormat[g];
+      return fmt ? fmt.color(`${n} ${fmt.label.toLowerCase()}`) : `${n} ${g}`;
+    });
+  console.log(chalk.bold(`\n${counts.join(chalk.dim(' · '))}`));
+}
+
+function formatElapsed(createTime: string): string {
+  const ms = Date.now() - new Date(createTime).getTime();
+  const minutes = Math.floor(ms / 60000);
+  if (minutes < 1) return '<1m';
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  const remMin = minutes % 60;
+  if (hours < 24) return `${hours}h${remMin > 0 ? ` ${remMin}m` : ''}`;
+  const days = Math.floor(hours / 24);
+  return `${days}d`;
 }
 
 export interface WaitOptions {
@@ -218,8 +245,8 @@ export async function waitForCompletion(
           }
         }
         else if (status === 'cancelled') cancelled.add(sessionId);
-      } catch {
-        // Transient — keep polling.
+      } catch (err) {
+        debug('wait poll error', { sessionId, error: (err as Error).message });
       }
     }
 

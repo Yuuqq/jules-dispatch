@@ -31,7 +31,19 @@ export class JulesClient {
       body: options?.body ? String(options.body).slice(0, 500) : undefined,
     });
 
-    const res = await timed(`${method} ${path}`, () => fetch(url, { ...options, headers }));
+    let res: Response;
+    try {
+      res = await timed(`${method} ${path}`, () => fetch(url, { ...options, headers }));
+    } catch (err) {
+      if (retries > 0 && err instanceof TypeError) {
+        debug('retrying network error', { retriesLeft: retries - 1 });
+        const attempt = MAX_RETRIES - retries;
+        const delay = BASE_DELAY_MS * Math.pow(2, attempt) + Math.random() * 250;
+        await sleep(delay);
+        return this.request<T>(path, options, retries - 1);
+      }
+      throw err;
+    }
 
     verbose(`← ${res.status} ${method} ${path}`);
 

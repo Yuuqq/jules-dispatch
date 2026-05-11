@@ -23,7 +23,7 @@ program
   .option('--llm-base-url <url>', '[optional planner] OpenAI-compatible base URL (default: https://api.openai.com/v1)')
   .option('--llm-model <model>', '[optional planner] model id (default: gpt-4o-mini)')
   .option('--json', 'machine-readable JSON output (one JSON object per command, NDJSON for streams)', false)
-  .option('-V, --verbose', 'log HTTP requests, timing, and error stacks to stderr (or set JULES_DISPATCH_VERBOSE=1)')
+  .option('-v, --verbose', 'log HTTP requests, timing, and error stacks to stderr (or set JULES_DISPATCH_VERBOSE=1)')
   .hook('preAction', (thisCommand) => {
     const opts = thisCommand.opts() as { json?: boolean; verbose?: boolean };
     if (opts.json) setOutputMode('json');
@@ -119,13 +119,51 @@ program
   .option('-i, --ids <ids...>', 'specific session IDs to check')
   .option('-o, --output <file>', 'save JSON report to file')
   .option('--scan <n>', 'how many recent sessions to scan when no --ids given', '100')
-  .action(async (opts: { ids?: string[]; output?: string; scan: string }) => {
+  .option('-w, --watch', 'auto-refresh status table')
+  .option('--interval <ms>', 'refresh interval in milliseconds (default: 5000)', '5000')
+  .action(async (opts: { ids?: string[]; output?: string; scan: string; watch?: boolean; interval: string }) => {
     const { config, client } = getConfig();
     await collectStatus(client, config, {
       sessionIds: opts.ids,
       output: opts.output,
       scanLimit: parseInt(opts.scan, 10),
     });
+
+    if (opts.watch) {
+      // Watch mode keeps the initial report write, but refreshes only render status.
+      const interval = parseInt(opts.interval, 10);
+      const abort = new AbortController();
+      const onSigint = () => { abort.abort(); };
+      process.on('SIGINT', onSigint);
+
+      try {
+        // eslint-disable-next-line no-constant-condition
+        while (true) {
+          await new Promise(resolve => setTimeout(resolve, interval));
+          if (abort.signal.aborted) break;
+
+          if (!isJson()) console.clear();
+
+          const results = await collectStatus(client, config, {
+            sessionIds: opts.ids,
+            output: undefined,
+            scanLimit: parseInt(opts.scan, 10),
+          });
+
+          const allTerminal = results.every(r =>
+            r.status === 'completed' || r.status === 'failed' || r.status === 'cancelled',
+          );
+          if (allTerminal) {
+            if (!isJson()) console.log(chalk.green('\nAll sessions resolved.'));
+            break;
+          }
+
+          if (!isJson()) console.log(chalk.dim(`\nRefreshing in ${interval / 1000}s... (Ctrl+C to exit)`));
+        }
+      } finally {
+        process.removeListener('SIGINT', onSigint);
+      }
+    }
   });
 
 // ---------- get ----------

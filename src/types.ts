@@ -83,4 +83,5 @@ export interface CollectResult {
   lastActivity?: string;
   activities: number;
   state?: string;
+  createTime?: string;
 }
