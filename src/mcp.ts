@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { resolve } from 'node:path';
 import { loadConfig, loadTasksFromString } from './config.js';
 import { JulesClient, deriveStatus } from './client.js';
+import { pollSessions } from './polling.js';
 import { dispatchTaskDefinition } from './dispatcher.js';
 import { planTasks, loadPlannerConfig, isPlannerConfigured } from './planner.js';
 import type { TaskDefinition, DispatchResult } from './types.js';
@@ -315,47 +316,12 @@ export async function runMcpServer(options: McpServerOptions): Promise<void> {
       failFast: z.boolean().optional().default(false),
     },
     async (args) => {
-      const start = Date.now();
-      const completed = new Set<string>();
-      const failed = new Set<string>();
-      const cancelled = new Set<string>();
-
-      while (Date.now() - start < args.timeoutMs) {
-        const remaining = (args.sessionIds as string[]).filter((id: string) =>
-          !completed.has(id) && !failed.has(id) && !cancelled.has(id),
-        );
-        if (remaining.length === 0) break;
-
-        for (const id of remaining) {
-          try {
-            const session = await client.getSession(id);
-            const { activities } = await client.listActivities(id, 10);
-            const status = deriveStatus(session, activities);
-            if (status === 'completed') completed.add(id);
-            else if (status === 'failed') {
-              failed.add(id);
-              if (args.failFast) break;
-            }
-            else if (status === 'cancelled') cancelled.add(id);
-          } catch {
-            /* transient */
-          }
-        }
-
-        if (args.failFast && failed.size > 0) break;
-        await new Promise(r => setTimeout(r, args.intervalMs));
-      }
-
-      const stillRunning = (args.sessionIds as string[]).filter((id: string) =>
-        !completed.has(id) && !failed.has(id) && !cancelled.has(id),
+      const result = await pollSessions(
+        client,
+        args.sessionIds as string[],
+        { interval: args.intervalMs, timeout: args.timeoutMs, failFast: args.failFast },
       );
-      return ok({
-        completed: [...completed],
-        failed: [...failed],
-        cancelled: [...cancelled],
-        stillRunning,
-        timedOut: stillRunning.length > 0,
-      });
+      return ok(result);
     },
     mutationAnnotations,
   );
@@ -475,66 +441,21 @@ export async function runMcpServer(options: McpServerOptions): Promise<void> {
       failFast: z.boolean().optional().default(false),
     },
     async (args) => {
-      const wait = args.wait ?? false;
-      const intervalMs = args.intervalMs ?? 10000;
-      const timeoutMs = args.timeoutMs ?? 600000;
-      const failFast = args.failFast ?? false;
-
       let sessions = await Promise.all((args.sessionIds as string[]).map(id => summarizeSession(id)));
-      if (!wait) return ok({ sessions });
+      if (!(args.wait ?? false)) return ok({ sessions });
 
-      const completed = new Set<string>();
-      const failed = new Set<string>();
-      const cancelled = new Set<string>();
-      const markTerminal = (sessionId: string, status: string): void => {
-        if (status === 'completed') completed.add(sessionId);
-        else if (status === 'failed') failed.add(sessionId);
-        else if (status === 'cancelled') cancelled.add(sessionId);
-      };
-
-      for (const session of sessions) markTerminal(session.sessionId, session.status);
-
-      const start = Date.now();
-      while (Date.now() - start < timeoutMs && !(failFast && failed.size > 0)) {
-        const remaining = (args.sessionIds as string[]).filter((id: string) =>
-          !completed.has(id) && !failed.has(id) && !cancelled.has(id),
-        );
-        if (remaining.length === 0) break;
-
-        for (const id of remaining) {
-          try {
-            const session = await client.getSession(id);
-            const { activities } = await client.listActivities(id, 10);
-            const status = deriveStatus(session, activities);
-            markTerminal(id, status);
-            if (status === 'failed' && failFast) break;
-          } catch {
-            /* transient */
-          }
-        }
-
-        if (failFast && failed.size > 0) break;
-        const stillRunning = (args.sessionIds as string[]).filter((id: string) =>
-          !completed.has(id) && !failed.has(id) && !cancelled.has(id),
-        );
-        if (stillRunning.length === 0) break;
-        await new Promise(r => setTimeout(r, intervalMs));
-      }
-
-      const stillRunning = (args.sessionIds as string[]).filter((id: string) =>
-        !completed.has(id) && !failed.has(id) && !cancelled.has(id),
+      const waitResult = await pollSessions(
+        client,
+        args.sessionIds as string[],
+        { interval: args.intervalMs, timeout: args.timeoutMs, failFast: args.failFast },
       );
+
+      // Re-summarize all sessions after wait completes.
       sessions = await Promise.all((args.sessionIds as string[]).map(id => summarizeSession(id)));
 
       return ok({
         sessions,
-        wait: {
-          completed: [...completed],
-          failed: [...failed],
-          cancelled: [...cancelled],
-          stillRunning,
-          timedOut: stillRunning.length > 0,
-        },
+        wait: waitResult,
       });
     },
     readOnlyAnnotations,

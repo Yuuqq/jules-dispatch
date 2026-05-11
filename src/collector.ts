@@ -6,6 +6,7 @@ import type { JulesConfig, CollectResult, JulesSession } from './types.js';
 import { JulesClient, deriveStatus } from './client.js';
 import { debug } from './log.js';
 import { isJson, emit, info } from './output.js';
+import { pollSessions, type PollResult } from './polling.js';
 
 export interface CollectStatusOptions {
   sessionIds?: string[];
@@ -202,109 +203,49 @@ export interface WaitOptions {
   failFast?: boolean;
 }
 
-export interface WaitResult {
-  completed: string[];
-  failed: string[];
-  cancelled: string[];
-  stillRunning: string[];
-  timedOut: boolean;
-}
+/** @deprecated Use PollResult from polling.ts directly. */
+export type WaitResult = PollResult;
 
 export async function waitForCompletion(
   client: JulesClient,
   _config: JulesConfig,
   sessionIds: string[],
   options: WaitOptions = {},
-): Promise<WaitResult> {
-  const interval = options.interval ?? 30000;
+): Promise<PollResult> {
   const timeout = options.timeout ?? 600000;
-  const start = Date.now();
 
   info(chalk.bold(`\nWaiting for ${sessionIds.length} session(s) to complete (timeout: ${timeout / 1000}s)...\n`));
 
-  const completed = new Set<string>();
-  const failed = new Set<string>();
-  const cancelled = new Set<string>();
-
-  while (Date.now() - start < timeout) {
-    const remaining = sessionIds.filter(id => !completed.has(id) && !failed.has(id) && !cancelled.has(id));
-    if (remaining.length === 0) break;
-
-    for (const sessionId of remaining) {
-      try {
-        const session = await client.getSession(sessionId);
-        const { activities } = await client.listActivities(sessionId, 10);
-        const status = deriveStatus(session, activities);
-
-        if (status === 'completed') completed.add(sessionId);
-        else if (status === 'failed') {
-          failed.add(sessionId);
-          if (options.failFast) {
-            info(chalk.red(`✗ Session ${sessionId} failed (failFast)`));
-            return finalize();
-          }
-        }
-        else if (status === 'cancelled') cancelled.add(sessionId);
-      } catch (err) {
-        debug('wait poll error', { sessionId, error: (err as Error).message });
-      }
-    }
-
-    const stillRunning = sessionIds.filter(id => !completed.has(id) && !failed.has(id) && !cancelled.has(id));
-    if (stillRunning.length === 0) break;
-
-    if (!isJson()) {
-      const elapsed = Math.round((Date.now() - start) / 1000);
-      console.log(
-        chalk.dim(`  ${stillRunning.length} session(s) still running`) +
-        ` (${elapsed}s elapsed, next check in ${interval / 1000}s)` +
-        (failed.size > 0 ? chalk.red(` [${failed.size} failed]`) : ''),
-      );
-    } else {
-      // Stream NDJSON progress.
-      process.stdout.write(JSON.stringify({
-        event: 'poll',
-        elapsedSec: Math.round((Date.now() - start) / 1000),
-        completed: completed.size,
-        failed: failed.size,
-        cancelled: cancelled.size,
-        stillRunning: stillRunning.length,
-      }) + '\n');
-    }
-
-    await sleep(interval);
-  }
-
-  return finalize();
-
-  function finalize(): WaitResult {
-    const stillRunning = sessionIds.filter(id => !completed.has(id) && !failed.has(id) && !cancelled.has(id));
-    const timedOut = stillRunning.length > 0;
-    const result: WaitResult = {
-      completed: [...completed],
-      failed: [...failed],
-      cancelled: [...cancelled],
-      stillRunning,
-      timedOut,
-    };
-
-    emit(
-      () => {
-        if (!timedOut) console.log(chalk.green.bold(`✓ All sessions resolved.`));
-        else console.log(chalk.yellow(`Timeout reached. ${stillRunning.length} session(s) may still be running.`));
+  const result = await pollSessions(client, sessionIds, {
+    interval: options.interval ?? 30000,
+    timeout,
+    failFast: options.failFast,
+  }, {
+    onError: (sessionId, err) => {
+      debug('wait poll error', { sessionId, error: err.message });
+    },
+    onPoll: ({ failed, remaining }) => {
+      if (!isJson()) {
         console.log(
-          `  ${chalk.green(`completed: ${completed.size}`)}` +
-          (failed.size > 0 ? `, ${chalk.red(`failed: ${failed.size}`)}` : '') +
-          (cancelled.size > 0 ? `, ${chalk.dim(`cancelled: ${cancelled.size}`)}` : ''),
+          chalk.dim(`  ${remaining} session(s) still running`) +
+          (failed > 0 ? chalk.red(` [${failed} failed]`) : ''),
         );
-      },
-      { event: 'final', ...result },
-    );
+      }
+    },
+  });
 
-    return result;
-  }
-}
+  emit(
+    () => {
+      if (!result.timedOut) console.log(chalk.green.bold(`✓ All sessions resolved.`));
+      else console.log(chalk.yellow(`Timeout reached. ${result.stillRunning.length} session(s) may still be running.`));
+      console.log(
+        `  ${chalk.green(`completed: ${result.completed.length}`)}` +
+        (result.failed.length > 0 ? `, ${chalk.red(`failed: ${result.failed.length}`)}` : '') +
+        (result.cancelled.length > 0 ? `, ${chalk.dim(`cancelled: ${result.cancelled.length}`)}` : ''),
+      );
+    },
+    { event: 'final', ...result },
+  );
 
-function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return result;
 }

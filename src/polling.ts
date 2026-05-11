@@ -4,6 +4,7 @@ import type { JulesClient } from './client.js';
 export interface PollCallbacks {
   onPoll?: (info: { completed: number; failed: number; cancelled: number; remaining: number }) => void;
   onTerminal?: (sessionId: string, status: 'completed' | 'failed' | 'cancelled') => void;
+  onError?: (sessionId: string, error: Error) => void;
 }
 
 export interface PollResult {
@@ -60,8 +61,8 @@ export async function pollSessions(
           if (failFast) break;
         }
         else if (status === 'cancelled') markTerminal(id, 'cancelled');
-      } catch {
-        /* transient */
+      } catch (err) {
+        callbacks?.onError?.(id, err as Error);
       }
     }
 
