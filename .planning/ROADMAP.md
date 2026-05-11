@@ -54,10 +54,14 @@ Plans:
 **Depends on**: Phase 11
 **Requirements**: POLL-01
 **Success Criteria** (what must be TRUE):
-  1. A single `waitForCompletion` function is exported and consumed by all 3 former implementations (jules_wait_for_completion, jules_monitor, collector.waitForCompletion) -- POLL-01
+  1. A single `pollSessions` function is exported and consumed by all 3 former implementations (jules_wait_for_completion, jules_monitor, collector.waitForCompletion) -- POLL-01
   2. The shared function preserves all existing behavior: timeout handling, polling interval, terminal state detection -- POLL-01
   3. No duplicate polling logic remains in the codebase -- POLL-01
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+**Wave 1**
+- [ ] 12-01-PLAN.md — Extract shared pollSessions to src/polling.ts with tests, refactor all 3 consumers
 
 ### Phase 13: Deprecated Tool Refactoring
 **Goal**: Deprecated MCP tools delegate to consolidated tools instead of containing duplicate business logic
@@ -104,8 +108,8 @@ Plans:
 | 8. CLI Status Table | v1 | 2/2 | Complete | 2026-05-11 |
 | 9. CLI Watch Mode | v1 | 1/1 | Complete | 2026-05-11 |
 | 10. CLI Batch Progress | v1 | 2/2 | Complete | 2026-05-11 |
-| 11. MCP Response Helpers & Consolidated Tool Tests | v2 | 2/2 | Complete    | 2026-05-11 |
-| 12. Polling Deduplication | v2 | 0/? | Not started | - |
+| 11. MCP Response Helpers & Consolidated Tool Tests | v2 | 2/2 | Complete | 2026-05-11 |
+| 12. Polling Deduplication | v2 | 0/1 | Planned | - |
 | 13. Deprecated Tool Refactoring | v2 | 0/? | Not started | - |
 | 14. Deprecated Alias Tests | v2 | 0/? | Not started | - |
 | 15. Doctor Command | v2 | 0/? | Not started | - |
