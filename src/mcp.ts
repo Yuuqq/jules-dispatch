@@ -130,7 +130,8 @@ export function createMcpServer(config: JulesConfig, client: JulesClient): McpSe
         autoMode: args.autoMode,
         requirePlanApproval: args.requirePlanApproval,
       };
-      return ok(await dispatchTaskDefinition(client, config, task, '<mcp>'));
+      const { results } = await dispatchConsolidatedTasks([task], 1, '<mcp>');
+      return ok(results[0]);
     },
     mutationAnnotations,
   );
@@ -157,21 +158,7 @@ export function createMcpServer(config: JulesConfig, client: JulesClient): McpSe
       const taskList: TaskDefinition[] = typeof args.tasks === 'string'
         ? loadTasksFromString(args.tasks, args.format ?? 'yaml')
         : args.tasks as TaskDefinition[];
-
-      const parallel = args.parallel ?? 10;
-      const results: DispatchResult[] = [];
-      for (let i = 0; i < taskList.length; i += parallel) {
-        const slice = taskList.slice(i, i + parallel);
-        const batchResults = await Promise.all(
-          slice.map(t => dispatchTaskDefinition(client, config, t, '<mcp>')),
-        );
-        results.push(...batchResults);
-      }
-      const dispatched = results.filter(r => r.status === 'dispatched').length;
-      return ok({
-        summary: { total: results.length, dispatched, failed: results.length - dispatched },
-        results,
-      });
+      return ok(await dispatchConsolidatedTasks(taskList, args.parallel ?? 10, '<mcp>'));
     },
     mutationAnnotations,
   );
@@ -202,27 +189,10 @@ export function createMcpServer(config: JulesConfig, client: JulesClient): McpSe
     '[DEPRECATED: Use jules_monitor instead.] Summarize the state, derived status, activity count, and PR metadata for one or more sessions.\n\nUse this when an AI agent needs a compact progress view for known session IDs, including sessions outside the recent page.\n\nReturns: { success: true, data: { results: [{ sessionId, title?, state?, status?, prUrl?, prTitle?, activities?, error? }] } }\n\nSee also: jules_get_session (full record), jules_list_activities, jules_wait_for_completion',
     { sessionIds: z.array(z.string()).min(1) },
     async (args) => {
-      const out = [];
-      for (const id of args.sessionIds) {
-        try {
-          const session = await client.getSession(id);
-          const { activities } = await client.listActivities(id, 10);
-          const status = deriveStatus(session, activities);
-          const pr = session.outputs?.find(o => o.pullRequest)?.pullRequest;
-          out.push({
-            sessionId: id,
-            title: session.title,
-            state: session.state,
-            status,
-            prUrl: pr?.url,
-            prTitle: pr?.title,
-            activities: activities.length,
-          });
-        } catch (err) {
-          out.push({ sessionId: id, error: (err as Error).message });
-        }
-      }
-      return ok({ results: out });
+      const results = await Promise.all(
+        (args.sessionIds as string[]).map(id => summarizeSessionLegacy(id)),
+      );
+      return ok({ results });
     },
     readOnlyAnnotations,
   );
@@ -383,6 +353,35 @@ export function createMcpServer(config: JulesConfig, client: JulesClient): McpSe
         status: 'error',
         lastActivity: (err as Error).message,
       };
+    }
+  }
+
+  async function summarizeSessionLegacy(sessionId: string): Promise<{
+    sessionId: string;
+    title?: string;
+    state?: string;
+    status: ReturnType<typeof deriveStatus> | 'error';
+    prUrl?: string;
+    prTitle?: string;
+    activities?: number;
+    error?: string;
+  }> {
+    try {
+      const session = await client.getSession(sessionId);
+      const { activities } = await client.listActivities(sessionId, 10);
+      const status = deriveStatus(session, activities);
+      const pr = session.outputs?.find(o => o.pullRequest)?.pullRequest;
+      return {
+        sessionId,
+        title: session.title,
+        state: session.state,
+        status,
+        prUrl: pr?.url,
+        prTitle: pr?.title,
+        activities: activities.length,
+      };
+    } catch (err) {
+      return { sessionId, status: 'error' as const, error: (err as Error).message };
     }
   }
 
