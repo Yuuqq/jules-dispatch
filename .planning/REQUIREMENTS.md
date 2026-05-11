@@ -58,24 +58,24 @@ Deferred to later milestones. Tracked but not in current roadmap.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ERR-01 | — | Pending |
-| ERR-02 | — | Pending |
-| ERR-03 | — | Pending |
-| CLI-01 | — | Pending |
-| CLI-02 | — | Pending |
-| CLI-03 | — | Pending |
-| ONB-01 | — | Pending |
-| ONB-02 | — | Pending |
-| ONB-03 | — | Pending |
-| DOC-01 | — | Pending |
-| DOC-02 | — | Pending |
-| DOC-03 | — | Pending |
+| ERR-01 | 16 | Pending |
+| ERR-02 | 16 | Pending |
+| ERR-03 | 16 | Pending |
+| CLI-01 | 17 | Pending |
+| CLI-02 | 17 | Pending |
+| CLI-03 | 17 | Pending |
+| ONB-01 | 18 | Pending |
+| ONB-02 | 18 | Pending |
+| ONB-03 | 18 | Pending |
+| DOC-01 | 19 | Pending |
+| DOC-02 | 19 | Pending |
+| DOC-03 | 19 | Pending |
 
 **Coverage:**
 - v3 requirements: 12 total
-- Mapped to phases: 0
-- Unmapped: 12 (roadmap pending)
+- Mapped to phases: 12
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-05-11*
-*Last updated: 2026-05-11 after initial definition*
+*Last updated: 2026-05-11 after v3 roadmap creation*
