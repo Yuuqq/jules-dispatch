@@ -1,7 +1,12 @@
+import { isatty } from 'node:tty';
 import chalk from 'chalk';
 import type { ErrorContext } from './errors.js';
 
 export type OutputMode = 'text' | 'json';
+
+if (process.env.NO_COLOR || process.env.TERM === 'dumb' || !isatty(1)) {
+  chalk.level = 0;
+}
 
 let mode: OutputMode = 'text';
 

@@ -90,7 +90,14 @@ program
       emit(() => console.error(`${chalk.red('✗')} ${chalk.bold(result.title)}: ${result.error}`), result);
       process.exit(ExitCode.GENERIC);
     }
-  });
+  })
+  .addHelpText('after', `
+Examples:
+  $ jules-dispatch dispatch task.yaml
+  $ jules-dispatch dispatch task.yaml --source sources/github/owner/repo --branch main
+  $ jules-dispatch dispatch - < tasks.yaml
+  $ echo '{"title":"Fix","prompt":"Fix bug"}' | jules-dispatch dispatch - --format json
+`);
 
 // ---------- batch ----------
 
@@ -116,7 +123,13 @@ program
     const failed = results.filter(r => r.status === 'failed').length;
     if (failed > 0 && results.length > failed) process.exit(ExitCode.PARTIAL);
     if (failed > 0) process.exit(ExitCode.GENERIC);
-  });
+  })
+  .addHelpText('after', `
+Examples:
+  $ jules-dispatch batch
+  $ jules-dispatch batch ./my-tasks --parallel 5
+  $ jules-dispatch batch --no-log
+`);
 
 // ---------- status ----------
 
@@ -171,7 +184,13 @@ program
         process.removeListener('SIGINT', onSigint);
       }
     }
-  });
+  })
+  .addHelpText('after', `
+Examples:
+  $ jules-dispatch status
+  $ jules-dispatch status -i abc123 def456
+  $ jules-dispatch status --watch --interval 3000
+`);
 
 // ---------- get ----------
 
@@ -197,7 +216,12 @@ program
     } catch (err) {
       fail(err);
     }
-  });
+  })
+  .addHelpText('after', `
+Examples:
+  $ jules-dispatch get abc123
+  $ jules-dispatch get abc123 --json
+`);
 
 // ---------- wait ----------
 
@@ -220,7 +244,13 @@ program
 
     if (result.timedOut) process.exit(ExitCode.TIMEOUT);
     if (result.failed.length > 0) process.exit(ExitCode.GENERIC);
-  });
+  })
+  .addHelpText('after', `
+Examples:
+  $ jules-dispatch wait abc123
+  $ jules-dispatch wait abc123 def456 --timeout 300000
+  $ jules-dispatch wait abc123 --fail-fast
+`);
 
 // ---------- sources ----------
 
@@ -242,7 +272,12 @@ program
       },
       { sources },
     );
-  });
+  })
+  .addHelpText('after', `
+Examples:
+  $ jules-dispatch sources
+  $ jules-dispatch sources --json
+`);
 
 // ---------- message ----------
 
@@ -260,7 +295,12 @@ program
     } catch (err) {
       fail(err);
     }
-  });
+  })
+  .addHelpText('after', `
+Examples:
+  $ jules-dispatch message abc123 "Please focus on tests"
+  $ jules-dispatch message abc123 "Add error handling" --json
+`);
 
 // ---------- plan ----------
 
@@ -292,7 +332,12 @@ program
     } catch (err) {
       fail(err);
     }
-  });
+  })
+  .addHelpText('after', `
+Examples:
+  $ jules-dispatch plan abc123
+  $ jules-dispatch plan abc123 --json
+`);
 
 // ---------- approve ----------
 
@@ -310,7 +355,12 @@ program
     } catch (err) {
       fail(err);
     }
-  });
+  })
+  .addHelpText('after', `
+Examples:
+  $ jules-dispatch approve abc123
+  $ jules-dispatch approve abc123 --json
+`);
 
 // ---------- cancel ----------
 
@@ -328,7 +378,12 @@ program
     } catch (err) {
       fail(err);
     }
-  });
+  })
+  .addHelpText('after', `
+Examples:
+  $ jules-dispatch cancel abc123
+  $ jules-dispatch cancel abc123 --json
+`);
 
 // ---------- doctor ----------
 
@@ -361,7 +416,13 @@ program
     );
 
     if (result.exitCode !== 0) process.exit(result.exitCode);
-  });
+  })
+  .addHelpText('after', `
+Examples:
+  $ jules-dispatch doctor
+  $ jules-dispatch doctor --task-file task.yaml
+  $ jules-dispatch doctor -v
+`);
 
 // ---------- tail ----------
 
@@ -413,7 +474,12 @@ program
       }
       await new Promise(r => setTimeout(r, interval));
     }
-  });
+  })
+  .addHelpText('after', `
+Examples:
+  $ jules-dispatch tail abc123
+  $ jules-dispatch tail abc123 --interval 2000
+`);
 
 // ---------- plan-tasks (optional LLM planner) ----------
 
@@ -493,7 +559,13 @@ program
       },
       result,
     );
-  });
+  })
+  .addHelpText('after', `
+Examples:
+  $ jules-dispatch plan-tasks "Fix all lint errors"
+  $ echo "Refactor auth" | jules-dispatch plan-tasks - --max 5
+  $ jules-dispatch plan-tasks "Add tests" --output tasks.yaml
+`);
 
 // ---------- auto (plan + dispatch) ----------
 
@@ -595,7 +667,13 @@ program
 
     if (failed.length > 0 && dispatched.length > 0) process.exit(ExitCode.PARTIAL);
     if (failed.length > 0) process.exit(ExitCode.GENERIC);
-  });
+  })
+  .addHelpText('after', `
+Examples:
+  $ jules-dispatch auto "Fix all lint errors"
+  $ jules-dispatch auto "Refactor auth" --dry-run
+  $ jules-dispatch auto "Add tests" --yes --parallel 5
+`);
 
 // ---------- mcp server ----------
 
@@ -608,7 +686,21 @@ program
     const { runMcpServer } = await import('./mcp.js');
     const opts = program.opts() as { project: string; apiKey?: string };
     await runMcpServer({ projectDir: resolve(opts.project), apiKeyOverride: opts.apiKey });
-  });
+  })
+  .addHelpText('after', `
+Examples:
+  $ jules-dispatch mcp
+  $ jules-dispatch mcp --project ./my-repo
+`);
+
+program.addHelpText('after', `
+Getting started:
+  $ jules-dispatch dispatch task.yaml     # dispatch your first task
+  $ jules-dispatch status                 # check progress
+  $ jules-dispatch doctor                 # validate your setup
+
+Docs: https://github.com/nicholasgasior/jules-dispatch
+`);
 
 // ---------- error wrapping ----------
 
