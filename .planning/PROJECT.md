@@ -61,18 +61,19 @@ Turn Jules from a one-at-a-time tool into a massively parallel coding workforce,
 
 ### Current State
 
-- Shipped v1 (2026-05-11): 10 phases, 16 plans, 58 tests, 18/18 requirements
-- ~3,259 LOC TypeScript across 10 source modules + 4 test files
-- 14 MCP tools (3 consolidated + 11 legacy/deprecated), 13 CLI commands
+- Shipped v2 (2026-05-11): 15 phases total (v1: 10, v2: 5), 192 tests, 26/26 requirements
+- 12 source modules + 7 test files
+- 14 MCP tools (3 consolidated + 11 deprecated thin wrappers), 14 CLI commands (including doctor)
 - Published on npm as `jules-dispatch` (v1.2.0)
 - CI: GitHub Actions, Node 20/22 matrix
+- MCP test coverage: 26 tests (consolidated + deprecated aliases)
+- Polling deduplicated: single `pollSessions` function shared by all consumers
 
 ### Known Tech Debt
 
-- MCP tools (mcp.ts, 665 lines) have zero test coverage
-- Polling logic duplicated 3x (jules_wait_for_completion, jules_monitor, collector)
-- Deprecated tools are full reimplementations, not thin wrappers
 - CLI UI output relies on manual visual inspection
+- MCP SDK v2 migration deferred to v3
+- Response format control (concise/detailed) deferred to v3
 
 ## Key Decisions
 
@@ -83,6 +84,9 @@ Turn Jules from a one-at-a-time tool into a massively parallel coding workforce,
 | Standardized response shape | Consistent agent-friendly interface | { success, data?, error?, meta? } on all tools |
 | cli-table3 for status table | Cross-platform, lightweight | Color-coded table with state grouping |
 | Watch mode ANSI refresh | Terminal-native, no TUI dependency | SIGINT handler + auto-exit on terminal states |
+| Extract helpers for testability | ok/fail/computeRecoveryHint untestable as closures | src/mcp-helpers.ts with 11 unit tests |
+| InMemoryTransport for MCP testing | Integration tests need real protocol layer | 26 tests via Client+Server pair |
+| Callback-based polling | Collector needs progress output, MCP needs raw result | PollCallbacks interface, backward-compatible |
 
 ## Constraints
 
@@ -102,4 +106,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-11 after v1 milestone*
+*Last updated: 2026-05-11 after v2 milestone*
