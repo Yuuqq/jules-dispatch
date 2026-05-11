@@ -6,7 +6,8 @@ import { loadConfig, loadTasksFromString } from './config.js';
 import { JulesClient, deriveStatus } from './client.js';
 import { dispatchTaskDefinition } from './dispatcher.js';
 import { planTasks, loadPlannerConfig, isPlannerConfigured } from './planner.js';
-import type { TaskDefinition, DispatchResult } from './types.js';
+import type { JulesConfig, TaskDefinition, DispatchResult } from './types.js';
+import { ok, fail, computeRecoveryHint } from './mcp-helpers.js';
 
 export interface McpServerOptions {
   projectDir: string;
@@ -20,14 +21,7 @@ type ToolAnnotations = {
   openWorldHint?: boolean;
 };
 
-export async function runMcpServer(options: McpServerOptions): Promise<void> {
-  // Load config eagerly so the user sees a clear error at startup if no API key.
-  const config = loadConfig(options.projectDir, {
-    apiKeyOverride: options.apiKeyOverride,
-    noExit: true,
-  });
-  const client = new JulesClient(config);
-
+export function createMcpServer(config: JulesConfig, client: JulesClient): McpServer {
   const server = new McpServer({
     name: 'jules-dispatch',
     version: '1.2.0',
@@ -51,11 +45,7 @@ export async function runMcpServer(options: McpServerOptions): Promise<void> {
         };
       } catch (err) {
         const e = err as Error & { status?: number };
-        const recovery_hint = e.status === 401 || e.status === 403
-          ? 'Verify JULES_API_KEY is set and valid.'
-          : e.status === 404
-            ? 'Check the resource ID and try again.'
-            : 'Check network connectivity and try again. If the problem persists, verify your API key.';
+        const recovery_hint = computeRecoveryHint(e.status);
         const failure = fail(e.message, recovery_hint);
         return {
           isError: true,
@@ -77,14 +67,6 @@ export async function runMcpServer(options: McpServerOptions): Promise<void> {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     server.registerTool(name, { description, inputSchema, annotations }, wrapped as any);
   };
-
-  function ok<T>(data: T, meta?: Record<string, unknown>): { success: true; data: T; meta?: Record<string, unknown> } {
-    return { success: true as const, data, ...(meta ? { meta } : {}) };
-  }
-
-  function fail(message: string, recovery_hint: string, code?: string): { success: false; error: { message: string; recovery_hint: string; code?: string } } {
-    return { success: false as const, error: { message, recovery_hint, ...((code ? { code } : {})) } };
-  }
 
   const readOnlyAnnotations: ToolAnnotations = {
     readOnlyHint: true,
@@ -582,7 +564,7 @@ export async function runMcpServer(options: McpServerOptions): Promise<void> {
     readOnlyAnnotations,
   );
 
-  // ---------- Planner (OPTIONAL — any OpenAI-compatible LLM) ----------
+  // ---------- Planner (OPTIONAL -- any OpenAI-compatible LLM) ----------
   // Only registered if a planner-capable API key is present at startup.
   // This keeps the tool list clean for users who only want raw dispatch.
 
@@ -659,9 +641,17 @@ export async function runMcpServer(options: McpServerOptions): Promise<void> {
     );
   } // end registerPlannerTools
 
-  await server.connect(new StdioServerTransport());
+  return server;
+}
 
-  // Server runs until stdio closes; do not return.
+export async function runMcpServer(options: McpServerOptions): Promise<void> {
+  const config = loadConfig(options.projectDir, {
+    apiKeyOverride: options.apiKeyOverride,
+    noExit: true,
+  });
+  const client = new JulesClient(config);
+  const server = createMcpServer(config, client);
+  await server.connect(new StdioServerTransport());
 }
 
 void resolve;  // keep import for potential future use
