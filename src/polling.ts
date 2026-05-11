@@ -1,3 +1,4 @@
+import { deriveStatus } from './client.js';
 import type { JulesClient } from './client.js';
 
 export interface PollCallbacks {
@@ -25,5 +26,77 @@ export async function pollSessions(
   options?: PollOptions,
   callbacks?: PollCallbacks,
 ): Promise<PollResult> {
-  throw new Error('not implemented');
+  const interval = options?.interval ?? 10000;
+  const timeout = options?.timeout ?? 600000;
+  const failFast = options?.failFast ?? false;
+  const start = Date.now();
+
+  const completed = new Set<string>();
+  const failed = new Set<string>();
+  const cancelled = new Set<string>();
+
+  const markTerminal = (id: string, status: 'completed' | 'failed' | 'cancelled'): void => {
+    if (status === 'completed') completed.add(id);
+    else if (status === 'failed') failed.add(id);
+    else if (status === 'cancelled') cancelled.add(id);
+    callbacks?.onTerminal?.(id, status);
+  };
+
+  while (Date.now() - start < timeout && !(failFast && failed.size > 0)) {
+    const remaining = sessionIds.filter(id =>
+      !completed.has(id) && !failed.has(id) && !cancelled.has(id),
+    );
+    if (remaining.length === 0) break;
+
+    for (const id of remaining) {
+      try {
+        const session = await client.getSession(id);
+        const { activities } = await client.listActivities(id, 10);
+        const status = deriveStatus(session, activities);
+
+        if (status === 'completed') markTerminal(id, 'completed');
+        else if (status === 'failed') {
+          markTerminal(id, 'failed');
+          if (failFast) break;
+        }
+        else if (status === 'cancelled') markTerminal(id, 'cancelled');
+      } catch {
+        /* transient */
+      }
+    }
+
+    callbacks?.onPoll?.({
+      completed: completed.size,
+      failed: failed.size,
+      cancelled: cancelled.size,
+      remaining: sessionIds.filter(id =>
+        !completed.has(id) && !failed.has(id) && !cancelled.has(id),
+      ).length,
+    });
+
+    if (failFast && failed.size > 0) break;
+
+    const stillRunning = sessionIds.filter(id =>
+      !completed.has(id) && !failed.has(id) && !cancelled.has(id),
+    );
+    if (stillRunning.length === 0) break;
+
+    await sleep(interval);
+  }
+
+  const stillRunning = sessionIds.filter(id =>
+    !completed.has(id) && !failed.has(id) && !cancelled.has(id),
+  );
+
+  return {
+    completed: [...completed],
+    failed: [...failed],
+    cancelled: [...cancelled],
+    stillRunning,
+    timedOut: stillRunning.length > 0,
+  };
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
