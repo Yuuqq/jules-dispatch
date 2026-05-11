@@ -6,7 +6,7 @@ import { loadConfig, loadTasksFromString } from './config.js';
 import { JulesClient, deriveStatus } from './client.js';
 import { dispatchTaskDefinition } from './dispatcher.js';
 import { planTasks, loadPlannerConfig, isPlannerConfigured } from './planner.js';
-import type { TaskDefinition, DispatchResult } from './types.js';
+import type { JulesConfig, TaskDefinition, DispatchResult } from './types.js';
 import { ok, fail, computeRecoveryHint } from './mcp-helpers.js';
 
 export interface McpServerOptions {
@@ -21,14 +21,7 @@ type ToolAnnotations = {
   openWorldHint?: boolean;
 };
 
-export async function runMcpServer(options: McpServerOptions): Promise<void> {
-  // Load config eagerly so the user sees a clear error at startup if no API key.
-  const config = loadConfig(options.projectDir, {
-    apiKeyOverride: options.apiKeyOverride,
-    noExit: true,
-  });
-  const client = new JulesClient(config);
-
+export function createMcpServer(config: JulesConfig, client: JulesClient): McpServer {
   const server = new McpServer({
     name: 'jules-dispatch',
     version: '1.2.0',
@@ -571,7 +564,7 @@ export async function runMcpServer(options: McpServerOptions): Promise<void> {
     readOnlyAnnotations,
   );
 
-  // ---------- Planner (OPTIONAL — any OpenAI-compatible LLM) ----------
+  // ---------- Planner (OPTIONAL -- any OpenAI-compatible LLM) ----------
   // Only registered if a planner-capable API key is present at startup.
   // This keeps the tool list clean for users who only want raw dispatch.
 
@@ -648,9 +641,17 @@ export async function runMcpServer(options: McpServerOptions): Promise<void> {
     );
   } // end registerPlannerTools
 
-  await server.connect(new StdioServerTransport());
+  return server;
+}
 
-  // Server runs until stdio closes; do not return.
+export async function runMcpServer(options: McpServerOptions): Promise<void> {
+  const config = loadConfig(options.projectDir, {
+    apiKeyOverride: options.apiKeyOverride,
+    noExit: true,
+  });
+  const client = new JulesClient(config);
+  const server = createMcpServer(config, client);
+  await server.connect(new StdioServerTransport());
 }
 
 void resolve;  // keep import for potential future use
