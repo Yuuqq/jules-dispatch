@@ -26,7 +26,7 @@
 
 - [x] **Phase 11: MCP Response Helpers & Consolidated Tool Tests** - Test coverage for ok/fail helpers, error wrapper, and all 3 consolidated MCP tools (completed 2026-05-11)
 - [x] **Phase 12: Polling Deduplication** - Extract shared polling function from 3 duplicate implementations (completed 2026-05-11)
-- [ ] **Phase 13: Deprecated Tool Refactoring** - Refactor 7 deprecated tools from full reimplementations to thin wrappers
+- [x] **Phase 13: Deprecated Tool Refactoring** - Refactor 7 deprecated tools from full reimplementations to thin wrappers (completed 2026-05-11)
 - [ ] **Phase 14: Deprecated Alias Tests** - Verify all 7 deprecated tool aliases work correctly via tests
 - [ ] **Phase 15: Doctor Command** - First-run environment validation, API connectivity, task file checking
 
@@ -75,7 +75,7 @@ Plans:
 
 Plans:
 **Wave 1**
-- [ ] 13-01-PLAN.md — Refactor 3 deprecated tools with duplicate logic to delegate to shared handlers; verify with typecheck + tests
+- [x] 13-01-PLAN.md — Refactor 3 deprecated tools with duplicate logic to delegate to shared handlers; verify with typecheck + tests
 
 ### Phase 14: Deprecated Alias Tests
 **Goal**: All deprecated tool aliases have test coverage proving they delegate correctly
@@ -114,7 +114,7 @@ Plans:
 | 10. CLI Batch Progress | v1 | 2/2 | Complete | 2026-05-11 |
 | 11. MCP Response Helpers & Consolidated Tool Tests | v2 | 2/2 | Complete | 2026-05-11 |
 | 12. Polling Deduplication | v2 | 1/1 | Complete    | 2026-05-11 |
-| 13. Deprecated Tool Refactoring | v2 | 0/1 | Planned | - |
+| 13. Deprecated Tool Refactoring | v2 | 1/1 | Complete   | 2026-05-11 |
 | 14. Deprecated Alias Tests | v2 | 0/? | Not started | - |
 | 15. Doctor Command | v2 | 0/? | Not started | - |
 
