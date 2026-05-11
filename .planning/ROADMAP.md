@@ -44,7 +44,7 @@
 
 Plans:
 **Wave 1**
-- [ ] 11-01-PLAN.md — Extract ok/fail/computeRecoveryHint to src/mcp-helpers.ts and write unit tests
+- [x] 11-01-PLAN.md — Extract ok/fail/computeRecoveryHint to src/mcp-helpers.ts and write unit tests
 
 **Wave 2** *(blocked on Wave 1 completion)*
 - [ ] 11-02-PLAN.md — Integration tests for all 3 consolidated MCP tools via InMemoryTransport
@@ -104,7 +104,7 @@ Plans:
 | 8. CLI Status Table | v1 | 2/2 | Complete | 2026-05-11 |
 | 9. CLI Watch Mode | v1 | 1/1 | Complete | 2026-05-11 |
 | 10. CLI Batch Progress | v1 | 2/2 | Complete | 2026-05-11 |
-| 11. MCP Response Helpers & Consolidated Tool Tests | v2 | 0/2 | In progress | - |
+| 11. MCP Response Helpers & Consolidated Tool Tests | v2 | 1/2 | In Progress|  |
 | 12. Polling Deduplication | v2 | 0/? | Not started | - |
 | 13. Deprecated Tool Refactoring | v2 | 0/? | Not started | - |
 | 14. Deprecated Alias Tests | v2 | 0/? | Not started | - |
