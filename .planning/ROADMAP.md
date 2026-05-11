@@ -43,7 +43,10 @@
 **Plans**: 2 plans
 
 Plans:
+**Wave 1**
 - [ ] 11-01-PLAN.md — Extract ok/fail/computeRecoveryHint to src/mcp-helpers.ts and write unit tests
+
+**Wave 2** *(blocked on Wave 1 completion)*
 - [ ] 11-02-PLAN.md — Integration tests for all 3 consolidated MCP tools via InMemoryTransport
 
 ### Phase 12: Polling Deduplication
