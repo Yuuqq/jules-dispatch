@@ -38,8 +38,8 @@
 <details>
 <summary>v3 — Polish & DX (Phases 16-19) — IN PROGRESS</summary>
 
-- [ ] **Phase 16: Error Message Infrastructure** — Actionable error messages replace raw stack traces
-- [ ] **Phase 17: CLI Help & Ergonomics** — Every command shows usage examples; color disabled when piped
+- [x] **Phase 16: Error Message Infrastructure** — Actionable error messages replace raw stack traces — completed 2026-05-12
+- [x] **Phase 17: CLI Help & Ergonomics** — Every command shows usage examples; color disabled when piped — completed 2026-05-12
 - [ ] **Phase 18: Init Wizard** — `jules-dispatch init` guides new users through first-run setup
 - [ ] **Phase 19: Documentation & Polish** — README quickstart, YAML reference, MCP integration guide
 
@@ -96,7 +96,7 @@
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 16. Error Message Infrastructure | 1/1 | Complete | 2026-05-12 |
-| 17. CLI Help & Ergonomics | 0/0 | Not started | - |
+| 17. CLI Help & Ergonomics | 1/1 | Complete | 2026-05-12 |
 | 18. Init Wizard | 0/0 | Not started | - |
 | 19. Documentation & Polish | 0/0 | Not started | - |
 

@@ -424,6 +424,58 @@ Examples:
   $ jules-dispatch doctor -v
 `);
 
+// ---------- init ----------
+
+program
+  .command('init')
+  .description('Set up API key and defaults for first-run (interactive wizard)')
+  .option('-s, --source <source>', 'default source (non-interactive mode)')
+  .option('-b, --branch <branch>', 'default branch (default: main)')
+  .addHelpText('after', `
+Examples:
+  $ jules-dispatch init
+  $ jules-dispatch init --api-key sk-xxx --source sources/github/owner/repo
+  $ jules-dispatch init --api-key sk-xxx --source sources/github/owner/repo --branch main
+`)
+  .action(async (opts: { source?: string; branch?: string }) => {
+    const optsGlobal = program.opts() as { project: string; apiKey?: string };
+    const apiKey = optsGlobal.apiKey;
+    const projectDir = resolve(optsGlobal.project);
+    const interactive = !apiKey && process.stdin.isTTY;
+
+    if (!interactive && !apiKey) {
+      emitError('Non-interactive mode requires --api-key. Use --api-key and optionally --source.', 'NON_INTERACTIVE');
+      process.exit(ExitCode.VALIDATION);
+    }
+
+    const { runInit } = await import('./init.js');
+    try {
+      const result = await runInit({
+        apiKey,
+        source: opts.source,
+        branch: opts.branch,
+        interactive: !!interactive,
+        projectDir,
+      });
+
+      emit(
+        () => {
+          if (result.backed) {
+            console.log(chalk.yellow('Backed up existing .env to .env.backup'));
+          }
+          console.log(chalk.green(`✓ Configuration written to ${result.envPath}`));
+          console.log(chalk.dim(`  API key: ${'*'.repeat(8)}${result.values.apiKey.slice(-4)}`));
+          console.log(chalk.dim(`  Source:  ${result.values.source || '(none)'}`));
+          console.log(chalk.dim(`  Branch:  ${result.values.branch}`));
+          console.log(chalk.dim('\nNext: jules-dispatch dispatch task.yaml'));
+        },
+        result,
+      );
+    } catch (err) {
+      fail(err);
+    }
+  });
+
 // ---------- tail ----------
 
 program
