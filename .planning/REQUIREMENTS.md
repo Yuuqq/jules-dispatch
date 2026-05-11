@@ -9,8 +9,8 @@ Requirements for reliability and onboarding. Each maps to roadmap phases.
 
 ### MCP Test Coverage
 
-- [ ] **MCP-09**: All 3 consolidated MCP tools (jules_dispatch, jules_monitor, jules_interact) have unit tests covering happy path, error handling, and edge cases
-- [ ] **MCP-10**: MCP response helpers (ok/fail) and error wrapper (recovery_hint computation) have unit tests
+- [x] **MCP-09**: All 3 consolidated MCP tools (jules_dispatch, jules_monitor, jules_interact) have unit tests covering happy path, error handling, and edge cases
+- [x] **MCP-10**: MCP response helpers (ok/fail) and error wrapper (recovery_hint computation) have unit tests
 - [ ] **MCP-11**: All 7 deprecated tool aliases have tests verifying they still function correctly
 
 ### Polling Deduplication
@@ -51,8 +51,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| MCP-09 | Phase 11 | Pending |
-| MCP-10 | Phase 11 | Pending |
+| MCP-09 | Phase 11 | Complete |
+| MCP-10 | Phase 11 | Complete |
 | MCP-11 | Phase 14 | Pending |
 | POLL-01 | Phase 12 | Pending |
 | DEP-01 | Phase 13 | Pending |
