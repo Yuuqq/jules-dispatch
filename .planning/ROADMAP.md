@@ -36,7 +36,7 @@
 </details>
 
 <details>
-<summary>v3 — Polish & DX (Phases 16-19) — IN PROGRESS</summary>
+<summary>v3 — Polish & DX (Phases 16-19) — COMPLETED 2026-05-12</summary>
 
 - [x] **Phase 16: Error Message Infrastructure** — Actionable error messages replace raw stack traces — completed 2026-05-12
 - [x] **Phase 17: CLI Help & Ergonomics** — Every command shows usage examples; color disabled when piped — completed 2026-05-12
