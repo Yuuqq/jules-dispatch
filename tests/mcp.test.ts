@@ -438,3 +438,158 @@ describe('jules_dispatch_batch', () => {
     expect(data.error.recovery_hint).toBeTruthy();
   });
 });
+
+describe('jules_get_session', () => {
+  let server: { client: Client; cleanup: () => Promise<void> };
+  let mockClient: JulesClient;
+
+  beforeEach(async () => {
+    mockClient = createMockClient();
+    server = await createTestServer(mockClient);
+  });
+
+  afterEach(async () => {
+    await server.cleanup();
+  });
+
+  it('returns session details', async () => {
+    const { isError, data } = await callTool(server.client, 'jules_get_session', {
+      sessionId: 'sess-1',
+    });
+    expect(isError).toBeFalsy();
+    expect(data.data.id).toBe('sess-1');
+    expect(data.data.title).toBe('Test Session');
+  });
+
+  it('returns error when session not found', async () => {
+    vi.mocked(mockClient.getSession).mockRejectedValueOnce(
+      Object.assign(new Error('Not found'), { status: 404 }),
+    );
+    const { isError, data } = await callTool(server.client, 'jules_get_session', {
+      sessionId: 'bad-id',
+    });
+    expect(isError).toBe(true);
+    expect(data.error.recovery_hint).toBeTruthy();
+  });
+});
+
+describe('jules_list_sessions', () => {
+  let server: { client: Client; cleanup: () => Promise<void> };
+  let mockClient: JulesClient;
+
+  beforeEach(async () => {
+    mockClient = createMockClient({
+      listSessions: vi.fn().mockResolvedValue({
+        sessions: [{ id: 's1', title: 'S1', url: 'https://jules.google/s1' }],
+      }),
+    });
+    server = await createTestServer(mockClient);
+  });
+
+  afterEach(async () => {
+    await server.cleanup();
+  });
+
+  it('returns paginated session list', async () => {
+    const { isError, data } = await callTool(server.client, 'jules_list_sessions', {
+      pageSize: 10,
+    });
+    expect(isError).toBeFalsy();
+    expect(data.data.sessions).toBeInstanceOf(Array);
+    expect(data.data.sessions[0].id).toBe('s1');
+  });
+});
+
+describe('jules_status', () => {
+  let server: { client: Client; cleanup: () => Promise<void> };
+  let mockClient: JulesClient;
+
+  beforeEach(async () => {
+    mockClient = createMockClient();
+    server = await createTestServer(mockClient);
+  });
+
+  afterEach(async () => {
+    await server.cleanup();
+  });
+
+  it('returns legacy summary with prTitle and activities count', async () => {
+    const { isError, data } = await callTool(server.client, 'jules_status', {
+      sessionIds: ['sess-1'],
+    });
+    expect(isError).toBeFalsy();
+    expect(data.data.results).toBeInstanceOf(Array);
+    expect(data.data.results).toHaveLength(1);
+    expect(data.data.results[0].sessionId).toBe('sess-1');
+    expect(data.data.results[0].status).toBe('running');
+    expect(data.data.results[0].activities).toEqual(expect.any(Number));
+  });
+
+  it('returns error status when session lookup fails', async () => {
+    vi.mocked(mockClient.getSession).mockRejectedValueOnce(new Error('Not found'));
+    const { isError, data } = await callTool(server.client, 'jules_status', {
+      sessionIds: ['bad-id'],
+    });
+    expect(isError).toBeFalsy();
+    expect(data.data.results[0].status).toBe('error');
+    expect(data.data.results[0].error).toBe('Not found');
+  });
+});
+
+describe('jules_list_activities', () => {
+  let server: { client: Client; cleanup: () => Promise<void> };
+  let mockClient: JulesClient;
+
+  beforeEach(async () => {
+    mockClient = createMockClient();
+    server = await createTestServer(mockClient);
+  });
+
+  afterEach(async () => {
+    await server.cleanup();
+  });
+
+  it('returns activities for a session', async () => {
+    const { isError, data } = await callTool(server.client, 'jules_list_activities', {
+      sessionId: 'sess-1',
+    });
+    expect(isError).toBeFalsy();
+    expect(data.data.activities).toBeInstanceOf(Array);
+    expect(data.data.activities).toHaveLength(1);
+    expect(data.data.activities[0].id).toBe('act-1');
+  });
+});
+
+describe('jules_get_plan', () => {
+  let server: { client: Client; cleanup: () => Promise<void> };
+  let mockClient: JulesClient;
+
+  beforeEach(async () => {
+    mockClient = createMockClient();
+    server = await createTestServer(mockClient);
+  });
+
+  afterEach(async () => {
+    await server.cleanup();
+  });
+
+  it('returns the latest plan for a session', async () => {
+    const { isError, data } = await callTool(server.client, 'jules_get_plan', {
+      sessionId: 'sess-1',
+    });
+    expect(isError).toBeFalsy();
+    expect(data.data.plan.id).toBe('plan-1');
+    expect(data.data.plan.steps).toBeInstanceOf(Array);
+  });
+
+  it('returns error with recovery_hint when getLatestPlan fails', async () => {
+    vi.mocked(mockClient.getLatestPlan).mockRejectedValueOnce(
+      Object.assign(new Error('Not found'), { status: 404 }),
+    );
+    const { isError, data } = await callTool(server.client, 'jules_get_plan', {
+      sessionId: 'sess-1',
+    });
+    expect(isError).toBe(true);
+    expect(data.error.recovery_hint).toBeTruthy();
+  });
+});
