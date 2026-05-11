@@ -145,7 +145,7 @@ describe('checkTaskFile', () => {
       expect(check.status).toBe('pass');
       expect(check.message).toContain('valid');
     } finally {
-      unlinkSync(tmpFile);
+      try { unlinkSync(tmpFile); } catch { /* already cleaned up */ }
     }
   });
 
@@ -162,7 +162,7 @@ describe('checkTaskFile', () => {
       expect(check.status).toBe('fail');
       expect(check.message).toContain('prompt');
     } finally {
-      unlinkSync(tmpFile);
+      try { unlinkSync(tmpFile); } catch { /* already cleaned up */ }
     }
   });
 
@@ -238,7 +238,7 @@ describe('runDoctor', () => {
         const taskCheck = result.checks.find(c => c.name === 'task_file');
         expect(taskCheck?.status).toBe('pass');
       } finally {
-        unlinkSync(tmpFile);
+        try { unlinkSync(tmpFile); } catch { /* already cleaned up */ }
       }
     } finally {
       if (original === undefined) delete process.env.JULES_API_KEY;
