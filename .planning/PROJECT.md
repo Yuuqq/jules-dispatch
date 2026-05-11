@@ -29,22 +29,22 @@ Turn Jules from a one-at-a-time tool into a massively parallel coding workforce,
 - CLI watch mode (--watch with ANSI refresh, SIGINT, auto-exit) — v1
 - CLI batch progress (per-task lines + summary) — v1
 
-## Current Milestone: v2 Reliability & Onboarding
+## Current Milestone: v3 Polish & DX
 
-**Goal:** Make the MCP layer testable, the CLI self-diagnosing, and the polling logic maintainable.
+**Goal:** A new user can npm install, run their first task, and understand the output in under 5 minutes — without reading source code.
 
 **Target features:**
-- MCP test coverage (mcp.ts 665 lines → comprehensive tests)
-- Polling logic deduplication (3 implementations → 1 shared)
-- doctor command (first-run validation, env checks, connectivity)
-- Deprecated tools refactored to thin wrappers
+- Setup & onboarding (init wizard, API key detection, config generation)
+- CLI ergonomics (richer --help, command aliases, better arg validation)
+- Error messages (actionable errors for auth, task files, API issues)
+- Documentation (README quickstart, per-command examples, MCP guide)
 
 ### Active
 
-- [ ] MCP test coverage (mcp.ts has zero tests)
-- [ ] Polling logic deduplication (3x → 1 shared)
-- [ ] Deprecated tools → thin wrappers (not full reimplementations)
-- [ ] First-run validation (`jules-dispatch doctor`)
+- [ ] Setup & onboarding (`jules-dispatch init` wizard)
+- [ ] CLI ergonomics (--help with examples, arg validation messages)
+- [ ] Error messages (actionable, no raw stack traces)
+- [ ] Documentation (README, quickstart, MCP guide)
 
 ### Out of Scope
 
@@ -72,8 +72,8 @@ Turn Jules from a one-at-a-time tool into a massively parallel coding workforce,
 ### Known Tech Debt
 
 - CLI UI output relies on manual visual inspection
-- MCP SDK v2 migration deferred to v3
-- Response format control (concise/detailed) deferred to v3
+- MCP SDK v2 migration deferred to v4
+- Response format control (concise/detailed) deferred to v4
 
 ## Key Decisions
 
@@ -106,4 +106,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-11 after v2 milestone*
+*Last updated: 2026-05-11 after v3 milestone kickoff*
