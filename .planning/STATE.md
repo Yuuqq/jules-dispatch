@@ -5,23 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-05-11)
 
 **Core value:** Turn Jules from a one-at-a-time tool into a massively parallel coding workforce, controlled seamlessly by either humans on the CLI or AI agents over MCP.
-**Current focus:** v1 shipped — planning next milestone
+**Current focus:** v2 Reliability & Onboarding — MCP tests, doctor, polling dedup
 
 ## Current Position
 
-Phase: 10/10 (ALL COMPLETE)
-Plan: 16/16 complete
-Status: v1 milestone shipped
-Last activity: 2026-05-11 -- v1 milestone complete
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-05-11 — Milestone v2 started
 
-Progress: [██████████] 100%
-
-## Performance Metrics
-
-**Velocity:**
-- Total plans completed: 16
-- Average duration: ~2-3 min per plan
-- Total execution time: ~30 min
+Progress: [░░░░░░░░░░] 0%
 
 ## Accumulated Context
 
@@ -35,10 +28,10 @@ Progress: [██████████] 100%
 
 ### Blockers/Concerns
 
-None — v1 shipped cleanly.
+None.
 
 ## Session Continuity
 
 Last session: 2026-05-11
-Stopped at: v1 complete, ready for /gsd-new-milestone
+Stopped at: v2 requirements definition
 Resume file: None

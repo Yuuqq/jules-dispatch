@@ -29,13 +29,22 @@ Turn Jules from a one-at-a-time tool into a massively parallel coding workforce,
 - CLI watch mode (--watch with ANSI refresh, SIGINT, auto-exit) — v1
 - CLI batch progress (per-task lines + summary) — v1
 
+## Current Milestone: v2 Reliability & Onboarding
+
+**Goal:** Make the MCP layer testable, the CLI self-diagnosing, and the polling logic maintainable.
+
+**Target features:**
+- MCP test coverage (mcp.ts 665 lines → comprehensive tests)
+- Polling logic deduplication (3 implementations → 1 shared)
+- doctor command (first-run validation, env checks, connectivity)
+- Deprecated tools refactored to thin wrappers
+
 ### Active
 
 - [ ] MCP test coverage (mcp.ts has zero tests)
+- [ ] Polling logic deduplication (3x → 1 shared)
+- [ ] Deprecated tools → thin wrappers (not full reimplementations)
 - [ ] First-run validation (`jules-dispatch doctor`)
-- [ ] Response format control (`format: "concise" | "detailed"`)
-- [ ] Cross-tool navigation hints (`suggested_next` field)
-- [ ] Output schema declarations (`outputSchema`) on MCP tools
 
 ### Out of Scope
 
