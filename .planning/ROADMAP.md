@@ -40,7 +40,11 @@
   1. Running `npm test` executes tests for all 3 consolidated MCP tools (jules_dispatch, jules_monitor, jules_interact) covering happy path, error handling, and edge cases -- MCP-09
   2. ok/fail response helpers produce correct { success, data?, error?, meta? } shapes for all input types -- MCP-10
   3. Error wrapper recovery_hint computation is verified for known error categories (auth, validation, timeout, network) -- MCP-10
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 11-01-PLAN.md — Extract ok/fail/computeRecoveryHint to src/mcp-helpers.ts and write unit tests
+- [ ] 11-02-PLAN.md — Integration tests for all 3 consolidated MCP tools via InMemoryTransport
 
 ### Phase 12: Polling Deduplication
 **Goal**: Wait-for-completion polling logic exists as a single shared function used everywhere
@@ -97,7 +101,7 @@
 | 8. CLI Status Table | v1 | 2/2 | Complete | 2026-05-11 |
 | 9. CLI Watch Mode | v1 | 1/1 | Complete | 2026-05-11 |
 | 10. CLI Batch Progress | v1 | 2/2 | Complete | 2026-05-11 |
-| 11. MCP Response Helpers & Consolidated Tool Tests | v2 | 0/? | Not started | - |
+| 11. MCP Response Helpers & Consolidated Tool Tests | v2 | 0/2 | In progress | - |
 | 12. Polling Deduplication | v2 | 0/? | Not started | - |
 | 13. Deprecated Tool Refactoring | v2 | 0/? | Not started | - |
 | 14. Deprecated Alias Tests | v2 | 0/? | Not started | - |
