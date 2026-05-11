@@ -15,7 +15,7 @@ Requirements for reliability and onboarding. Each maps to roadmap phases.
 
 ### Polling Deduplication
 
-- [ ] **POLL-01**: Wait-for-completion polling logic is extracted into a single shared function used by all 3 current implementations (jules_wait_for_completion, jules_monitor, collector.waitForCompletion)
+- [x] **POLL-01**: Wait-for-completion polling logic is extracted into a single shared function used by all 3 current implementations (jules_wait_for_completion, jules_monitor, collector.waitForCompletion)
 
 ### Deprecated Tool Refactoring
 
@@ -54,7 +54,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MCP-09 | Phase 11 | Complete |
 | MCP-10 | Phase 11 | Complete |
 | MCP-11 | Phase 14 | Pending |
-| POLL-01 | Phase 12 | Pending |
+| POLL-01 | Phase 12 | Complete |
 | DEP-01 | Phase 13 | Pending |
 | DOC-01 | Phase 15 | Pending |
 | DOC-02 | Phase 15 | Pending |

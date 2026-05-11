@@ -70,8 +70,12 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. Each of the 7 deprecated MCP tools is a thin wrapper (argument mapping + delegation call) with no duplicated business logic -- DEP-01
   2. Existing MCP clients using deprecated tool names receive identical responses to using consolidated tools -- DEP-01
-  3. The total lines of code in mcp.ts decreases significantly from the 665-line baseline -- DEP-01
-**Plans**: TBD
+  3. The total lines of code in mcp.ts decreases significantly from the 578-line baseline -- DEP-01
+**Plans**: 1 plan
+
+Plans:
+**Wave 1**
+- [ ] 13-01-PLAN.md — Refactor 3 deprecated tools with duplicate logic to delegate to shared handlers; verify with typecheck + tests
 
 ### Phase 14: Deprecated Alias Tests
 **Goal**: All deprecated tool aliases have test coverage proving they delegate correctly
@@ -105,12 +109,12 @@ Plans:
 | 5. MCP Response Standardization | v1 | 4/4 | Complete | 2026-05-11 |
 | 6. MCP Orchestration Tools | v1 | 3/3 | Complete | 2026-05-11 |
 | 7. MCP Backward Compatibility | v1 | 1/1 | Complete | 2026-05-11 |
-| 8. CLI Status Table | v1 | 2/2 | Complete | 2026-05-11 |
+| 8. CLI Status Table | v2 | 2/2 | Complete | 2026-05-11 |
 | 9. CLI Watch Mode | v1 | 1/1 | Complete | 2026-05-11 |
 | 10. CLI Batch Progress | v1 | 2/2 | Complete | 2026-05-11 |
 | 11. MCP Response Helpers & Consolidated Tool Tests | v2 | 2/2 | Complete | 2026-05-11 |
-| 12. Polling Deduplication | v2 | 1/1 | Complete   | 2026-05-11 |
-| 13. Deprecated Tool Refactoring | v2 | 0/? | Not started | - |
+| 12. Polling Deduplication | v2 | 1/1 | Complete    | 2026-05-11 |
+| 13. Deprecated Tool Refactoring | v2 | 0/1 | Planned | - |
 | 14. Deprecated Alias Tests | v2 | 0/? | Not started | - |
 | 15. Doctor Command | v2 | 0/? | Not started | - |
 
