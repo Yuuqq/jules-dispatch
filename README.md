@@ -197,22 +197,107 @@ env = { JULES_API_KEY = "your-api-key-here", JULES_DEFAULT_SOURCE = "sources/git
 
 ### MCP Tools Exposed
 
-| Tool | What it does |
-|---|---|
-| `jules_list_sources` | List GitHub repos connected to Jules |
-| `jules_dispatch_task` | Create one Jules session |
-| `jules_dispatch_batch` | Create N sessions in parallel (accepts array or YAML/JSON string) |
-| `jules_get_session` | Full session details (state, PR, etc.) |
-| `jules_list_sessions` | Recent sessions, paginated |
-| `jules_status` | Compact status summary for a list of session IDs |
-| `jules_list_activities` | Activity log for a session |
-| `jules_get_plan` | Latest generated plan (steps + descriptions) |
-| `jules_approve_plan` | Approve a pending plan |
-| `jules_send_message` | Send a follow-up message to a running session |
-| `jules_cancel_session` | Cancel a running session |
-| `jules_wait_for_completion` | Block until N sessions finish (or timeout) |
+#### Consolidated tools (recommended)
 
-All tool outputs are JSON; errors are returned as MCP `isError` results with `{message, status, name}`.
+These 3 tools handle all common workflows. Legacy tools (12 aliases) still work but are deprecated.
+
+##### `jules_dispatch` — Create one or more sessions
+
+Accepts a single task object, an array of tasks, or a YAML/JSON string.
+
+**Parameters:**
+
+| Parameter | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `tasks` | `object \| object[] \| string` | **Yes** | — | Task definition(s). Objects need `title` + `prompt`. Strings are parsed as YAML/JSON. |
+| `format` | `"yaml" \| "json"` | No | `"yaml"` | Format when `tasks` is a string |
+| `parallel` | `number` | No | `10` | Max concurrent dispatches (1–50) |
+
+```json
+{
+  "tasks": [
+    { "title": "Fix auth bug", "prompt": "Fix the null check in login()" },
+    { "title": "Add tests", "prompt": "Add unit tests for auth.ts" }
+  ],
+  "parallel": 5
+}
+```
+
+##### `jules_monitor` — Check status or wait for completion
+
+**Parameters:**
+
+| Parameter | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `sessionIds` | `string[]` | **Yes** | — | Session IDs to monitor |
+| `wait` | `boolean` | No | `false` | If true, poll until all sessions reach a terminal state |
+| `intervalMs` | `number` | No | `10000` | Poll interval in ms (min 1000) |
+| `timeoutMs` | `number` | No | `600000` | Max wait time in ms (min 1000) |
+| `failFast` | `boolean` | No | `false` | Exit immediately on first failure |
+
+```json
+{
+  "sessionIds": ["abc123", "def456"],
+  "wait": true,
+  "timeoutMs": 300000
+}
+```
+
+##### `jules_interact` — Inspect a session in full context
+
+Returns session details, derived status, latest plan, activity timeline, and PR output in one call.
+
+**Parameters:**
+
+| Parameter | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `sessionId` | `string` | **Yes** | — | Session ID to inspect |
+| `activityCount` | `number` | No | `10` | Number of recent activities (1–100) |
+
+```json
+{ "sessionId": "abc123", "activityCount": 20 }
+```
+
+#### Utility tools
+
+| Tool | Parameters | Description |
+|---|---|---|
+| `jules_list_sources` | *(none)* | List all GitHub repos connected to Jules |
+| `jules_list_sessions` | `pageSize?`, `pageToken?` | List recent sessions with pagination |
+| `jules_approve_plan` | `sessionId` | Approve a plan-gated session |
+| `jules_send_message` | `sessionId`, `text` | Send a follow-up message |
+| `jules_cancel_session` | `sessionId` | Cancel a running session |
+
+#### Optional LLM-powered tools (requires LLM key)
+
+| Tool | Parameters | Description |
+|---|---|---|
+| `jules_plan_tasks` | `description`, `maxTasks?`, `source?`, `branch?`, `context?` | Plan tasks from a high-level description |
+| `jules_auto` | `description`, `maxTasks?`, `source?`, `branch?`, `parallel?` | Plan + dispatch in one shot |
+
+#### Response format
+
+All tools return:
+```json
+{ "success": true, "data": { ... } }
+```
+
+Errors return:
+```json
+{
+  "success": false,
+  "error": {
+    "message": "Authentication failed",
+    "status": 401,
+    "name": "Error",
+    "recovery_hint": "Check your API key"
+  }
+}
+```
+
+#### Legacy tools (deprecated aliases)
+
+`jules_dispatch_task`, `jules_dispatch_batch`, `jules_get_session`, `jules_list_activities`, `jules_get_plan`, `jules_status`, `jules_wait_for_completion` — all still functional, redirect to consolidated tools internally.
 
 ---
 
@@ -220,32 +305,36 @@ All tool outputs are JSON; errors are returned as MCP `isError` results with `{m
 
 ### Prerequisites
 
-- Node.js 18+
+- Node.js 20+
 - A [Google Jules](https://jules.google.com/) account and API key
 - A GitHub repository connected to Jules
 
 ### 1. Install
 
 ```bash
-npm install
-# or globally:
 npm install -g jules-dispatch
 ```
 
-### 2. Configure
+### 2. Set up (interactive wizard)
 
 ```bash
-cp .env.example .env
+jules-dispatch init
 ```
 
-```env
-JULES_API_KEY=your-api-key-here
-JULES_DEFAULT_SOURCE=sources/github/YOUR_ORG/YOUR_REPO
-JULES_DEFAULT_BRANCH=main
-JULES_AUTO_MODE=AUTO_CREATE_PR
+The wizard prompts for your API key, default source, and branch. It writes a `.env` file.
+
+For CI/scripts (non-interactive):
+```bash
+jules-dispatch init --api-key sk-xxx --source sources/github/owner/repo
 ```
 
-### 3. Write a task
+### 3. Validate your setup
+
+```bash
+jules-dispatch doctor
+```
+
+### 4. Write a task
 
 ```yaml
 # tasks/add-dark-mode.yaml
@@ -259,7 +348,7 @@ prompt: |
   5. Open a PR
 ```
 
-### 4. Dispatch it
+### 5. Dispatch it
 
 ```bash
 jules-dispatch dispatch tasks/add-dark-mode.yaml
@@ -268,11 +357,13 @@ jules-dispatch dispatch tasks/add-dark-mode.yaml
 #   ID:      abc123
 ```
 
-### 5. Or batch-dispatch everything at once
+### 6. Batch-dispatch a whole directory
 
 ```bash
 jules-dispatch batch tasks/ --parallel 10
 ```
+
+That's it — 6 steps from install to your first PR.
 
 ---
 
@@ -290,10 +381,11 @@ jules-dispatch batch tasks/ --parallel 10
 
 | Command | What it does |
 |---|---|
+| `init` | Interactive first-run wizard (API key, source, branch) |
 | `dispatch <taskFile>` | Dispatch a single task. Use `-` to read from stdin. |
-| `plan-tasks <description>` | Use OpenRouter LLM to expand an intent into N task drafts (no dispatch) |
-| `auto <description>` | LLM-plan + dispatch in one shot (with confirmation) |
 | `batch [taskDir]` | Dispatch all `.yaml`/`.yml`/`.json` files in a directory |
+| `auto <description>` | LLM-plan + dispatch in one shot (with confirmation) |
+| `plan-tasks <description>` | Use LLM to expand an intent into N task drafts (no dispatch) |
 | `status` | Summary of recent sessions (or specific `--ids`) |
 | `get <sessionId>` | Full details of one session |
 | `wait <ids...>` | Poll until sessions finish (or timeout) |
@@ -303,6 +395,7 @@ jules-dispatch batch tasks/ --parallel 10
 | `message <sessionId> <text>` | Send a follow-up message |
 | `cancel <sessionId>` | Cancel a running session |
 | `sources` | List connected GitHub repos (auto-paginates) |
+| `doctor` | Validate environment, API key, connectivity, task files |
 | `mcp` | Run as an MCP server over stdio |
 
 ### Exit codes (for shell scripts and agents)
@@ -386,32 +479,65 @@ stateDiagram-v2
 
 ## 📄 Task File Format
 
-```yaml
-title: "Human-readable task name"           # required
-prompt: |                                   # required
-  Detailed instructions for Jules.
-  The more specific, the better the output.
+### Field Reference
 
-source: "sources/github/owner/repo"         # optional — overrides .env default
-branch: "main"                              # optional — overrides .env default
-autoMode: "AUTO_CREATE_PR"                  # optional — AUTO_CREATE_PR | NONE
-requirePlanApproval: false                  # optional — pause for plan OK
+| Field | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `title` | `string` | **Yes** | — | Human-readable task name shown in CLI status and session lists |
+| `prompt` | `string` | **Yes** | — | Detailed instructions for the Jules agent. The more specific, the better the output. |
+| `source` | `string` | No | `JULES_DEFAULT_SOURCE` from `.env` | Jules source identifier, e.g. `sources/github/owner/repo`. Override per-task. |
+| `branch` | `string` | No | `JULES_DEFAULT_BRANCH` from `.env` (or `main`) | Git branch for the Jules session to start from |
+| `autoMode` | `string` | No | `AUTO_CREATE_PR` | Automation mode. Values: `AUTO_CREATE_PR` (Jules creates a PR automatically), `NONE` |
+| `requirePlanApproval` | `boolean` | No | `false` | When `true`, Jules pauses after generating a plan and waits for `jules-dispatch approve <id>` |
+
+### YAML example
+
+```yaml
+title: "Add unit tests for auth module"
+prompt: |
+  Add comprehensive unit tests for src/auth.ts:
+  1. Test login with valid credentials
+  2. Test login with invalid credentials
+  3. Test token refresh flow
+  4. Test session expiry handling
+  5. Open a PR with the test file
+source: "sources/github/myorg/myrepo"
+branch: "develop"
+autoMode: "AUTO_CREATE_PR"
+requirePlanApproval: false
 ```
 
-**Multiple tasks in one file** (YAML `---` separators):
+### Multiple tasks in one file (YAML `---` separators)
 
 ```yaml
-title: "Task 1"
-prompt: "Do thing A"
+title: "Fix lint errors in src/auth"
+prompt: "Fix all ESLint errors in src/auth.ts"
 ---
-title: "Task 2"
-prompt: "Do thing B"
+title: "Fix lint errors in src/api"
+prompt: "Fix all ESLint errors in src/api.ts"
+---
+title: "Fix lint errors in src/utils"
+prompt: "Fix all ESLint errors in src/utils.ts"
 ```
 
-JSON also works:
+### JSON format
 
 ```json
-{ "title": "Fix the thing", "prompt": "Find the bug in src/auth.ts and fix it." }
+{
+  "title": "Fix the thing",
+  "prompt": "Find the bug in src/auth.ts and fix it.",
+  "source": "sources/github/owner/repo",
+  "branch": "main"
+}
+```
+
+JSON array (for batch dispatch via MCP):
+
+```json
+[
+  { "title": "Task 1", "prompt": "Do thing A" },
+  { "title": "Task 2", "prompt": "Do thing B" }
+]
 ```
 
 ---
@@ -438,16 +564,23 @@ You get **N parallel coding agents** orchestrated by **one strategic agent**, ha
 ```
 jules-dispatch/
 ├── src/
-│   ├── cli.ts          CLI entry (Commander)
+│   ├── cli.ts          CLI entry point (Commander)
 │   ├── client.ts       Jules REST client (retries, pagination)
 │   ├── config.ts       .env + task file loading
 │   ├── dispatcher.ts   Task dispatch logic
 │   ├── collector.ts    Status polling & wait
-│   ├── output.ts       Text vs JSON output mode
-│   ├── mcp.ts          MCP server (stdio transport)
+│   ├── errors.ts       Structured error translation (Problem/Cause/Fix)
+│   ├── output.ts       Text vs JSON output mode, color detection
+│   ├── init.ts         Interactive init wizard
+│   ├── doctor.ts       Environment validation (doctor command)
+│   ├── mcp.ts          MCP server (stdio transport, 14 tools)
+│   ├── mcp-helpers.ts  MCP response helpers (ok/fail/recovery hints)
+│   ├── polling.ts      Shared poll-with-callback engine
+│   ├── planner.ts      Optional LLM task planner
+│   ├── log.ts          Verbose logging
 │   └── types.ts        TypeScript types
 ├── tasks/              Your task YAMLs live here
-├── .env.example        Environment variable template
+├── .env                Generated by jules-dispatch init
 └── .dispatch-logs/     JSON audit trail
 ```
 

@@ -9,27 +9,27 @@ Requirements for Polish & DX milestone. Each maps to roadmap phases.
 
 ### Error Messages
 
-- [ ] **ERR-01**: Error translation module (`src/errors.ts`) maps HTTP/status codes to actionable messages with Problem/Cause/Fix structure
-- [ ] **ERR-02**: Enhanced `emitError()` accepts optional `ErrorContext` with `hint` and `docsUrl` fields; JSON shape extended additively (backward-compatible)
-- [ ] **ERR-03**: All catch sites in `cli.ts` use structured error translation instead of raw `(err as Error).message`
+- [x] **ERR-01**: Error translation module (`src/errors.ts`) maps HTTP/status codes to actionable messages with Problem/Cause/Fix structure
+- [x] **ERR-02**: Enhanced `emitError()` accepts optional `ErrorContext` with `hint` and `docsUrl` fields; JSON shape extended additively (backward-compatible)
+- [x] **ERR-03**: All catch sites in `cli.ts` use structured error translation instead of raw `(err as Error).message`
 
 ### CLI Ergonomics
 
-- [ ] **CLI-01**: Every CLI command has 2-4 usage examples shown via `addHelpText('after', ...)`
-- [ ] **CLI-02**: Top-level `--help` shows grouped command list and getting-started footer
-- [ ] **CLI-03**: `NO_COLOR=1`, `TERM=dumb`, and piped stdout disable color output (respects existing conventions)
+- [x] **CLI-01**: Every CLI command has 2-4 usage examples shown via `addHelpText('after', ...)`
+- [x] **CLI-02**: Top-level `--help` shows grouped command list and getting-started footer
+- [x] **CLI-03**: `NO_COLOR=1`, `TERM=dumb`, and piped stdout disable color output (respects existing conventions)
 
 ### Setup & Onboarding
 
-- [ ] **ONB-01**: `jules-dispatch init` wizard prompts for API key and default source, writes `.env` file
-- [ ] **ONB-02**: Non-interactive mode via `--api-key` and `--source` flags for CI/scripting environments
-- [ ] **ONB-03**: Safe config handling — detect existing `.env`, show current values as defaults, backup before overwrite
+- [x] **ONB-01**: `jules-dispatch init` wizard prompts for API key and default source, writes `.env` file
+- [x] **ONB-02**: Non-interactive mode via `--api-key` and `--source` flags for CI/scripting environments
+- [x] **ONB-03**: Safe config handling — detect existing `.env`, show current values as defaults, backup before overwrite
 
 ### Documentation
 
-- [ ] **DOC-01**: README quickstart rewrite — install, init, dispatch, see PR in under 5 minutes
-- [ ] **DOC-02**: YAML task file format reference with all supported fields and examples
-- [ ] **DOC-03**: MCP integration guide with tool descriptions and usage examples for AI agents
+- [x] **DOC-01**: README quickstart rewrite — install, init, dispatch, see PR in under 5 minutes
+- [x] **DOC-02**: YAML task file format reference with all supported fields and examples
+- [x] **DOC-03**: MCP integration guide with tool descriptions and usage examples for AI agents
 
 ## Future Requirements
 
@@ -58,18 +58,18 @@ Deferred to later milestones. Tracked but not in current roadmap.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ERR-01 | 16 | Pending |
-| ERR-02 | 16 | Pending |
-| ERR-03 | 16 | Pending |
-| CLI-01 | 17 | Pending |
-| CLI-02 | 17 | Pending |
-| CLI-03 | 17 | Pending |
-| ONB-01 | 18 | Pending |
-| ONB-02 | 18 | Pending |
-| ONB-03 | 18 | Pending |
-| DOC-01 | 19 | Pending |
-| DOC-02 | 19 | Pending |
-| DOC-03 | 19 | Pending |
+| ERR-01 | 16 | Complete |
+| ERR-02 | 16 | Complete |
+| ERR-03 | 16 | Complete |
+| CLI-01 | 17 | Complete |
+| CLI-02 | 17 | Complete |
+| CLI-03 | 17 | Complete |
+| ONB-01 | 18 | Complete |
+| ONB-02 | 18 | Complete |
+| ONB-03 | 18 | Complete |
+| DOC-01 | 19 | Complete |
+| DOC-02 | 19 | Complete |
+| DOC-03 | 19 | Complete |
 
 **Coverage:**
 - v3 requirements: 12 total
