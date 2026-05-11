@@ -99,8 +99,12 @@ Plans:
   1. Running `jules-dispatch doctor` reports Node.js version and npm availability status -- DOC-01
   2. Doctor checks JULES_API_KEY presence and validates connectivity to the Jules API -- DOC-02
   3. Doctor validates task file format when a path is provided and reports specific errors for malformed files -- DOC-03
-**Plans**: TBD
+**Plans**: 1 plan
 **UI hint**: yes
+
+Plans:
+**Wave 1**
+- [ ] 15-01-PLAN.md — Implement doctor module, CLI command, and tests (DOC-01, DOC-02, DOC-03)
 
 ## Progress
 
@@ -119,8 +123,8 @@ Plans:
 | 11. MCP Response Helpers & Consolidated Tool Tests | v2 | 2/2 | Complete | 2026-05-11 |
 | 12. Polling Deduplication | v2 | 1/1 | Complete    | 2026-05-11 |
 | 13. Deprecated Tool Refactoring | v2 | 1/1 | Complete    | 2026-05-11 |
-| 14. Deprecated Alias Tests | v2 | 1/1 | Complete   | 2026-05-11 |
-| 15. Doctor Command | v2 | 0/? | Not started | - |
+| 14. Deprecated Alias Tests | v2 | 1/1 | Complete    | 2026-05-11 |
+| 15. Doctor Command | v2 | 0/1 | Not started | - |
 
 ---
 
