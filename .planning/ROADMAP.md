@@ -85,7 +85,11 @@ Plans:
   1. Running `npm test` executes tests for all 7 deprecated tool aliases verifying they produce correct results -- MCP-11
   2. Alias tests confirm argument mapping from legacy formats to consolidated tool parameters is correct -- MCP-11
   3. Error responses from deprecated aliases match the consolidated tool error format -- MCP-11
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+**Wave 1**
+- [ ] 14-01-PLAN.md — Integration tests for all 7 deprecated MCP tool aliases
 
 ### Phase 15: Doctor Command
 **Goal**: Users can run `jules-dispatch doctor` to validate their environment before first use
@@ -114,8 +118,8 @@ Plans:
 | 10. CLI Batch Progress | v1 | 2/2 | Complete | 2026-05-11 |
 | 11. MCP Response Helpers & Consolidated Tool Tests | v2 | 2/2 | Complete | 2026-05-11 |
 | 12. Polling Deduplication | v2 | 1/1 | Complete    | 2026-05-11 |
-| 13. Deprecated Tool Refactoring | v2 | 1/1 | Complete   | 2026-05-11 |
-| 14. Deprecated Alias Tests | v2 | 0/? | Not started | - |
+| 13. Deprecated Tool Refactoring | v2 | 1/1 | Complete    | 2026-05-11 |
+| 14. Deprecated Alias Tests | v2 | 0/1 | Not started | - |
 | 15. Doctor Command | v2 | 0/? | Not started | - |
 
 ---
