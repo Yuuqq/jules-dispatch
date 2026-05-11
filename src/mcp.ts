@@ -4,9 +4,11 @@ import { z } from 'zod';
 import { resolve } from 'node:path';
 import { loadConfig, loadTasksFromString } from './config.js';
 import { JulesClient, deriveStatus } from './client.js';
+import { pollSessions } from './polling.js';
 import { dispatchTaskDefinition } from './dispatcher.js';
 import { planTasks, loadPlannerConfig, isPlannerConfigured } from './planner.js';
-import type { TaskDefinition, DispatchResult } from './types.js';
+import type { JulesConfig, TaskDefinition, DispatchResult } from './types.js';
+import { ok, fail, computeRecoveryHint } from './mcp-helpers.js';
 
 export interface McpServerOptions {
   projectDir: string;
@@ -20,14 +22,7 @@ type ToolAnnotations = {
   openWorldHint?: boolean;
 };
 
-export async function runMcpServer(options: McpServerOptions): Promise<void> {
-  // Load config eagerly so the user sees a clear error at startup if no API key.
-  const config = loadConfig(options.projectDir, {
-    apiKeyOverride: options.apiKeyOverride,
-    noExit: true,
-  });
-  const client = new JulesClient(config);
-
+export function createMcpServer(config: JulesConfig, client: JulesClient): McpServer {
   const server = new McpServer({
     name: 'jules-dispatch',
     version: '1.2.0',
@@ -51,11 +46,7 @@ export async function runMcpServer(options: McpServerOptions): Promise<void> {
         };
       } catch (err) {
         const e = err as Error & { status?: number };
-        const recovery_hint = e.status === 401 || e.status === 403
-          ? 'Verify JULES_API_KEY is set and valid.'
-          : e.status === 404
-            ? 'Check the resource ID and try again.'
-            : 'Check network connectivity and try again. If the problem persists, verify your API key.';
+        const recovery_hint = computeRecoveryHint(e.status);
         const failure = fail(e.message, recovery_hint);
         return {
           isError: true,
@@ -77,14 +68,6 @@ export async function runMcpServer(options: McpServerOptions): Promise<void> {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     server.registerTool(name, { description, inputSchema, annotations }, wrapped as any);
   };
-
-  function ok<T>(data: T, meta?: Record<string, unknown>): { success: true; data: T; meta?: Record<string, unknown> } {
-    return { success: true as const, data, ...(meta ? { meta } : {}) };
-  }
-
-  function fail(message: string, recovery_hint: string, code?: string): { success: false; error: { message: string; recovery_hint: string; code?: string } } {
-    return { success: false as const, error: { message, recovery_hint, ...((code ? { code } : {})) } };
-  }
 
   const readOnlyAnnotations: ToolAnnotations = {
     readOnlyHint: true,
@@ -147,7 +130,8 @@ export async function runMcpServer(options: McpServerOptions): Promise<void> {
         autoMode: args.autoMode,
         requirePlanApproval: args.requirePlanApproval,
       };
-      return ok(await dispatchTaskDefinition(client, config, task, '<mcp>'));
+      const { results } = await dispatchConsolidatedTasks([task], 1, '<mcp>');
+      return ok(results[0]);
     },
     mutationAnnotations,
   );
@@ -174,21 +158,7 @@ export async function runMcpServer(options: McpServerOptions): Promise<void> {
       const taskList: TaskDefinition[] = typeof args.tasks === 'string'
         ? loadTasksFromString(args.tasks, args.format ?? 'yaml')
         : args.tasks as TaskDefinition[];
-
-      const parallel = args.parallel ?? 10;
-      const results: DispatchResult[] = [];
-      for (let i = 0; i < taskList.length; i += parallel) {
-        const slice = taskList.slice(i, i + parallel);
-        const batchResults = await Promise.all(
-          slice.map(t => dispatchTaskDefinition(client, config, t, '<mcp>')),
-        );
-        results.push(...batchResults);
-      }
-      const dispatched = results.filter(r => r.status === 'dispatched').length;
-      return ok({
-        summary: { total: results.length, dispatched, failed: results.length - dispatched },
-        results,
-      });
+      return ok(await dispatchConsolidatedTasks(taskList, args.parallel ?? 10, '<mcp>'));
     },
     mutationAnnotations,
   );
@@ -219,27 +189,10 @@ export async function runMcpServer(options: McpServerOptions): Promise<void> {
     '[DEPRECATED: Use jules_monitor instead.] Summarize the state, derived status, activity count, and PR metadata for one or more sessions.\n\nUse this when an AI agent needs a compact progress view for known session IDs, including sessions outside the recent page.\n\nReturns: { success: true, data: { results: [{ sessionId, title?, state?, status?, prUrl?, prTitle?, activities?, error? }] } }\n\nSee also: jules_get_session (full record), jules_list_activities, jules_wait_for_completion',
     { sessionIds: z.array(z.string()).min(1) },
     async (args) => {
-      const out = [];
-      for (const id of args.sessionIds) {
-        try {
-          const session = await client.getSession(id);
-          const { activities } = await client.listActivities(id, 10);
-          const status = deriveStatus(session, activities);
-          const pr = session.outputs?.find(o => o.pullRequest)?.pullRequest;
-          out.push({
-            sessionId: id,
-            title: session.title,
-            state: session.state,
-            status,
-            prUrl: pr?.url,
-            prTitle: pr?.title,
-            activities: activities.length,
-          });
-        } catch (err) {
-          out.push({ sessionId: id, error: (err as Error).message });
-        }
-      }
-      return ok({ results: out });
+      const results = await Promise.all(
+        (args.sessionIds as string[]).map(id => summarizeSessionLegacy(id)),
+      );
+      return ok({ results });
     },
     readOnlyAnnotations,
   );
@@ -315,47 +268,12 @@ export async function runMcpServer(options: McpServerOptions): Promise<void> {
       failFast: z.boolean().optional().default(false),
     },
     async (args) => {
-      const start = Date.now();
-      const completed = new Set<string>();
-      const failed = new Set<string>();
-      const cancelled = new Set<string>();
-
-      while (Date.now() - start < args.timeoutMs) {
-        const remaining = (args.sessionIds as string[]).filter((id: string) =>
-          !completed.has(id) && !failed.has(id) && !cancelled.has(id),
-        );
-        if (remaining.length === 0) break;
-
-        for (const id of remaining) {
-          try {
-            const session = await client.getSession(id);
-            const { activities } = await client.listActivities(id, 10);
-            const status = deriveStatus(session, activities);
-            if (status === 'completed') completed.add(id);
-            else if (status === 'failed') {
-              failed.add(id);
-              if (args.failFast) break;
-            }
-            else if (status === 'cancelled') cancelled.add(id);
-          } catch {
-            /* transient */
-          }
-        }
-
-        if (args.failFast && failed.size > 0) break;
-        await new Promise(r => setTimeout(r, args.intervalMs));
-      }
-
-      const stillRunning = (args.sessionIds as string[]).filter((id: string) =>
-        !completed.has(id) && !failed.has(id) && !cancelled.has(id),
+      const result = await pollSessions(
+        client,
+        args.sessionIds as string[],
+        { interval: args.intervalMs, timeout: args.timeoutMs, failFast: args.failFast },
       );
-      return ok({
-        completed: [...completed],
-        failed: [...failed],
-        cancelled: [...cancelled],
-        stillRunning,
-        timedOut: stillRunning.length > 0,
-      });
+      return ok(result);
     },
     mutationAnnotations,
   );
@@ -438,6 +356,35 @@ export async function runMcpServer(options: McpServerOptions): Promise<void> {
     }
   }
 
+  async function summarizeSessionLegacy(sessionId: string): Promise<{
+    sessionId: string;
+    title?: string;
+    state?: string;
+    status: ReturnType<typeof deriveStatus> | 'error';
+    prUrl?: string;
+    prTitle?: string;
+    activities?: number;
+    error?: string;
+  }> {
+    try {
+      const session = await client.getSession(sessionId);
+      const { activities } = await client.listActivities(sessionId, 10);
+      const status = deriveStatus(session, activities);
+      const pr = session.outputs?.find(o => o.pullRequest)?.pullRequest;
+      return {
+        sessionId,
+        title: session.title,
+        state: session.state,
+        status,
+        prUrl: pr?.url,
+        prTitle: pr?.title,
+        activities: activities.length,
+      };
+    } catch (err) {
+      return { sessionId, status: 'error' as const, error: (err as Error).message };
+    }
+  }
+
   // ---------- Consolidated orchestration ----------
 
   tool(
@@ -475,66 +422,21 @@ export async function runMcpServer(options: McpServerOptions): Promise<void> {
       failFast: z.boolean().optional().default(false),
     },
     async (args) => {
-      const wait = args.wait ?? false;
-      const intervalMs = args.intervalMs ?? 10000;
-      const timeoutMs = args.timeoutMs ?? 600000;
-      const failFast = args.failFast ?? false;
-
       let sessions = await Promise.all((args.sessionIds as string[]).map(id => summarizeSession(id)));
-      if (!wait) return ok({ sessions });
+      if (!(args.wait ?? false)) return ok({ sessions });
 
-      const completed = new Set<string>();
-      const failed = new Set<string>();
-      const cancelled = new Set<string>();
-      const markTerminal = (sessionId: string, status: string): void => {
-        if (status === 'completed') completed.add(sessionId);
-        else if (status === 'failed') failed.add(sessionId);
-        else if (status === 'cancelled') cancelled.add(sessionId);
-      };
-
-      for (const session of sessions) markTerminal(session.sessionId, session.status);
-
-      const start = Date.now();
-      while (Date.now() - start < timeoutMs && !(failFast && failed.size > 0)) {
-        const remaining = (args.sessionIds as string[]).filter((id: string) =>
-          !completed.has(id) && !failed.has(id) && !cancelled.has(id),
-        );
-        if (remaining.length === 0) break;
-
-        for (const id of remaining) {
-          try {
-            const session = await client.getSession(id);
-            const { activities } = await client.listActivities(id, 10);
-            const status = deriveStatus(session, activities);
-            markTerminal(id, status);
-            if (status === 'failed' && failFast) break;
-          } catch {
-            /* transient */
-          }
-        }
-
-        if (failFast && failed.size > 0) break;
-        const stillRunning = (args.sessionIds as string[]).filter((id: string) =>
-          !completed.has(id) && !failed.has(id) && !cancelled.has(id),
-        );
-        if (stillRunning.length === 0) break;
-        await new Promise(r => setTimeout(r, intervalMs));
-      }
-
-      const stillRunning = (args.sessionIds as string[]).filter((id: string) =>
-        !completed.has(id) && !failed.has(id) && !cancelled.has(id),
+      const waitResult = await pollSessions(
+        client,
+        args.sessionIds as string[],
+        { interval: args.intervalMs, timeout: args.timeoutMs, failFast: args.failFast },
       );
+
+      // Re-summarize all sessions after wait completes.
       sessions = await Promise.all((args.sessionIds as string[]).map(id => summarizeSession(id)));
 
       return ok({
         sessions,
-        wait: {
-          completed: [...completed],
-          failed: [...failed],
-          cancelled: [...cancelled],
-          stillRunning,
-          timedOut: stillRunning.length > 0,
-        },
+        wait: waitResult,
       });
     },
     readOnlyAnnotations,
@@ -582,7 +484,7 @@ export async function runMcpServer(options: McpServerOptions): Promise<void> {
     readOnlyAnnotations,
   );
 
-  // ---------- Planner (OPTIONAL — any OpenAI-compatible LLM) ----------
+  // ---------- Planner (OPTIONAL -- any OpenAI-compatible LLM) ----------
   // Only registered if a planner-capable API key is present at startup.
   // This keeps the tool list clean for users who only want raw dispatch.
 
@@ -659,9 +561,17 @@ export async function runMcpServer(options: McpServerOptions): Promise<void> {
     );
   } // end registerPlannerTools
 
-  await server.connect(new StdioServerTransport());
+  return server;
+}
 
-  // Server runs until stdio closes; do not return.
+export async function runMcpServer(options: McpServerOptions): Promise<void> {
+  const config = loadConfig(options.projectDir, {
+    apiKeyOverride: options.apiKeyOverride,
+    noExit: true,
+  });
+  const client = new JulesClient(config);
+  const server = createMcpServer(config, client);
+  await server.connect(new StdioServerTransport());
 }
 
 void resolve;  // keep import for potential future use
