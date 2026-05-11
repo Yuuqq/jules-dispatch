@@ -1,4 +1,5 @@
 import chalk from 'chalk';
+import type { ErrorContext } from './errors.js';
 
 export type OutputMode = 'text' | 'json';
 
@@ -23,14 +24,16 @@ export function emit(textFn: () => void, jsonObj: unknown): void {
   }
 }
 
-export function emitError(message: string, code?: string, details?: unknown): void {
+export function emitError(message: string, code?: string, details?: unknown, context?: ErrorContext): void {
   if (mode === 'json') {
-    process.stdout.write(
-      JSON.stringify({ error: { code: code ?? 'ERROR', message, details } }) + '\n',
-    );
+    const payload: Record<string, unknown> = { code: code ?? 'ERROR', message, details };
+    if (context?.hint) payload.hint = context.hint;
+    if (context?.docsUrl) payload.docsUrl = context.docsUrl;
+    process.stdout.write(JSON.stringify({ error: payload }) + '\n');
   } else {
     console.error(chalk.red(`✗ ${message}`));
     if (details) console.error(chalk.dim(typeof details === 'string' ? details : JSON.stringify(details)));
+    if (context?.hint) console.error(chalk.cyan(`  Fix: ${context.hint}`));
   }
 }
 

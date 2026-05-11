@@ -5,6 +5,7 @@ import type { JulesConfig, DispatchResult, TaskDefinition } from './types.js';
 import { JulesClient } from './client.js';
 import { loadTask, loadTasksFromDir } from './config.js';
 import { isJson, emit, info } from './output.js';
+import { translateError } from './errors.js';
 
 export async function dispatchTask(
   client: JulesClient,
@@ -66,7 +67,7 @@ export async function dispatchTaskDefinition(
       sessionUrl: '',
       title: task.title,
       status: 'failed',
-      error: (err as Error).message,
+      error: translateError(err).problem,
     };
   }
 }

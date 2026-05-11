@@ -56,7 +56,7 @@
   2. When authentication fails (401), the user sees a message explaining their API key is invalid or expired, with a fix suggestion to run `jules-dispatch init` or check their `.env`
   3. When `emitError()` is called with an `ErrorContext` containing `hint` and `docsUrl`, the JSON output includes both fields while remaining backward-compatible
   4. Every catch block in `cli.ts` surfaces the translated error message, not raw `(err as Error).message`
-**Plans**: TBD
+**Plans**: 16-01
 
 ### Phase 17: CLI Help & Ergonomics
 **Goal**: Every CLI command teaches the user how to use it from the help output alone, and color output respects terminal capabilities.
@@ -95,7 +95,7 @@
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 16. Error Message Infrastructure | 0/0 | Not started | - |
+| 16. Error Message Infrastructure | 1/1 | Complete | 2026-05-12 |
 | 17. CLI Help & Ergonomics | 0/0 | Not started | - |
 | 18. Init Wizard | 0/0 | Not started | - |
 | 19. Documentation & Polish | 0/0 | Not started | - |

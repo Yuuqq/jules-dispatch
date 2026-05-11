@@ -10,6 +10,7 @@ import { dispatchTask, dispatchBatch, dispatchTaskDefinition } from './dispatche
 import { collectStatus, waitForCompletion } from './collector.js';
 import { setOutputMode, isJson, emit, emitError, info, ExitCode } from './output.js';
 import { setVerbose } from './log.js';
+import { translateError, type TranslatedError } from './errors.js';
 
 const program = new Command();
 
@@ -36,8 +37,14 @@ function getConfig(): { config: ReturnType<typeof loadConfig>; client: JulesClie
   return { config, client: new JulesClient(config) };
 }
 
-function fail(message: string, code: number = ExitCode.GENERIC, errCode?: string): never {
-  emitError(message, errCode);
+function fail(input: string | TranslatedError | unknown, code: number = ExitCode.GENERIC, errCode?: string): never {
+  if (typeof input === 'string') {
+    emitError(input, errCode);
+  } else {
+    const translated = translateError(input);
+    const { problem, cause, fix, code: tCode, context } = translated;
+    emitError(problem, tCode, `Cause: ${cause}\nFix: ${fix}`, context);
+  }
   process.exit(code);
 }
 
@@ -188,7 +195,7 @@ program
         session,
       );
     } catch (err) {
-      fail((err as Error).message, ExitCode.GENERIC);
+      fail(err);
     }
   });
 
@@ -251,7 +258,7 @@ program
         { ok: true, sessionId },
       );
     } catch (err) {
-      fail((err as Error).message, ExitCode.GENERIC);
+      fail(err);
     }
   });
 
@@ -283,7 +290,7 @@ program
         { plan },
       );
     } catch (err) {
-      fail((err as Error).message, ExitCode.GENERIC);
+      fail(err);
     }
   });
 
@@ -301,7 +308,7 @@ program
         { ok: true, sessionId },
       );
     } catch (err) {
-      fail((err as Error).message, ExitCode.GENERIC);
+      fail(err);
     }
   });
 
@@ -319,7 +326,7 @@ program
         { ok: true, sessionId },
       );
     } catch (err) {
-      fail((err as Error).message, ExitCode.GENERIC);
+      fail(err);
     }
   });
 
@@ -398,7 +405,11 @@ program
           process.exit(state === 'COMPLETED' ? ExitCode.OK : ExitCode.GENERIC);
         }
       } catch (err) {
-        if (!isJson()) console.error(chalk.red(`Tail error: ${(err as Error).message}`));
+        if (!isJson()) {
+          const t = translateError(err);
+          console.error(chalk.red(`Tail error: ${t.problem}`));
+          console.error(chalk.dim(`  ${t.fix}`));
+        }
       }
       await new Promise(r => setTimeout(r, interval));
     }
@@ -440,7 +451,7 @@ program
         modelOverride: programOpts.llmModel,
       });
     } catch (err) {
-      fail((err as Error).message, ExitCode.AUTH, 'LLM_KEY_MISSING');
+      fail(err, ExitCode.AUTH);
     }
 
     info(chalk.dim(`Planning with ${plannerCfg.model}...\n`));
@@ -455,7 +466,7 @@ program
         context,
       });
     } catch (err) {
-      fail((err as Error).message, ExitCode.GENERIC, 'PLANNER_FAILED');
+      fail(err);
     }
 
     if (opts.output) {
@@ -516,7 +527,7 @@ program
         modelOverride: programOpts.llmModel,
       });
     } catch (err) {
-      fail((err as Error).message, ExitCode.AUTH, 'LLM_KEY_MISSING');
+      fail(err, ExitCode.AUTH);
     }
 
     info(chalk.dim(`Planning with ${plannerCfg.model}...\n`));
@@ -531,7 +542,7 @@ program
         context,
       });
     } catch (err) {
-      fail((err as Error).message, ExitCode.GENERIC, 'PLANNER_FAILED');
+      fail(err);
     }
 
     info(chalk.bold(`\nPlanned ${plan.tasks.length} task(s):\n`));
@@ -602,11 +613,13 @@ program
 // ---------- error wrapping ----------
 
 process.on('unhandledRejection', (err) => {
-  emitError((err as Error)?.message ?? String(err), 'UNHANDLED');
+  const t = translateError(err);
+  emitError(t.problem, t.code, `Cause: ${t.cause}\nFix: ${t.fix}`, t.context);
   process.exit(ExitCode.GENERIC);
 });
 
 program.parseAsync(process.argv).catch((err) => {
-  emitError((err as Error).message, 'CLI_ERROR');
+  const t = translateError(err);
+  emitError(t.problem, t.code, `Cause: ${t.cause}\nFix: ${t.fix}`, t.context);
   process.exit(ExitCode.GENERIC);
 });
