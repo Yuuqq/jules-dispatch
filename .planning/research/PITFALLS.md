@@ -1,201 +1,318 @@
-# Domain Pitfalls
+# Domain Pitfalls: v3 Polish & DX
 
-**Domain:** MCP server tool design, CLI batch-orchestration, incremental brownfield optimization
-**Researched:** 2026-05-10
-**Project:** jules-dispatch (12 MCP tools, 13 CLI commands, TypeScript/ESM, Node 20+)
+**Domain:** Adding DX polish to existing Node.js CLI + MCP server
+**Researched:** 2026-05-11
+**Project:** jules-dispatch (14 CLI commands, 14 MCP tools, TypeScript/ESM, Node 20+)
+**Existing PITFALLS.md:** Covers MCP tool design (v1/v2). This file covers v3 DX milestone.
 
 ---
 
 ## Critical Pitfalls
 
-Mistakes that cause rewrites or major issues.
+Mistakes that cause rewrites, break existing users, or fundamentally undermine the DX effort.
 
-### Pitfall 1: Tool Fragmentation -- Exposing API Operations Instead of Outcomes
+### Pitfall 1: Init Wizard That Breaks Non-Interactive Usage
 
-**What goes wrong:** The current MCP surface has 12 tools that map nearly 1:1 to Jules API operations (`jules_get_session`, `jules_list_sessions`, `jules_list_activities`, `jules_get_plan`, `jules_approve_plan`, `jules_send_message`, `jules_cancel_session`). AI agents must chain 3-4 calls to answer a simple question like "is my task done yet?" -- calling `jules_get_session`, then `jules_list_activities`, then manually deriving status from the combined result. This is the "operation-oriented" anti-pattern confirmed by Block (who went from 30+ tools to 2), GitHub Copilot (40 to 13), and the Speakeasy Pet Store experiment (107 tools = total failure cliff, 10 tools = perfect).
+**What goes wrong:** The `init` wizard uses interactive prompts (e.g., `@clack/prompts`, `inquirer`) without detecting whether stdin is a TTY. When run in CI, piped from another command, or called from an agent script, the prompt hangs indefinitely waiting for input that will never arrive.
 
-**Why it happens:** Developers naturally wrap API endpoints as tools because the mapping is mechanical and feels complete. The jules-dispatch MCP tools were likely built endpoint-first during initial development.
+**Why it happens:** Developers build wizards in interactive terminals and forget the tool must also work in scripts. The `@clack/prompts` README contains zero guidance on non-interactive environments -- the library itself does not guard against this.
 
-**Consequences:** Agents burn tokens on intermediate results, accumulate latency across round-trips, and compound failure probability with each chained call (3 calls at 95% success each = 85.7% overall). Agents also hallucinate tool names or conflate parameters when presented with too many similar tools.
-
-**Prevention:** Consolidate into outcome-oriented tools that match what agents actually want to do:
-- A `jules_task_status` tool that takes sessionIds and returns derived status + PR info in one call (the current `jules_status` tool is a step in this direction but is underdescribed)
-- A `jules_dispatch_and_wait` orchestration tool that combines dispatch + polling + result collection
-- A `jules_review_plan` tool that combines get-plan + approve into a single workflow step
-
-The academic study (arXiv 2602.14878) found that 56% of MCP tool descriptions fail to state their purpose clearly and 89.3% lack usage guidelines. Each consolidated tool should include Purpose, Guidelines, and Limitations in its description.
-
-**Detection:** Count your tools. If above 15, you are past the diminishing-returns threshold. Run this test: give an agent 10 representative user requests and see if it selects the right tool on the first try. Below 90% accuracy = descriptions need work.
-
-**Phase:** Should be addressed in the MCP tool redesign phase (first active requirement in PROJECT.md).
-
-### Pitfall 2: Tool Descriptions Written for Humans, Not Agents
-
-**What goes wrong:** Tool descriptions like "Get full details of a single Jules session including state and any created PR" describe what the tool does technically but fail to tell the agent when to use it, what it returns that matters, or how it fits into a workflow. The arXiv study of 856 MCP tools found 97.1% contain at least one description quality smell. Augmented descriptions improved task success by a median 5.85 percentage points -- but also increased execution steps by 67.46%, so augmentation must be targeted, not voluminous.
-
-**Why it happens:** Developers write descriptions the way they would write API documentation for other developers. But agents are not developers -- they lack the implicit context about workflow ordering, parameter semantics, and tool relationships that humans carry.
-
-**Consequences:** Agents call the wrong tool, call tools in the wrong order, supply invalid parameters, or fall back to exhaustive enumeration (calling every tool to find what they need).
-
-**Prevention:** Apply the six-component rubric from the arXiv study to each tool description. For jules-dispatch, the most impactful components are:
-1. **Purpose** -- What the tool does in plain language (NOT what endpoint it wraps)
-2. **Guidelines** -- When to use it and when NOT to use it (e.g., "Use this after dispatching to check results, not for monitoring progress -- use jules_wait_for_completion for that")
-3. **Limitations** -- What it cannot do (e.g., "Returns at most 200 sessions per page")
-
-The Anthropic research found that compact combinations (Purpose + Guidelines) often outperform fully augmented descriptions. Do NOT blindly add Examples or exhaustive Parameter Explanations -- the ablation study showed these can degrade performance in some domain-model combinations by introducing ambiguous or contradictory statements.
-
-**Detection:** Present your tool list to an LLM and ask it to select the right tool for 10 different user requests. Below 90% accuracy = descriptions need work.
-
-**Phase:** Should be addressed alongside tool redesign -- descriptions are part of the tool surface.
-
-### Pitfall 3: Silent Failures and Invisible State
-
-**What goes wrong:** The codebase already has documented instances of this (H2: silent error swallowing in collector, M6: silent autoMode fallback to AUTO_CREATE_PR). But the pattern is deeper: the `jules_wait_for_completion` tool swallows transient errors in its catch block (`catch { /* transient */ }` on line 271), meaning a session that becomes unreachable will simply be reported as "stillRunning" until timeout. The agent has no way to distinguish "still processing" from "network partition."
-
-**Why it happens:** Defensive coding that catches exceptions to prevent crashes but discards the error information. The intent is resilience, but the result is opacity.
-
-**Consequences:** Agents (and humans) make decisions based on stale or incorrect state. A batch of 10 tasks where 3 fail silently appears as "7 completed, 3 still running" rather than "7 completed, 3 failed." The agent will keep polling the 3 "running" tasks until timeout, wasting tokens and time.
+**Consequences:** CI pipelines hang. Agent workflows that call `jules-dispatch init --some-flag` freeze. Users report "tool hangs on startup" and lose trust.
 
 **Prevention:**
-1. Track error state explicitly. The `jules_wait_for_completion` tool should return an `errors` array alongside `completed`, `failed`, `cancelled`, `stillRunning`.
-2. Distinguish retryable errors from permanent failures. A 404 on a session ID is permanent; a 503 is transient.
-3. Include a `lastError` field in session status responses so agents can reason about what went wrong.
-4. Add verbose-mode logging at minimum for catch blocks (addressing H2 from CONCERNS.md).
+1. **Always check `process.stdin.isTTY` before prompting.** The codebase already does this once (cli.ts:547 in the `auto` command) -- extend this pattern to every prompt site.
+2. **Require a `--yes` or `--defaults` flag for non-interactive init.** When stdin is not a TTY and no `--yes` flag is present, fail immediately with: `"Non-interactive mode detected. Pass --yes to use defaults, or set values via flags: --api-key <key> --source <source>"`.
+3. **Never require a prompt.** Every value collected by the wizard must have an equivalent CLI flag or env var. The wizard is a convenience wrapper, not the only path.
+4. **Test in non-interactive mode.** Add a test: `echo "" | node dist/cli.js init` should either succeed with defaults or fail with a helpful message -- never hang.
 
-**Detection:** Search for empty catch blocks, catch blocks that only log in verbose mode, and catch blocks that suppress errors without tracking them. In the current codebase: `collector.ts:80-83`, `collector.ts:221-223`, `mcp.ts:271`.
+**Detection:** Run the init wizard with stdin redirected from /dev/null. If it hangs for more than 2 seconds, the pitfall is present.
 
-**Phase:** Should be addressed in the error-handling improvement phase, before or alongside dashboard work.
+**Phase:** Must be designed into the init wizard from day one. Retrofitting is harder than building it right.
 
-### Pitfall 4: Breaking MCP Tool Contracts During Refactoring
+### Pitfall 2: Init Wizard Over-Collecting Information
 
-**What goes wrong:** When consolidating tools (Pitfall 1), the natural approach is to rename tools, change parameter names, or merge tools. But MCP clients cache tool schemas and any existing agent workflows, scripts, or integrations built against the current 12 tools will break silently. This is especially dangerous because MCP has no versioning mechanism for individual tools.
+**What goes wrong:** The wizard asks for API key, default source, default branch, auto mode, LLM key, LLM model, LLM base URL, log directory, parallel count -- 8+ sequential prompts. Users abandon before finishing. The wizard becomes slower than just editing `.env` manually.
 
-**Why it happens:** MCP's protocol decouples tool discovery from invocation, which means the client rediscovers tools on each connection. Developers assume this means they can change tools freely. But in practice, agents develop "muscle memory" in their context windows within a session, and human-authored agent workflows reference tool names directly.
+**Why it happens:** Each config field seems important in isolation. The developer adds one prompt per field because "it would be nice to configure." The cumulative effect is a wall of questions.
 
-**Consequences:** Existing users' agent workflows stop working. Since jules-dispatch is on npm (v1.2.0), breaking changes propagate immediately to all users on upgrade. There is no deprecation cycle in MCP.
-
-**Prevention:**
-1. **Never remove a tool.** Add new consolidated tools alongside existing ones.
-2. **Deprecate in descriptions, not in code.** Add "DEPRECATED: Use jules_task_status instead" to old tool descriptions.
-3. **Keep old tools functional for at least one major version.** They can delegate to the new implementation internally.
-4. **Use semantic versioning strictly.** Tool surface changes = major version bump.
-5. **Test tool compatibility.** Maintain a test suite that calls each tool with its expected parameters and asserts the response shape.
-
-**Detection:** Any PR that removes or renames a tool exported from mcp.ts should be treated as a breaking change requiring major version bump.
-
-**Phase:** Applies to every phase that touches mcp.ts. This is a continuous concern, not a one-time fix.
-
-### Pitfall 5: Dashboard Without Structured Data Foundation
-
-**What goes wrong:** Building a CLI dashboard (the "global status dashboard" requirement in PROJECT.md) before establishing reliable data collection and status derivation means the dashboard displays unreliable information. The current `deriveStatus()` function (client.ts:181-197) is completely untested (H1), and the collector silently swallows errors (H2). A dashboard built on top of these will show misleading data.
-
-**Why it happens:** Dashboard work is visually rewarding and feels like progress. The underlying data quality issues are invisible until the dashboard shows wrong information and users lose trust in it.
-
-**Consequences:** Users make decisions based on incorrect status (e.g., thinking a task failed when it actually succeeded, or vice versa). Once trust is lost, the dashboard is abandoned regardless of later fixes.
+**Consequences:** Time-to-first-task exceeds the 5-minute goal stated in PROJECT.md. Power users skip the wizard entirely. New users get overwhelmed and quit.
 
 **Prevention:**
-1. **Test `deriveStatus()` exhaustively first.** Cover all Jules session states, edge cases (missing fields, empty activities), and the mapping to the tool's status categories.
-2. **Fix error collection before building display.** Address H2 and M3 before any dashboard work.
-3. **Build the dashboard as a consumer of a tested data layer.** The dashboard command should call the same tested functions that the MCP tools use, not duplicate logic.
+1. **Maximum 3 prompts.** Collect only what blocks first-run: API key (required), default source (required for dispatch), and nothing else. Everything else has sensible defaults already baked into `loadConfig()` (config.ts:41-50).
+2. **Apply the 80/20 rule.** The `.env` fields with no current default are `JULES_API_KEY` and `JULES_DEFAULT_SOURCE`. Those are the two fields that actually block first use. `JULES_DEFAULT_BRANCH` defaults to `"main"`, `JULES_AUTO_MODE` defaults to `AUTO_CREATE_PR` -- these do not need wizard prompts.
+3. **Post-wizard hint, not pre-wizard prompt.** After the 2-3 essential prompts, print: `"Configuration saved to .env. Edit it to customize: branch, auto mode, LLM planner, parallel count."`
+4. **Offer a `--minimal` flag** that collects only the API key.
 
-**Detection:** If the dashboard phase begins before `deriveStatus()` has test coverage above 80%, stop and fix the foundation first.
+**Detection:** Count the prompts. If above 3, strip it down. Time a first-time user through the wizard. If above 60 seconds, it is too long.
 
-**Phase:** Must be addressed before the dashboard phase. Testing `deriveStatus()` and fixing error handling are prerequisites.
+**Phase:** Init wizard design phase. Define the prompt list before writing code.
+
+### Pitfall 3: Init Wizard Overwriting Existing Config Without Warning
+
+**What goes wrong:** User has a carefully configured `.env` with API key, custom source, LLM settings. They run `jules-dispatch init` (perhaps to update one setting). The wizard overwrites the entire `.env` with defaults, destroying their configuration.
+
+**Why it happens:** Writing a file is simpler than merging. The wizard writes a fresh `.env` without reading the existing one first.
+
+**Consequences:** Data loss. Users learn to never run `init` again. The wizard becomes a one-time-use tool instead of an idempotent config manager.
+
+**Prevention:**
+1. **Detect existing `.env` on entry.** If it exists, show current values as defaults in the prompts (pre-filled). Only overwrite changed fields.
+2. **Offer merge vs. replace.** If existing config detected: `"Existing .env found. [U]pdate values, [R]eplace entirely, [C]ancel?"`
+3. **Backup before write.** Write `.env.bak` before modifying. Print: `"Previous config backed up to .env.bak"`.
+4. **Make init idempotent.** Running `init` twice with the same answers should produce identical output.
+
+**Detection:** Create a `.env` with 5 fields, run `init`, verify all 5 fields survive.
+
+**Phase:** Init wizard implementation. Write the detection/merge logic first.
+
+### Pitfall 4: Error Messages That Leak Internals or Provide No Next Step
+
+**What goes wrong:** Two failure modes coexist in the current codebase:
+
+**Mode A -- Raw error passthrough:**
+```typescript
+catch (err) {
+  fail((err as Error).message, ExitCode.GENERIC);
+}
+```
+This pattern appears in `get`, `message`, `plan`, `approve`, `cancel` commands (cli.ts:191, 254, 287, 304, 323). When the Jules API returns a 403, the user sees something like: `"Request failed with status code 403"` -- no explanation of what to do.
+
+**Mode B -- Generic messages:**
+The `loadConfig` error (config.ts:34) says `"JULES_API_KEY is required"` but does not say where to get one, what format it should be, or link to documentation.
+
+**Why it happens:** Error handling was built for correctness (non-zero exit, structured JSON) but not for user guidance. The `emitError` function (output.ts:26-34) formats errors but does not enrich them.
+
+**Consequences:** Users paste raw error messages into search engines and find nothing. They cannot self-diagnose. They file issues that could have been avoided with a one-line hint.
+
+**Prevention:**
+1. **Classify errors before presenting them.** Every error falls into a category: auth (exit 2), validation (exit 3), network, API, internal. Each category has a template:
+   - Auth errors: `"Authentication failed. Verify JULES_API_KEY is set correctly. Get your key at: https://jules.google.com/settings/api-keys"`
+   - Network errors: `"Could not reach Jules API (ECONNREFUSED). Check your internet connection and try again."`
+   - API errors: Include the HTTP status, what was attempted, and a hint: `"Session not found (404). Verify the session ID: jules-dispatch get <id>"`.
+2. **Never show raw exception messages to users.** Wrap them. `"An unexpected error occurred. Run with --verbose for details."`
+3. **Always include a next step.** Every error message must end with either a fix command, a documentation link, or "Run `jules-dispatch doctor` to diagnose."
+4. **Extend `emitError` to accept a `hint` field** alongside `code` and `details`:
+   ```typescript
+   emitError('API key invalid', 'AUTH_FAILED', { hint: 'Get a key at https://...' });
+   ```
+
+**Detection:** Trigger each error path. If any error message lacks a next-step hint, it is incomplete. If any error message shows internal class names, file paths, or stack traces by default, it leaks internals.
+
+**Phase:** Error message improvement phase. Can be done incrementally per command.
+
+### Pitfall 5: Breaking Existing CLI Contracts While Adding DX
+
+**What goes wrong:** Adding `init` command, changing help text, adding aliases, or modifying output format of existing commands breaks scripts, agent workflows, or muscle memory built on the current behavior.
+
+**Why it happens:** DX work feels cosmetic and therefore "safe." But `--help` output is an interface. Exit codes are an interface. The order and format of `status` table columns is an interface. Changing any of these breaks downstream consumers.
+
+**Consequences:** Scripts that parse `status --json` output break. Agent workflows that check specific exit codes break. Users who trained their fingers on `jules-dispatch batch tasks/` find the command renamed or its flags changed.
+
+**Prevention:**
+1. **Only add, never modify or remove.** New commands (like `init`) are safe. New flags are safe. Changing existing flag names, removing commands, or altering JSON output shape is a breaking change.
+2. **Help text changes are additive.** Adding examples to `--help` is safe. Changing the command description or argument order is not.
+3. **New aliases are safe; removing aliases is not.** The existing `plan-tasks` / `plan-batch` alias pattern (cli.ts:412) is good. Do not remove it.
+4. **Exit codes are frozen.** The 0-5 scheme (output.ts:50-57) is a contract. Adding new codes above 5 is safe; reassigning existing codes is not.
+
+**Detection:** Diff the CLI interface before and after each phase. Any removed flag, changed argument name, or altered JSON key is a breaking change.
+
+**Phase:** Continuous concern. Review every CLI change against the v2 interface.
 
 ---
 
 ## Moderate Pitfalls
 
-### Pitfall 6: Polling Without Backoff (Amplified at Scale)
+### Pitfall 6: Ignoring `NO_COLOR` and Piping Conventions
 
-**What goes wrong:** Both the CLI and MCP tools poll at fixed intervals (L1). At small scale this is tolerable. But when an agent dispatches a batch of 50 tasks and then polls all 50 every 10 seconds via `jules_wait_for_completion`, that is 5 API calls per second sustained for the duration of all tasks. The Jules API is v1alpha with unknown rate limits.
+**What goes wrong:** The codebase uses `chalk` extensively but only disables color in JSON mode (`output.ts:10-11`). When output is piped to a file (`jules-dispatch status > report.txt`) or when `NO_COLOR=1` is set, the output contains ANSI escape codes that render as garbage text like `[32m[1m[22m`.
 
-**Why it happens:** Fixed intervals are simpler to implement and reason about. The current codebase is designed for human-scale usage where one person dispatches a few tasks.
+**Why it happens:** `chalk` respects `FORCE_COLOR` and TTY detection by default, but the codebase explicitly sets `chalk.level = 0` only in JSON mode, overriding chalk's auto-detection for text mode.
 
-**Prevention:** Implement exponential backoff with jitter in the polling loop. Start at the configured interval, double after each poll up to a maximum (e.g., 60s), and add random jitter to prevent thundering herd when multiple agents poll simultaneously.
-
-**Detection:** Any `setTimeout(r, interval)` or `await sleep(interval)` in a loop without backoff logic.
-
-**Phase:** Address alongside or immediately after error handling fixes. Low effort, high value at scale.
-
-### Pitfall 7: Token-Inefficient Tool Responses
-
-**What goes wrong:** The MCP tools return full JSON objects via `JSON.stringify(result, null, 2)`. For `jules_list_sessions` with a default page size of 50, this could return thousands of tokens of session data. The Anthropic engineering blog showed that agents scale better when tools filter and transform results before returning them -- returning 5 relevant rows instead of 10,000 reduced context consumption by orders of magnitude.
-
-**Why it happens:** JSON.stringify is the simplest serialization. No filtering or projection logic has been implemented.
+**Consequences:** Piped output is unusable. CI logs show escape sequences. Users who set `NO_COLOR` (an industry convention respected by thousands of tools) are ignored.
 
 **Prevention:**
-1. Add `format` or `detail` parameters to tools that return large datasets. Options like "summary" vs "full" let the agent control token consumption.
-2. For `jules_status`, return only derived status fields by default, not raw session + activity data.
-3. Truncate large responses and include a note like "Results truncated to 10 sessions. Use pageSize parameter for more."
+1. **Respect `NO_COLOR` env var.** Check `process.env.NO_COLOR` early in startup. If set, `chalk.level = 0`.
+2. **Respect `--no-color` flag.** Add it as a global option alongside `--json` and `--verbose`.
+3. **Respect `TERM=dumb`.** Check `process.env.TERM === 'dumb'` and disable color.
+4. **Let chalk auto-detect TTY.** Do not override `chalk.level` in text mode. Only force `chalk.level = 0` for JSON mode.
+5. **Detect piped stdout.** If `!process.stdout.isTTY`, disable color automatically.
 
-**Detection:** Any tool response that exceeds ~2000 tokens in common usage.
+**Detection:** Run `jules-dispatch status | cat -v` and check for escape sequences. Run `NO_COLOR=1 jules-dispatch status` and verify no color codes.
 
-**Phase:** Address during tool redesign. Add format/detail parameters to the consolidated tools from the start.
+**Phase:** CLI ergonomics phase. Small change, high impact on scriptability.
 
-### Pitfall 8: Missing Network Error Retry (Fetch Exceptions Bypass Retry Logic)
+### Pitfall 7: Help Text Wall With No Examples
 
-**What goes wrong:** Already documented as M3. The retry logic in client.ts only triggers on HTTP 429/5xx status codes. When `fetch()` throws (DNS errors, connection refused, timeouts), the retry logic is bypassed entirely. This is especially relevant for MCP usage where an agent might be running in a CI environment with flaky networking.
+**What goes wrong:** Commander.js generates help text from command descriptions and option definitions. The current descriptions are terse one-liners (`'Dispatch a single task file to Jules. Use "-" to read from stdin.'`). When users run `jules-dispatch --help`, they get a flat list of 14 commands with no indication of common workflows, typical sequences, or examples.
 
-**Why it happens:** The retry loop checks `response.status` but `fetch()` throws before returning a response object. The error path does not enter the retry loop.
+**Why it happens:** Commander's `.description()` accepts a single string. Developers write a brief description and move on. Adding examples requires explicit `.addHelpText()` calls that feel like polish work and get deferred.
 
-**Prevention:** Wrap the fetch call in try/catch within the retry loop. Retry on `TypeError` (network errors) and `DOMException` (abort/timeout) in addition to HTTP status codes.
-
-**Detection:** Look for `fetch()` calls where the retry logic only operates on the response object, not on the fetch call itself.
-
-**Phase:** Address in the reliability/error-handling phase. Quick fix, high impact.
-
-### Pitfall 9: `as any` Type Casts at MCP Boundary Lose Type Safety
-
-**What goes wrong:** Already documented as M4. Two `as any` casts at mcp.ts:58 and mcp.ts:255 work around SDK generic inference issues. When tool signatures change during redesign, the type checker will not catch mismatches between the declared schema and the handler's expected arguments.
-
-**Why it happens:** The MCP SDK's generic inference for `registerTool` does not compose well with wrapper functions.
-
-**Prevention:** Create a typed wrapper that validates at runtime what the type system cannot verify statically. Use Zod's `parse()` on incoming args in the wrapper before passing to handlers.
-
-**Detection:** Search for `as any` in mcp.ts. Any remaining instances after the wrapper improvement are flags.
-
-**Phase:** Address during tool redesign when the wrapper function will be modified anyway.
-
-### Pitfall 10: CLI Dashboard Output That Breaks Piping and Scripting
-
-**What goes wrong:** When adding a dashboard command, the temptation is to use terminal control sequences (ANSI escape codes, cursor movement, color) for a rich display. But CLI output that uses these codes breaks when piped to `grep`, redirected to a file, or consumed by other tools. The Evil Martians CLI UX guide emphasizes: "check how your app's standard output stream looks in a text file by redirecting it" and "one command's output might be another's input via the pipe operator."
-
-**Why it happens:** Terminal dashboards look impressive in demos. The human-facing appeal obscures the machine-consumption use case.
+**Consequences:** Users stare at a list of 14 commands and have no idea where to start. The 5-minute-to-first-task goal (PROJECT.md) is impossible if the user cannot figure out the workflow from `--help` alone.
 
 **Prevention:**
-1. Detect `isatty(stdout)` and use rich formatting only for TTY output.
-2. Always provide a `--json` flag that outputs structured data without formatting.
-3. The existing `--json` output mode in jules-dispatch is good -- extend this pattern to the dashboard command.
-4. Follow the existing dual-output pattern (text + JSON) already established in output.ts.
+1. **Add a command synopsis at the top level.** Use `program.addHelpText('before', ...)` to show:
+   ```
+   Quick start:
+     jules-dispatch init                    Set up API key and defaults
+     jules-dispatch dispatch tasks/fix.yaml Dispatch a single task
+     jules-dispatch status                  Check recent sessions
+   ```
+2. **Add examples to each command.** Use `.addHelpText('after', ...)` on commands that have non-obvious usage:
+   ```
+   Examples:
+     jules-dispatch dispatch tasks/fix.yaml
+     jules-dispatch dispatch - -s sources/github/owner/repo < task.yaml
+     jules-dispatch batch tasks/ --parallel 5
+   ```
+3. **Lead with the happy path.** Put `init`, `dispatch`, `batch`, `status` first in the help output. Group advanced commands (`plan-tasks`, `auto`, `mcp`) separately.
+4. **Do not overload the top-level help.** Keep it to a synopsis + 4-5 most common commands. Put the full command list behind `jules-dispatch help`.
 
-**Detection:** If a new CLI command does not check `isatty` or offer `--json` output.
+**Detection:** Show `--help` to someone who has never used the tool. If they cannot dispatch a task within 2 minutes of reading it, the help is insufficient.
 
-**Phase:** Applies to the dashboard phase specifically.
+**Phase:** CLI ergonomics phase.
+
+### Pitfall 8: Adding Too Many Commands Instead of Improving Existing Ones
+
+**What goes wrong:** The tool already has 14 commands. Adding `init`, `config`, `config-set`, `config-get`, `docs`, `examples`, `completions` would push it to 20+. Users cannot find the command they need. The `--help` output becomes a wall.
+
+**Why it happens:** Each DX improvement feels like it needs its own command. "Config management" becomes 3 commands. "Documentation" becomes a command. The command surface grows linearly with features.
+
+**Consequences:** Users cannot remember which command does what. `jules-dispatch config set` vs `jules-dispatch init` vs editing `.env` -- three ways to do the same thing creates confusion.
+
+**Prevention:**
+1. **Prefer flags over new commands.** `jules-dispatch init --show` to display current config is better than a separate `config show` command.
+2. **Merge related operations.** `init` handles both first-time setup AND config updates (see Pitfall 3). No need for `config` + `config-set` + `config-get`.
+3. **Target: maximum 2 new commands** for this milestone (`init` and possibly `completions`). Everything else should be flags or improvements to existing commands.
+4. **Audit the existing 14 commands.** Are all 14 necessary? `get` duplicates what `status --ids` does. `plan` is a subset of `tail`. Consider whether consolidation serves users better than expansion.
+
+**Detection:** Count total commands after the milestone. If above 16, reconsider. If any new command's functionality overlaps with an existing command's flags, consolidate.
+
+**Phase:** Planning phase. Decide command surface before implementation.
+
+### Pitfall 9: Documentation That Goes Stale Immediately
+
+**What goes wrong:** A README quickstart, MCP guide, and per-command examples are written as part of this milestone. They reference specific flag names, output formats, and workflows. Six months later, a flag is renamed, a command's output changes, or a new step is added to the workflow. The docs are now wrong, and wrong docs are worse than no docs.
+
+**Why it happens:** Documentation is written once and never tested. There is no mechanism to verify docs against the actual tool behavior.
+
+**Consequences:** Users follow the quickstart, hit an error because the documented flag was changed, and lose trust in both the docs and the tool.
+
+**Prevention:**
+1. **Extract examples from tests.** If the README says `jules-dispatch dispatch tasks/fix.yaml`, have a test that actually runs this command and verifies the output. Use doc-tests or integration tests that double as documentation verification.
+2. **Keep examples minimal.** The fewer moving parts in an example, the less likely it breaks. A 2-command quickstart is more durable than a 10-step tutorial.
+3. **Version-stamp the docs.** Include `Tested with jules-dispatch vX.Y.Z` in the README. Make this part of the release checklist.
+4. **Prefer self-documenting commands over external docs.** `jules-dispatch doctor` already validates the environment. Extend it to verify the user's setup matches the documented quickstart: "API key: set. Default source: set. Example task file: found."
+5. **Automate link and command checking.** A CI step that runs each documented command in a sandbox and verifies it exits 0.
+
+**Detection:** After 3 months, run each documented command exactly as written. Any failure indicates stale docs.
+
+**Phase:** Documentation phase. Build verification into the documentation work, not as a separate afterthought.
+
+### Pitfall 10: Error Messages That Are Too Verbose
+
+**What goes wrong:** In the effort to be "helpful," error messages become paragraphs. The user sees a 5-line error with context, explanation, documentation link, alternative suggestion, and a hint about related commands. They stop reading after line 1.
+
+**Why it happens:** Each addition to the error message seems individually useful. "Add a link" + "add a hint" + "add context" + "add the alternative" = 4 additions that each make sense alone but combine into noise.
+
+**Consequences:** Signal-to-noise ratio drops. Users skim past the important part (what went wrong) and miss the fix. Long errors also break terminal formatting when wrapped in narrow terminals.
+
+**Prevention:**
+1. **Structure errors as 2 lines max in normal mode:**
+   ```
+   Error: API key invalid (AUTH_FAILED)
+   Hint:  Get a key at https://jules.google.com/settings/api-keys
+   ```
+2. **Verbose mode gets the details.** `--verbose` shows the full error chain, request/response, stack trace.
+3. **Follow the pattern:** `[severity]: [what happened] ([error code])` on line 1, `Hint: [what to do]` on line 2. Nothing else unless `--verbose`.
+4. **Test error messages at 80-column width.** If an error wraps, it is too long.
+
+**Detection:** Trigger each error. If any error message exceeds 2 lines in normal mode or 80 characters per line, shorten it.
+
+**Phase:** Error message phase. Define the error format template before implementing individual messages.
+
+### Pitfall 11: Spinner/Progress Without Cleanup Guarantees
+
+**What goes wrong:** Adding spinners or progress indicators (for `init`, `dispatch`, `doctor`) without guaranteeing cleanup on error, SIGINT, or exception. The spinner's start/stop lifecycle is not exception-safe. If an error is thrown between `spinner.start()` and `spinner.stop()`, the terminal cursor remains hidden or the spinner text remains on screen.
+
+**Why it happens:** Spinners look simple. `s.start(); await work(); s.stop('Done!')`. But the `await work()` can throw, be interrupted by SIGINT, or timeout. The cleanup path is non-obvious.
+
+**Consequences:** Terminal is left in a corrupted state (hidden cursor, lingering spinner text). Users must run `reset` to restore their terminal. This erodes trust in the tool's quality.
+
+**Prevention:**
+1. **Use try/finally for all spinner lifecycles:**
+   ```typescript
+   const s = spinner();
+   s.start('Connecting to Jules...');
+   try {
+     const result = await client.getSession(id);
+     s.stop('Connected.');
+   } catch (err) {
+     s.stop('Connection failed.');
+     throw err;
+   }
+   ```
+2. **Register a SIGINT handler that calls `spinner.stop()` before exiting.** The codebase already has SIGINT handling for watch mode (cli.ts:137) -- extend this pattern.
+3. **Consider `@clack/prompts` carefully.** Its `spinner()` does not document cleanup guarantees. Test what happens when the process exits between `start()` and `stop()`.
+4. **Alternative: use chalk-based status lines** (`info(chalk.dim('Connecting...'))`) instead of animated spinners. Less flashy but zero cleanup risk. The existing codebase uses this pattern already (cli.ts:60, 370, 446, 522, 558).
+
+**Detection:** Run the command, hit Ctrl+C during a spinner, and check terminal state. If the cursor is hidden or text lingers, cleanup is missing.
+
+**Phase:** Applies to any phase that adds interactive feedback. Prefer the existing `info(chalk.dim(...))` pattern over spinners unless the operation consistently takes >3 seconds.
 
 ---
 
 ## Minor Pitfalls
 
-### Pitfall 11: Dead Code and Unused Imports
+### Pitfall 12: Wizard Library Dependency Bloat
 
-**What goes wrong:** Already documented as L5. `void resolve;` on mcp.ts:373 suppresses an unused import. During redesign, dead code creates confusion about which code paths are active.
+**What goes wrong:** Adding `@clack/prompts` or `inquirer` pulls in significant dependency trees. `inquirer` is particularly heavy. For a CLI tool that values startup speed (the 12-factor CLI guideline targets <500ms startup), adding 2MB of prompt library defeats the purpose.
 
-**Prevention:** Remove unused imports immediately. Lint rules should catch these.
+**Prevention:**
+1. **Use `@clack/prompts` over `inquirer`** -- lighter, modern, better TypeScript support.
+2. **Or use Node's built-in `readline` module** for simple prompts (API key input, yes/no confirmation). Zero dependencies.
+3. **Lazy-load the prompt library.** Only `import()` it inside the `init` command action, not at module top level. The codebase already uses this pattern for the MCP SDK (cli.ts:597) and planner (cli.ts:420).
+4. **Measure startup time before and after.** `time node dist/cli.js --version` should stay under 200ms.
 
-**Detection:** ESLint's no-unused-vars rule.
+**Detection:** `npm ls --all` before and after adding the prompt library. If the tree grows by >20 packages, reconsider.
 
-**Phase:** Quick cleanup at the start of any phase touching mcp.ts.
+**Phase:** Init wizard phase. Choose the library before writing code.
 
-### Pitfall 12: Undocumented Default Behaviors
+### Pitfall 13: Completions That Do Not Match Actual Commands
 
-**What goes wrong:** Already documented as M6. The `AUTO_CREATE_PR` default mode means a user who does not set `JULES_AUTO_MODE` gets automatic PR creation. For an MCP agent that dispatches 20 tasks, this creates 20 unexpected PRs.
+**What goes wrong:** Shell completions (bash/zsh/fish) are generated from a static list of commands. When commands are added, removed, or renamed, completions go out of sync. Users type `jules-dispatch in<TAB>` and do not get `init` because completions were not regenerated.
 
-**Prevention:** Change the default to `NONE` (safe default). Document the default prominently in tool descriptions so agents can inform users. Alternatively, require explicit opt-in for destructive/side-effect-producing defaults.
+**Prevention:**
+1. **Generate completions dynamically from Commander's command list** at generation time, not as a static file.
+2. **Include a `completions` command** that writes the completion script to stdout. Users pipe it to their shell config. Document this in the quickstart.
+3. **Test completions as part of CI.** Generate completions, source them in a bash subprocess, verify tab completion returns expected results.
 
-**Detection:** Search for fallback values in config loading that have user-visible side effects.
+**Phase:** CLI ergonomics phase, if completions are in scope.
 
-**Phase:** Quick fix, should be done early.
+### Pitfall 14: `--help` Overload When Appended to Subcommands
+
+**What goes wrong:** Commander.js supports `command --help` by default, but if the user types `jules-dispatch dispatch --help --json`, the `--json` flag may be processed before help is shown, changing the help output format or causing confusing behavior.
+
+**Prevention:**
+1. **Test `--help` with other flags.** Commander handles this correctly by default, but custom preAction hooks (cli.ts:27-31) that set output mode could interfere. Verify that `--help` short-circuits before the preAction hook runs.
+2. **Always let `-h`/`--help` take precedence.** Per clig.dev: "you should be able to append -h to anything and get help."
+
+**Phase:** Quick verification during CLI ergonomics phase.
+
+### Pitfall 15: Quickstart That Assumes Too Much Prior Knowledge
+
+**What goes wrong:** The README quickstart says: "1. Set JULES_API_KEY in .env. 2. Run `jules-dispatch dispatch task.yaml`." It does not explain where to get the API key, what a task YAML looks like, or what "source" means in the Jules context. The quickstart is technically correct but practically useless for a first-time user.
+
+**Why it happens:** The author knows the domain so well that they skip the "obvious" steps. But to a new user, nothing is obvious.
+
+**Consequences:** The 5-minute goal is not met. Users Google for examples or read the source code. The quickstart exists but does not serve its purpose.
+
+**Prevention:**
+1. **Include a complete copy-paste example.** A working `.env` and a working `task.yaml` in the quickstart. Not just field names -- actual values.
+2. **Include the "where to get the API key" step.** Link to the Jules dashboard or settings page.
+3. **Include expected output.** Show what the user should see after running the command. This confirms success and calibrates expectations.
+4. **Test the quickstart on a clean machine.** Clone the repo, follow the quickstart exactly. If any step requires knowledge not in the quickstart, fix it.
+
+**Phase:** Documentation phase. Write the quickstart first, then test it.
 
 ---
 
@@ -203,25 +320,43 @@ The Anthropic research found that compact combinations (Purpose + Guidelines) of
 
 | Phase Topic | Likely Pitfall | Mitigation |
 |-------------|---------------|------------|
-| MCP tool redesign | Breaking existing tool contracts (Pitfall 4) | Add new tools alongside old ones; deprecate in descriptions |
-| MCP tool redesign | Tool fragmentation not reduced (Pitfall 1) | Target 5-10 outcome-oriented tools; measure agent tool-selection accuracy |
-| MCP tool descriptions | Over-augmentation causing token bloat (Pitfall 2) | Use Purpose + Guidelines only; skip Examples (ablation study showed no statistical degradation without Examples) |
-| Error handling | Silent failures remaining after "fix" (Pitfall 3) | Every catch block must either handle, track, or propagate the error -- never silently discard |
-| Dashboard | Building on untested foundation (Pitfall 5) | Require 80%+ test coverage on deriveStatus and collector before dashboard work begins |
-| Dashboard | TTY-only output breaks scripting (Pitfall 10) | Always offer --json; detect isatty for formatting |
-| Testing | Tests that verify implementation, not behavior | Test deriveStatus against known session states, not against code structure |
-| Backward compat | Semver violations on tool surface changes | Any tool name/parameter removal = major version bump |
-| Network reliability | Fetch exceptions still bypassing retry after "fix" (Pitfall 8) | Test with simulated network failures (DNS error, connection refused), not just HTTP errors |
-| Polling at scale | Thundering herd with multiple agents | Add jitter to backoff; consider event-driven notification if Jules API ever supports webhooks |
+| Init wizard | Hangs in non-interactive mode (Pitfall 1) | Check `process.stdin.isTTY`; require `--yes` for scripts |
+| Init wizard | Over-collects info (Pitfall 2) | Maximum 3 prompts; everything else has defaults |
+| Init wizard | Overwrites existing config (Pitfall 3) | Detect + merge; backup before write |
+| Init wizard | Dependency bloat (Pitfall 12) | Use `@clack/prompts` or built-in `readline`; lazy-load |
+| Error messages | Raw internals leak to users (Pitfall 4) | Classify errors; wrap with hints; never show raw exceptions |
+| Error messages | Too verbose (Pitfall 10) | 2-line max in normal mode; details in `--verbose` |
+| CLI ergonomics | Breaking existing contracts (Pitfall 5) | Only add; never remove or rename |
+| CLI ergonomics | Help text wall (Pitfall 7) | Synopsis + examples at top; group commands |
+| CLI ergonomics | Too many new commands (Pitfall 8) | Max 2 new commands; prefer flags |
+| CLI ergonomics | Missing NO_COLOR support (Pitfall 6) | Respect NO_COLOR, TERM=dumb, --no-color, piped stdout |
+| Documentation | Stale docs (Pitfall 9) | Extract examples from tests; version-stamp; CI verification |
+| Documentation | Assumes too much (Pitfall 15) | Complete copy-paste quickstart with expected output |
+| Completions | Out of sync (Pitfall 13) | Generate dynamically from Commander's command list |
+| Spinners | Terminal corruption on error (Pitfall 11) | try/finally for spinner lifecycle; SIGINT cleanup |
+| Interactive prompts | `@clack/prompts` cancel sentinel leaks (P1 in clack research) | Check `isCancel()` after every prompt; use `group()` with `onCancel` |
+
+---
+
+## Existing Codebase Strengths to Preserve
+
+These patterns are already correct and should not be broken during DX work:
+
+1. **Dual output mode** (output.ts) -- every user-facing op emits text and JSON. Extend to new commands, do not replace.
+2. **Structured exit codes** (output.ts:50-57) -- 0-5 scheme is well-defined. New commands should use these, not invent new codes.
+3. **`emitError` function** (output.ts:26-34) -- centralized error output. Extend with `hint` field, do not bypass it.
+4. **TTY detection in `auto` command** (cli.ts:547) -- `process.stdin.isTTY` check before confirmation prompt. Extend to all prompts.
+5. **Lazy imports for heavy modules** (cli.ts:420, 597) -- MCP SDK and planner are imported only when needed. Apply same pattern to prompt library.
+6. **Verbose logging to stderr** (log.ts) -- never mixes with stdout. Maintain this separation.
+7. **`doctor` command** (cli.ts:328-357) -- validates environment. Extend to check new config fields.
 
 ---
 
 ## Sources
 
-- arXiv 2602.14878 -- "MCP Tool Descriptions Are Smelly!" (856 tools, 103 servers, structured rubric, ablation study). HIGH confidence: peer-reviewed, empirical, large-scale.
-- Anthropic Engineering Blog -- "Writing effective tools for AI agents" (tool design principles, namespacing, token efficiency). HIGH confidence: official Anthropic guidance.
-- Anthropic Engineering Blog -- "Code execution with MCP" (token reduction via code-mode, progressive disclosure). HIGH confidence: official Anthropic engineering.
-- Speakeasy -- "Design MCP tools" (tool curation, workflow-based grouping, <30 tool threshold). MEDIUM confidence: vendor guidance, consistent with other sources.
-- dev.to AWS Heroes -- "MCP Tool Design: Why Your AI Agent Is Failing" (Capability Square, outcome-oriented design, Block/GitHub evidence). MEDIUM confidence: practitioner blog, aligns with Anthropic guidance.
-- Evil Martians -- "CLI UX Best Practices: 3 Patterns for Improving Progress Displays" (spinner, X-of-Y, progress bar, clean logs). MEDIUM confidence: UX patterns, widely cited.
-- jules-dispatch codebase analysis -- CONCERNS.md, mcp.ts source. HIGH confidence: direct code inspection.
+- clig.dev -- "Command Line Interface Guidelines" (comprehensive CLI design guide: error messages, help, interactivity, piping, color). HIGH confidence: widely cited, battle-tested by Heroku/Docker/GitHub CLI teams.
+- Jeff Dickey -- "12-Factor CLI Apps" (startup speed, help, flags vs args, streams, error handling). HIGH confidence: practitioner-authored, widely referenced.
+- @clack/prompts README (prompt library gotchas: cancel sentinel, no non-interactive guidance, spinner cleanup). MEDIUM confidence: direct from source, but gaps identified from reading the docs rather than production failures.
+- jules-dispatch codebase -- cli.ts, config.ts, output.ts, log.ts (current patterns and gaps). HIGH confidence: direct code inspection.
+- Evil Martians -- "CLI UX Best Practices" (progress displays, clean output, spinner patterns). MEDIUM confidence: practitioner blog, consistent with clig.dev.
+- Anthropic/gum patterns (exit codes, structured logging, stdout/stderr separation). LOW confidence: indirect source, patterns inferred from README.
