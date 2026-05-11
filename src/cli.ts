@@ -323,6 +323,39 @@ program
     }
   });
 
+// ---------- doctor ----------
+
+program
+  .command('doctor')
+  .description('Validate environment: Node.js, npm, JULES_API_KEY, API connectivity, task file')
+  .option('--task-file <path>', 'validate a task file (YAML or JSON)')
+  .action(async (opts: { taskFile?: string }) => {
+    const { runDoctor } = await import('./doctor.js');
+    const optsGlobal = program.opts() as { project: string; apiKey?: string };
+    const projectDir = resolve(optsGlobal.project);
+
+    const result = await runDoctor(projectDir, {
+      apiKeyOverride: optsGlobal.apiKey,
+      taskFile: opts.taskFile,
+    });
+
+    emit(
+      () => {
+        console.log(chalk.bold('\nDoctor Check\n'));
+        for (const check of result.checks) {
+          const icon = check.status === 'pass' ? chalk.green('✓')
+            : check.status === 'warn' ? chalk.yellow('⚠')
+            : chalk.red('✗');
+          console.log(`  ${icon} ${check.name}: ${check.message}`);
+        }
+        console.log('');
+      },
+      { checks: result.checks },
+    );
+
+    if (result.exitCode !== 0) process.exit(result.exitCode);
+  });
+
 // ---------- tail ----------
 
 program
