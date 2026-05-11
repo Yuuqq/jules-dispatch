@@ -28,7 +28,7 @@
 - [x] **Phase 12: Polling Deduplication** - Extract shared polling function from 3 duplicate implementations (completed 2026-05-11)
 - [x] **Phase 13: Deprecated Tool Refactoring** - Refactor 7 deprecated tools from full reimplementations to thin wrappers (completed 2026-05-11)
 - [x] **Phase 14: Deprecated Alias Tests** - Verify all 7 deprecated tool aliases work correctly via tests (completed 2026-05-11)
-- [ ] **Phase 15: Doctor Command** - First-run environment validation, API connectivity, task file checking
+- [x] **Phase 15: Doctor Command** - First-run environment validation, API connectivity, task file checking (completed 2026-05-11)
 
 ## Phase Details
 
@@ -104,7 +104,7 @@ Plans:
 
 Plans:
 **Wave 1**
-- [ ] 15-01-PLAN.md — Implement doctor module, CLI command, and tests (DOC-01, DOC-02, DOC-03)
+- [x] 15-01-PLAN.md — Implement doctor module, CLI command, and tests (DOC-01, DOC-02, DOC-03)
 
 ## Progress
 
@@ -124,7 +124,7 @@ Plans:
 | 12. Polling Deduplication | v2 | 1/1 | Complete    | 2026-05-11 |
 | 13. Deprecated Tool Refactoring | v2 | 1/1 | Complete    | 2026-05-11 |
 | 14. Deprecated Alias Tests | v2 | 1/1 | Complete    | 2026-05-11 |
-| 15. Doctor Command | v2 | 0/1 | Not started | - |
+| 15. Doctor Command | v2 | 1/1 | Complete   | 2026-05-11 |
 
 ---
 
