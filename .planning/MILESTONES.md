@@ -25,3 +25,30 @@ Hardened data foundation (retry, error surfacing, test coverage), consolidated 1
 - Roadmap: .planning/milestones/v1-ROADMAP.md
 - Requirements: .planning/milestones/v1-REQUIREMENTS.md
 - Audit: .planning/v1-MILESTONE-AUDIT.md
+
+## v2 — Reliability & Onboarding
+
+**Shipped:** 2026-05-11
+**Phases:** 5 | **Plans:** 5 | **Tests:** 192
+**Requirements:** 8/8 satisfied
+**Known deferred items at close:** None
+
+### Delivered
+
+MCP test coverage (24 tests for consolidated tools + helpers), polling deduplication (3 implementations → 1 shared function), deprecated tool refactoring (thin wrappers), deprecated alias tests (13 tests for 7 aliases), and doctor command (environment + API + task file validation).
+
+### Key Accomplishments
+
+1. 192 tests across 13 files — up from 58 (134 new tests across v1+v2)
+2. MCP response helpers extracted and tested (ok/fail/computeRecoveryHint)
+3. In-process MCP testing via InMemoryTransport (26 integration tests)
+4. Polling deduplication: 3 duplicate loops → 1 shared `pollSessions` (-137 LOC)
+5. 7 deprecated tools refactored from full reimplementations to thin wrappers
+6. `jules-dispatch doctor` command for first-run environment validation
+
+### Archive
+
+- Roadmap: .planning/milestones/v2-ROADMAP.md
+- Requirements: .planning/milestones/v2-REQUIREMENTS.md
+- Audit: .planning/v2-MILESTONE-AUDIT.md
+- Phases: .planning/milestones/v2-phases/
