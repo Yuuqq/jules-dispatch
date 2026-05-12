@@ -4,7 +4,7 @@
 
 - **v1 — Incremental Optimization** (shipped 2026-05-11)
 - **v2 — Reliability & Onboarding** (shipped 2026-05-11)
-- **v3 — Polish & DX** (shipped 2026-05-12)
+- **v3 — Polish & DX** (current)
 
 ## Phases
 

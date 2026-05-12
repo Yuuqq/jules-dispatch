@@ -29,22 +29,11 @@ Turn Jules from a one-at-a-time tool into a massively parallel coding workforce,
 - CLI watch mode (--watch with ANSI refresh, SIGINT, auto-exit) — v1
 - CLI batch progress (per-task lines + summary) — v1
 
-## Current Milestone: v3 Polish & DX
+## Current Milestone: None (v3 shipped 2026-05-12)
 
-**Goal:** A new user can npm install, run their first task, and understand the output in under 5 minutes — without reading source code.
+**v3 Goal:** A new user can npm install, run their first task, and understand the output in under 5 minutes — without reading source code.
 
-**Target features:**
-- Setup & onboarding (init wizard, API key detection, config generation)
-- CLI ergonomics (richer --help, command aliases, better arg validation)
-- Error messages (actionable errors for auth, task files, API issues)
-- Documentation (README quickstart, per-command examples, MCP guide)
-
-### Active
-
-- [ ] Setup & onboarding (`jules-dispatch init` wizard)
-- [ ] CLI ergonomics (--help with examples, arg validation messages)
-- [ ] Error messages (actionable, no raw stack traces)
-- [ ] Documentation (README, quickstart, MCP guide)
+v3 delivered: init wizard, CLI help with examples, structured error messages, and rewritten documentation. All 12/12 requirements complete, 163 tests passing.
 
 ### Out of Scope
 
@@ -61,13 +50,14 @@ Turn Jules from a one-at-a-time tool into a massively parallel coding workforce,
 
 ### Current State
 
-- Shipped v2 (2026-05-11): 15 phases total (v1: 10, v2: 5), 192 tests, 26/26 requirements
-- 12 source modules + 7 test files
+- Shipped v3 (2026-05-12): 19 phases total (v1: 10, v2: 5, v3: 4), 163 tests, 38/38 requirements
+- 12 source modules + 11 test files
 - 14 MCP tools (3 consolidated + 11 deprecated thin wrappers), 14 CLI commands (including doctor)
 - Published on npm as `jules-dispatch` (v1.2.0)
 - CI: GitHub Actions, Node 20/22 matrix
 - MCP test coverage: 26 tests (consolidated + deprecated aliases)
 - Polling deduplicated: single `pollSessions` function shared by all consumers
+- Init wizard, structured errors, CLI help examples, and docs rewrite shipped
 
 ### Known Tech Debt
 
@@ -106,4 +96,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-11 after v3 milestone kickoff*
+*Last updated: 2026-05-12 after v3 milestone close-out*
