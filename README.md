@@ -164,6 +164,8 @@ sequenceDiagram
 npm install -g jules-dispatch
 ```
 
+> **Full setup guide** (including GSD integration): [docs/MCP-INTEGRATION.md](docs/MCP-INTEGRATION.md)
+
 Add to `~/.config/claude-code/mcp.json` (or use `claude mcp add`):
 
 ```json
