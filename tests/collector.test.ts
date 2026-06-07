@@ -44,6 +44,35 @@ afterEach(() => {
 });
 
 describe('collectStatus error handling', () => {
+  it('uses the newest progress activity as lastActivity', async () => {
+    const client = mockClient();
+    client.getSession.mockResolvedValue(session({ id: 'session-1', state: 'RUNNING' }));
+    client.listActivities.mockResolvedValue({
+      activities: [
+        {
+          id: 'new',
+          createTime: '2026-01-01T00:02:00Z',
+          originator: 'agent',
+          progressUpdated: { title: 'Newest progress' },
+        },
+        {
+          id: 'old',
+          createTime: '2026-01-01T00:01:00Z',
+          originator: 'agent',
+          progressUpdated: { title: 'Old progress' },
+        },
+      ],
+    });
+
+    const result = await collectStatus(client as unknown as JulesClient, config, { sessionIds: ['session-1'] });
+
+    expect(result[0]).toMatchObject({
+      sessionId: 'session-1',
+      status: 'running',
+      lastActivity: 'Newest progress',
+    });
+  });
+
   it('activity fetch error is logged via debug', async () => {
     const client = mockClient();
     client.getSession.mockResolvedValue(session({ id: 'session-1', state: 'RUNNING' }));

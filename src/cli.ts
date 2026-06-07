@@ -48,6 +48,15 @@ function fail(input: string | TranslatedError | unknown, code: number = ExitCode
   process.exit(code);
 }
 
+function parseIntegerOption(value: string, name: string, min: number, max?: number): number {
+  const parsed = Number(value);
+  const maxText = max === undefined ? '' : ` and <= ${max}`;
+  if (!Number.isInteger(parsed) || parsed < min || (max !== undefined && parsed > max)) {
+    fail(`Invalid ${name}. Expected an integer >= ${min}${maxText}.`, ExitCode.VALIDATION, 'INVALID_OPTION');
+  }
+  return parsed;
+}
+
 // ---------- dispatch ----------
 
 program
@@ -116,7 +125,7 @@ program
     const results = await dispatchBatch(client, config, dir, {
       source: opts.source,
       branch: opts.branch,
-      parallel: parseInt(opts.parallel, 10),
+      parallel: parseIntegerOption(opts.parallel, '--parallel', 1, 50),
       logDir: opts.log === false ? false : undefined,
     });
 
@@ -146,12 +155,12 @@ program
     await collectStatus(client, config, {
       sessionIds: opts.ids,
       output: opts.output,
-      scanLimit: parseInt(opts.scan, 10),
+      scanLimit: parseIntegerOption(opts.scan, '--scan', 1, 200),
     });
 
     if (opts.watch) {
       // Watch mode keeps the initial report write, but refreshes only render status.
-      const interval = parseInt(opts.interval, 10);
+      const interval = parseIntegerOption(opts.interval, '--interval', 100);
       const abort = new AbortController();
       const onSigint = () => { abort.abort(); };
       process.on('SIGINT', onSigint);
@@ -167,7 +176,7 @@ program
           const results = await collectStatus(client, config, {
             sessionIds: opts.ids,
             output: undefined,
-            scanLimit: parseInt(opts.scan, 10),
+            scanLimit: parseIntegerOption(opts.scan, '--scan', 1, 200),
           });
 
           const allTerminal = results.every(r =>
@@ -237,8 +246,8 @@ program
     if (ids.length === 0) fail('No session IDs provided. Usage: wait <id1> [id2...]', ExitCode.VALIDATION, 'NO_IDS');
 
     const result = await waitForCompletion(client, config, ids, {
-      interval: parseInt(opts.interval, 10),
-      timeout: parseInt(opts.timeout, 10),
+      interval: parseIntegerOption(opts.interval, '--interval', 1),
+      timeout: parseIntegerOption(opts.timeout, '--timeout', 1),
       failFast: opts.failFast,
     });
 
@@ -484,7 +493,7 @@ program
   .option('--interval <ms>', 'poll interval', '5000')
   .action(async (sessionId: string, opts: { interval: string }) => {
     const { client } = getConfig();
-    const interval = parseInt(opts.interval, 10);
+    const interval = parseIntegerOption(opts.interval, '--interval', 1);
     const seen = new Set<string>();
 
     info(chalk.dim(`Tailing ${sessionId} (Ctrl+C to stop)...\n`));
@@ -580,7 +589,7 @@ program
         description: desc,
         source: opts.source,
         branch: opts.branch,
-        maxTasks: parseInt(opts.max, 10),
+        maxTasks: parseIntegerOption(opts.max, '--max', 1, 50),
         context,
       });
     } catch (err) {
@@ -662,7 +671,7 @@ program
         description: desc,
         source: opts.source ?? config.defaultSource,
         branch: opts.branch ?? config.defaultBranch,
-        maxTasks: parseInt(opts.max, 10),
+        maxTasks: parseIntegerOption(opts.max, '--max', 1, 50),
         context,
       });
     } catch (err) {
@@ -691,7 +700,7 @@ program
     }
 
     info(chalk.dim('\nDispatching...\n'));
-    const parallel = parseInt(opts.parallel, 10);
+    const parallel = parseIntegerOption(opts.parallel, '--parallel', 1, 50);
     const results = [];
     for (let i = 0; i < plan.tasks.length; i += parallel) {
       const slice = plan.tasks.slice(i, i + parallel);
@@ -736,8 +745,20 @@ program
     // Lazy-import: the SDK is only loaded when actually running the MCP server,
     // keeping CLI startup snappy.
     const { runMcpServer } = await import('./mcp.js');
-    const opts = program.opts() as { project: string; apiKey?: string };
-    await runMcpServer({ projectDir: resolve(opts.project), apiKeyOverride: opts.apiKey });
+    const opts = program.opts() as {
+      project: string;
+      apiKey?: string;
+      llmKey?: string;
+      llmBaseUrl?: string;
+      llmModel?: string;
+    };
+    await runMcpServer({
+      projectDir: resolve(opts.project),
+      apiKeyOverride: opts.apiKey,
+      llmApiKeyOverride: opts.llmKey,
+      llmBaseUrlOverride: opts.llmBaseUrl,
+      llmModelOverride: opts.llmModel,
+    });
   })
   .addHelpText('after', `
 Examples:

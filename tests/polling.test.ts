@@ -138,6 +138,7 @@ describe('pollSessions', () => {
     const result = await resultPromise;
     expect(result.failed).toContain('s1');
     expect(result.stillRunning).toContain('s2');
+    expect(result.timedOut).toBe(false);
   });
 
   it('handles mixed terminal states correctly', async () => {

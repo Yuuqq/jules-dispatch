@@ -49,6 +49,17 @@ beforeEach(() => {
 });
 
 describe('batch chunking', () => {
+  it('rejects invalid parallel values before dispatching', async () => {
+    loadTasks(makeTask('one'));
+    const client = mockClient(() => successfulSession('unused'));
+
+    await expect(
+      dispatchBatch(client, baseConfig, 'task-dir', { parallel: 0, logDir: false }),
+    ).rejects.toThrow('Invalid parallel value');
+
+    expect(client.createSession).not.toHaveBeenCalled();
+  });
+
   it('dispatches 7 tasks with parallel=3', async () => {
     loadTasks(...Array.from({ length: 7 }, (_, i) => makeTask(`task-${i + 1}`)));
     let inFlight = 0;

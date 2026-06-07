@@ -103,6 +103,9 @@ export async function dispatchBatch(
   info(chalk.bold(`Dispatching ${allTasks.length} task(s) from ${taskFiles.length} file(s)...\n`));
 
   const parallel = options.parallel ?? 10;
+  if (!Number.isInteger(parallel) || parallel < 1 || parallel > 50) {
+    throw new Error('Invalid parallel value. Expected an integer from 1 to 50.');
+  }
   const results: DispatchResult[] = [];
 
   for (let i = 0; i < allTasks.length; i += parallel) {

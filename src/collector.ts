@@ -63,7 +63,9 @@ export async function collectStatus(
 
       const failedAct = activities.find(a => a.sessionFailed);
       const completedAct = activities.find(a => a.sessionCompleted);
-      const latestProgress = activities.filter(a => a.progressUpdated).pop();
+      const latestProgress = activities
+        .filter(a => a.progressUpdated)
+        .sort((a, b) => (a.createTime > b.createTime ? -1 : 1))[0];
 
       status = deriveStatus(session, activities);
 

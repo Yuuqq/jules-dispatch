@@ -168,6 +168,33 @@ describe('jules_dispatch', () => {
   });
 });
 
+describe('planner tool registration', () => {
+  it('registers planner tools when an LLM API key override is provided', async () => {
+    const config: JulesConfig = {
+      apiKey: 'test-key',
+      defaultSource: 'sources/github/owner/repo',
+      defaultBranch: 'main',
+      autoMode: 'AUTO_CREATE_PR',
+    };
+    const mockClient = createMockClient();
+    const mcpServer = createMcpServer(config, mockClient, { llmApiKeyOverride: 'llm-key' });
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    await mcpServer.connect(serverTransport);
+    const client = new Client({ name: 'test', version: '1.0.0' });
+    await client.connect(clientTransport);
+
+    try {
+      const tools = await client.listTools();
+      const names = tools.tools.map(tool => tool.name);
+      expect(names).toContain('jules_plan_tasks');
+      expect(names).toContain('jules_auto');
+    } finally {
+      await client.close();
+      await mcpServer.close();
+    }
+  });
+});
+
 describe('jules_monitor', () => {
   let server: { client: Client; cleanup: () => Promise<void> };
   let mockClient: JulesClient;

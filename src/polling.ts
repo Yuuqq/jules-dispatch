@@ -35,6 +35,7 @@ export async function pollSessions(
   const completed = new Set<string>();
   const failed = new Set<string>();
   const cancelled = new Set<string>();
+  let stoppedByFailFast = false;
 
   const markTerminal = (id: string, status: 'completed' | 'failed' | 'cancelled'): void => {
     if (status === 'completed') completed.add(id);
@@ -75,7 +76,10 @@ export async function pollSessions(
       ).length,
     });
 
-    if (failFast && failed.size > 0) break;
+    if (failFast && failed.size > 0) {
+      stoppedByFailFast = true;
+      break;
+    }
 
     const stillRunning = sessionIds.filter(id =>
       !completed.has(id) && !failed.has(id) && !cancelled.has(id),
@@ -94,7 +98,7 @@ export async function pollSessions(
     failed: [...failed],
     cancelled: [...cancelled],
     stillRunning,
-    timedOut: stillRunning.length > 0,
+    timedOut: stillRunning.length > 0 && !stoppedByFailFast && Date.now() - start >= timeout,
   };
 }
 

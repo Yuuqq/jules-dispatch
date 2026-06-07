@@ -13,6 +13,15 @@ import { ok, fail, computeRecoveryHint } from './mcp-helpers.js';
 export interface McpServerOptions {
   projectDir: string;
   apiKeyOverride?: string;
+  llmApiKeyOverride?: string;
+  llmBaseUrlOverride?: string;
+  llmModelOverride?: string;
+}
+
+export interface CreateMcpServerOptions {
+  llmApiKeyOverride?: string;
+  llmBaseUrlOverride?: string;
+  llmModelOverride?: string;
 }
 
 type ToolAnnotations = {
@@ -22,7 +31,11 @@ type ToolAnnotations = {
   openWorldHint?: boolean;
 };
 
-export function createMcpServer(config: JulesConfig, client: JulesClient): McpServer {
+export function createMcpServer(
+  config: JulesConfig,
+  client: JulesClient,
+  options: CreateMcpServerOptions = {},
+): McpServer {
   const server = new McpServer({
     name: 'jules-dispatch',
     version: '1.2.0',
@@ -488,7 +501,8 @@ export function createMcpServer(config: JulesConfig, client: JulesClient): McpSe
   // Only registered if a planner-capable API key is present at startup.
   // This keeps the tool list clean for users who only want raw dispatch.
 
-  if (isPlannerConfigured()) {
+  const plannerConfigured = Boolean(options.llmApiKeyOverride) || isPlannerConfigured();
+  if (plannerConfigured) {
     registerPlannerTools();
   }
 
@@ -506,7 +520,11 @@ export function createMcpServer(config: JulesConfig, client: JulesClient): McpSe
         baseUrl: z.string().optional().describe('OpenAI-compatible base URL (defaults to LLM_BASE_URL or https://api.openai.com/v1)'),
       },
       async (args) => {
-        const cfg = loadPlannerConfig({ modelOverride: args.model, baseUrlOverride: args.baseUrl });
+        const cfg = loadPlannerConfig({
+          apiKeyOverride: options.llmApiKeyOverride,
+          modelOverride: args.model ?? options.llmModelOverride,
+          baseUrlOverride: args.baseUrl ?? options.llmBaseUrlOverride,
+        });
         return ok(await planTasks(cfg, {
           description: args.description,
           source: args.source ?? config.defaultSource,
@@ -532,7 +550,11 @@ export function createMcpServer(config: JulesConfig, client: JulesClient): McpSe
         parallel: z.number().int().min(1).max(50).optional().default(10),
       },
       async (args) => {
-        const cfg = loadPlannerConfig({ modelOverride: args.model, baseUrlOverride: args.baseUrl });
+        const cfg = loadPlannerConfig({
+          apiKeyOverride: options.llmApiKeyOverride,
+          modelOverride: args.model ?? options.llmModelOverride,
+          baseUrlOverride: args.baseUrl ?? options.llmBaseUrlOverride,
+        });
         const plan = await planTasks(cfg, {
           description: args.description,
           source: args.source ?? config.defaultSource,
@@ -570,7 +592,11 @@ export async function runMcpServer(options: McpServerOptions): Promise<void> {
     noExit: true,
   });
   const client = new JulesClient(config);
-  const server = createMcpServer(config, client);
+  const server = createMcpServer(config, client, {
+    llmApiKeyOverride: options.llmApiKeyOverride,
+    llmBaseUrlOverride: options.llmBaseUrlOverride,
+    llmModelOverride: options.llmModelOverride,
+  });
   await server.connect(new StdioServerTransport());
 }
 
