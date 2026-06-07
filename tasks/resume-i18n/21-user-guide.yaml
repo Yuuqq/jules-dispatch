@@ -1,0 +1,106 @@
+# Docs: Create user guide and help documentation
+title: "Documentation — User Guide + API Docs + README Update"
+source: "sources/github/Yuuqq/smart-resume-builder"
+branch: "master"
+autoMode: "AUTO_CREATE_PR"
+
+prompt: |
+  ## Context
+  Streamlit resume builder (职点AI简历工坊). No user-facing documentation exists. Create a comprehensive user guide.
+
+  ## Task
+
+  ### 1. Create `docs/USER_GUIDE.md`
+
+  Write a Chinese-language user guide covering:
+
+  **快速开始**
+  - 注册/登录流程
+  - 游客模式使用
+  - 界面布局说明（侧边栏、主区域、预览区）
+
+  **AI 简历生成**
+  - 如何用自然语言描述经历
+  - AI 提取的 JSON 结构说明
+  - 如何编辑 AI 生成的结果
+
+  **简历编辑**
+  - JSON 编辑器使用
+  - 各字段说明（姓名、教育、经历、技能等）
+  - 实时预览功能
+
+  **模板与样式**
+  - 12 种模板预览与切换
+  - 配色方案选择
+  - 字体选择
+  - 专业预设功能
+
+  **AI 润色**
+  - 通用润色 vs 定向润色
+  - 简历诊断功能
+  - 一键优化
+
+  **能力评分**
+  - 五维评分体系
+  - 雷达图解读
+  - 成长数字孪生功能
+  - 版本对比
+
+  **职位匹配**
+  - 预设职位库
+  - 匹配分析结果解读
+  - 技能差距分析
+
+  **版本管理**
+  - 自动保存
+  - 版本历史查看
+  - 版本对比
+
+  **导出**
+  - PDF 导出步骤
+  - HTML 预览
+
+  **AI 教学助手**
+  - Copilot 对话使用
+  - 来源引用功能
+
+  ### 2. Create `docs/ADMIN_GUIDE.md`
+
+  Admin/teacher documentation:
+  - 管理后台访问
+  - 数据统计面板
+  - AI 使用量监控
+  - 限流配置
+  - CSV/JSON 数据导出
+
+  ### 3. Update `README.md`
+
+  Update the project README with:
+  - Project overview (already may exist, update if needed)
+  - Feature list
+  - Tech stack
+  - Installation instructions
+  - Configuration (env vars)
+  - Deployment (local + Cloud Run)
+  - Project structure
+  - Links to user guide and admin guide
+
+  ### 4. Create `docs/ARCHITECTURE.md`
+
+  Brief architecture doc:
+  - System overview diagram (text-based)
+  - Module structure: core/ (business logic) + views/ (UI)
+  - Data flow: user input → AI service → template rendering → PDF export
+  - Dual backend: local JSON + GCP Firestore
+  - AI Guard: rate limiting, cost control, circuit breaker
+  - Security: session tokens, XSS sanitization, brute-force protection
+
+  ## Important
+  - Write in Chinese (user-facing docs) with English for technical terms
+  - Include screenshots references where helpful (placeholder: `![描述](截图路径)`)
+  - Keep documentation concise and practical
+  - Only create files in `docs/` and update `README.md`
+  - Do NOT modify any source code
+
+  ## Commit
+  Message: `docs: add user guide, admin guide, architecture doc, and update README`

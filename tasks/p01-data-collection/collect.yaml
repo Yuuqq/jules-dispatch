@@ -1,0 +1,235 @@
+# Data Collection Tasks — 16 tasks
+# Each task runs a collection script and commits the data
+---
+title: "[DC-01] Collect data security laws from FLK"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Run the data security FLK collection script and commit the results.
+
+  Steps:
+  1. Run: `python scripts/collect_data_security_flk.py`
+  2. If the script fails with import errors, run: `pip install -r requirements.txt` then retry
+  3. If the script fails due to website changes, fix the scraper code in scrapers/flk_*.py to match the current HTML structure, then retry
+  4. After successful run, commit ALL files under `data/flk/data_security/` (including any JSON files)
+  5. In the commit message, include the count of documents collected
+  6. If no data could be collected after fixing, commit a file `data/flk/data_security/FAILED.md` explaining what went wrong
+
+  The collected data files MUST be committed. They are no longer in .gitignore.
+---
+title: "[DC-02] Collect environmental laws from FLK"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Run the environmental governance FLK collection script and commit the results.
+
+  Steps:
+  1. Run: `pip install -r requirements.txt && python scripts/collect_environmental_flk.py`
+  2. If the script fails, fix scrapers/flk_*.py to match current website HTML
+  3. Commit ALL files under `data/flk/environmental/`
+  4. Include document count in commit message
+  5. If failed, commit `data/flk/environmental/FAILED.md` with explanation
+---
+title: "[DC-03] Collect urban governance laws from FLK"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Run the urban governance FLK collection script and commit the results.
+
+  Steps:
+  1. Run: `pip install -r requirements.txt && python scripts/collect_urban_flk.py`
+  2. If the script fails, fix scrapers/flk_*.py to match current website HTML
+  3. Commit ALL files under `data/flk/urban_governance/`
+  4. Include document count in commit message
+  5. If failed, commit `data/flk/urban_governance/FAILED.md` with explanation
+---
+title: "[DC-04] Collect commons resource laws from FLK"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Run the commons resource FLK collection script and commit the results.
+
+  Steps:
+  1. Run: `pip install -r requirements.txt && python scripts/collect_commons_flk.py`
+  2. If the script fails, fix scrapers/flk_*.py to match current website HTML
+  3. Commit ALL files under `data/flk/commons_resource/`
+  4. Include document count in commit message
+  5. If failed, commit `data/flk/commons_resource/FAILED.md` with explanation
+---
+title: "[DC-05] Collect platform governance laws from FLK"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Run the platform governance FLK collection script and commit the results.
+
+  Steps:
+  1. Run: `pip install -r requirements.txt && python scripts/collect_platform_flk.py`
+  2. If the script fails, fix scrapers/flk_*.py to match current website HTML
+  3. Commit ALL files under `data/flk/platform_governance/`
+  4. Include document count in commit message
+  5. If failed, commit `data/flk/platform_governance/FAILED.md` with explanation
+---
+title: "[DC-06] Collect data security policies from gov.cn"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Run the data security gov.cn collection script and commit the results.
+
+  Steps:
+  1. Run: `pip install -r requirements.txt && python scripts/collect_data_security_govcn.py`
+  2. If the script fails, fix scrapers/govcn_*.py to match current website HTML
+  3. Commit ALL files under `data/govcn/data_security/`
+  4. Include document count in commit message
+  5. If failed, commit `data/govcn/data_security/FAILED.md` with explanation
+---
+title: "[DC-07] Collect environmental policies from gov.cn"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Run the environmental gov.cn collection script and commit the results.
+
+  Steps:
+  1. Run: `pip install -r requirements.txt && python scripts/collect_environmental_govcn.py`
+  2. If the script fails, fix scrapers/govcn_*.py to match current website HTML
+  3. Commit ALL files under `data/govcn/environmental/`
+  4. Include document count in commit message
+  5. If failed, commit `data/govcn/environmental/FAILED.md` with explanation
+---
+title: "[DC-08] Collect urban governance policies from gov.cn"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Run the urban governance gov.cn collection script and commit the results.
+
+  Steps:
+  1. Run: `pip install -r requirements.txt && python scripts/collect_urban_govcn.py`
+  2. If the script fails, fix scrapers/govcn_*.py to match current website HTML
+  3. Commit ALL files under `data/govcn/urban_governance/`
+  4. Include document count in commit message
+  5. If failed, commit `data/govcn/urban_governance/FAILED.md` with explanation
+---
+title: "[DC-09] Collect commons resource policies from gov.cn"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Run the commons resource gov.cn collection script and commit the results.
+
+  Steps:
+  1. Run: `pip install -r requirements.txt && python scripts/collect_commons_govcn.py`
+  2. If the script fails, fix scrapers/govcn_*.py to match current website HTML
+  3. Commit ALL files under `data/govcn/commons_resource/`
+  4. Include document count in commit message
+  5. If failed, commit `data/govcn/commons_resource/FAILED.md` with explanation
+---
+title: "[DC-10] Collect platform governance policies from gov.cn"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Run the platform governance gov.cn collection script and commit the results.
+
+  Steps:
+  1. Run: `pip install -r requirements.txt && python scripts/collect_platform_govcn.py`
+  2. If the script fails, fix scrapers/govcn_*.py to match current website HTML
+  3. Commit ALL files under `data/govcn/platform_governance/`
+  4. Include document count in commit message
+  5. If failed, commit `data/govcn/platform_governance/FAILED.md` with explanation
+---
+title: "[DC-11] Collect CAC (网信办) regulations"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Run the CAC (网信办) collection script and commit the results.
+
+  Steps:
+  1. Run: `pip install -r requirements.txt && python scripts/collect_cac.py`
+  2. If the script fails, fix scrapers/ministry_cac.py to match current website HTML
+  3. Commit ALL files under `data/ministry/cac/`
+  4. Include document count in commit message
+  5. If failed, commit `data/ministry/cac/FAILED.md` with explanation
+---
+title: "[DC-12] Collect MEE (生态环境部) regulations"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Run the MEE (生态环境部) collection script and commit the results.
+
+  Steps:
+  1. Run: `pip install -r requirements.txt && python scripts/collect_mee.py`
+  2. If the script fails, fix scrapers/ministry_mee.py to match current website HTML
+  3. Commit ALL files under `data/ministry/mee/`
+  4. Include document count in commit message
+  5. If failed, commit `data/ministry/mee/FAILED.md` with explanation
+---
+title: "[DC-13] Collect MOHURD (住建部) regulations"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Run the MOHURD (住建部) collection script and commit the results.
+
+  Steps:
+  1. Run: `pip install -r requirements.txt && python scripts/collect_mohurd.py`
+  2. If the script fails, fix scrapers/ministry_mohurd.py to match current website HTML
+  3. Commit ALL files under `data/ministry/mohurd/`
+  4. Include document count in commit message
+  5. If failed, commit `data/ministry/mohurd/FAILED.md` with explanation
+---
+title: "[DC-14] Collect MNR (自然资源部) regulations"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Run the MNR (自然资源部) collection script and commit the results.
+
+  Steps:
+  1. Run: `pip install -r requirements.txt && python scripts/collect_mnr.py`
+  2. If the script fails, fix scrapers/ministry_mnr.py to match current website HTML
+  3. Commit ALL files under `data/ministry/mnr/`
+  4. Include document count in commit message
+  5. If failed, commit `data/ministry/mnr/FAILED.md` with explanation
+---
+title: "[DC-15] Collect SAMR (市场监管总局) regulations"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Run the SAMR (市场监管总局) collection script and commit the results.
+
+  Steps:
+  1. Run: `pip install -r requirements.txt && python scripts/collect_samr.py`
+  2. If the script fails, fix scrapers/ministry_samr.py to match current website HTML
+  3. Commit ALL files under `data/ministry/samr/`
+  4. Include document count in commit message
+  5. If failed, commit `data/ministry/samr/FAILED.md` with explanation
+---
+title: "[DC-16] Collect international comparison data via Exa"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Run the Exa supplementary collection script and commit the results.
+
+  Steps:
+  1. Run: `pip install -r requirements.txt && python -c "
+  from scrapers.exa_supplement import ExaSupplementaryCollector
+  collector = ExaSupplementaryCollector()
+  topics = ['GDPR', 'data protection law comparison', 'AI regulation international', 'algorithm governance']
+  result = collector.collect(topics)
+  print(f'Collected: {result}')
+  "`
+  2. If the Exa API keys don't work (they're hardcoded in exa_supplement.py), modify the script to accept keys from environment variable EXA_API_KEY, then set it to one of these keys and retry: <EXA_API_KEY>
+  3. Commit ALL files under `data/exa_supplement/`
+  4. Include document count in commit message
+  5. If failed, commit `data/exa_supplement/FAILED.md` with explanation

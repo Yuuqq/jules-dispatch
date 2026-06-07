@@ -1,0 +1,91 @@
+# Cleanup: Remove dead code, unused imports, and consolidate config files
+title: "Code Cleanup — Dead Code + Unused Imports + Config Consolidation"
+source: "sources/github/Yuuqq/smart-resume-builder"
+branch: "master"
+autoMode: "AUTO_CREATE_PR"
+
+prompt: |
+  ## Context
+  Streamlit resume builder. Codebase has accumulated some dead code and unused imports across multiple phases. Clean it up.
+
+  ## Task
+
+  ### 1. Find and remove unused imports
+
+  Run analysis on all Python files:
+  ```bash
+  pip install autoflake
+  autoflake --remove-all-unused-imports --remove-unused-variables --check --recursive .
+  ```
+
+  Fix all reported unused imports. Common patterns to check:
+  - `import json` not used
+  - `from typing import X` where X is never used
+  - Unused `from core.X import Y`
+  - `import logging` where no logger is created
+
+  Do NOT remove:
+  - `from __future__ import annotations` (used for type hints)
+  - Imports used only in type annotations
+  - `streamlit as st` (always needed in view files)
+
+  ### 2. Find and remove dead code
+
+  Search for:
+  - Commented-out code blocks (5+ lines of commented code)
+  - Functions/methods that are never called (grep for their names)
+  - Variables assigned but never used
+  - `print()` statements that should be `logger.info()` or removed
+  - TODO/FIXME comments that are outdated
+
+  Remove dead code but keep:
+  - Docstrings
+  - Intentional comments explaining WHY
+  - TODO comments that are still relevant
+
+  ### 3. Find and remove duplicate code
+
+  Look for patterns that appear in multiple files:
+  - Duplicate version type label dicts (appears in both `app.py` and `scoring.py` and `version_manager.py`) — extract to a shared constant
+  - Duplicate validation logic
+  - Similar error handling patterns that could share a helper
+
+  For the version type labels specifically:
+  ```python
+  # Create a shared constant in core/config.py or views/common.py
+  VERSION_TYPE_LABELS = {
+      "initial": "初始生成",
+      "polish_general": "通用润色",
+      "polish_targeted": "定向润色",
+      "manual": "手动保存",
+  }
+  ```
+
+  ### 4. Clean up print statements
+
+  Find all `print()` calls in `core/` and `views/`:
+  ```bash
+  grep -rn "print(" core/ views/ --include="*.py"
+  ```
+
+  Replace:
+  - Debug prints → remove or convert to `logger.debug()`
+  - Error prints → convert to `logger.error()` or `logger.warning()`
+  - The one in `data_manager.py` `load_template()` → convert to `logger.error()`
+
+  ### 5. Verify nothing breaks
+
+  ```bash
+  python -m pytest tests/ -x -q
+  python -c "from core.config import get_config; from core.user_manager import get_user_manager; from core.data_manager import get_data_manager; print('OK')"
+  ```
+
+  ## Important
+  - Be conservative — if unsure whether code is used, leave it
+  - Only remove code that you can CONFIRM is unused (grep the entire codebase)
+  - Don't change any public API or function signatures
+  - Don't remove error handling, only clean up how it's expressed
+  - Run tests after changes to verify nothing breaks
+
+  ## Commit
+  Message: `chore: remove unused imports, dead code, print statements, deduplicate version labels`

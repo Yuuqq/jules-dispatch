@@ -1,0 +1,17 @@
+title: "P05: Annotate policy sentiment themes (batch 3)"
+source: "sources/github/Yuuqq/css-lab-annotation-tool"
+branch: "main"
+prompt: |
+  Continue annotation for documents 1001-1500 from `../css-lab-policy-db/data/processed/normalized_all_policies.json`.
+
+  Wait for batch 2 to be committed first, then:
+  1. Read normalized_all_policies.json
+  2. Skip first 1000 docs (already annotated)
+  3. For docs 1001-1500, apply same rule-based annotation:
+     - governance_theme: 环境治理/数据安全/平台经济/城市治理/公地资源/公共安全/科学技术/农业/其他
+     - policy_sentiment: 积极/限制/中性
+     - target_sector: 企业/政府/个人/平台/金融机构/社会组织/混合
+  4. Save as `data/annotated_policies_batch3.json`
+  5. Merge all batches (1+2+3) into `data/annotated_all_policies.json`
+
+  Commit: "feat: rule-based annotation batch 3 (docs 1001-1500) + merged all"

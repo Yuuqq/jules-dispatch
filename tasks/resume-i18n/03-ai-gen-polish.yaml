@@ -1,0 +1,146 @@
+# Phase 8: AI generation + AI polish UI i18n (fully independent)
+title: "UI i18n — ai_generation + ai_polish"
+source: "sources/github/Yuuqq/smart-resume-builder"
+branch: "master"
+autoMode: "AUTO_CREATE_PR"
+
+prompt: |
+  ## Context
+  Streamlit + Python resume builder. Adding bilingual support.
+  Your job: create i18n stubs + translate ALL Chinese in 2 AI view files.
+
+  ## Step 1: Create shared i18n infrastructure
+
+  Create `core/i18n_data/__init__.py`:
+  ```python
+  """i18n string data — auto-discovers all _*.py modules."""
+  from pathlib import Path
+  from typing import Dict
+  import importlib
+  import pkgutil
+
+  _ui_strings: Dict[str, Dict[str, str]] = {"zh": {}, "en": {}}
+  _loaded = False
+
+  def _load():
+      global _loaded, _ui_strings
+      if _loaded:
+          return
+      for module_info in pkgutil.iter_modules([str(Path(__file__).parent)]):
+          if module_info.name.startswith("_"):
+              try:
+                  mod = importlib.import_module(f"core.i18n_data.{module_info.name}")
+                  if hasattr(mod, "UI_STRINGS"):
+                      for locale, strings in mod.UI_STRINGS.items():
+                          _ui_strings.setdefault(locale, {}).update(strings)
+              except Exception:
+                  pass
+      _loaded = True
+
+  def get_ui_strings() -> Dict[str, Dict[str, str]]:
+      _load()
+      return _ui_strings
+  ```
+
+  Create `core/i18n.py`:
+  ```python
+  """Bilingual i18n module."""
+  import logging
+  from typing import Dict
+  import streamlit as st
+
+  logger = logging.getLogger(__name__)
+  LOCALE_ZH = "zh"
+  LOCALE_EN = "en"
+  DEFAULT_LOCALE = LOCALE_ZH
+
+  def get_locale() -> str:
+      return st.session_state.get("locale", DEFAULT_LOCALE)
+
+  def set_locale(locale: str) -> None:
+      st.session_state["locale"] = locale
+      try:
+          from core.user_manager import get_user_manager
+          user_session = st.session_state.get("user_session")
+          if user_session and user_session.user.role not in ("guest",):
+              mgr = get_user_manager()
+              mgr.update_locale(user_session.user.user_id, locale)
+      except Exception as e:
+          logger.warning("Failed to persist locale: %s", e)
+
+  def t(key: str, **kwargs) -> str:
+      from core.i18n_data import get_ui_strings
+      strings = get_ui_strings()
+      locale = get_locale()
+      text = strings.get(locale, {}).get(key, key)
+      if kwargs:
+          try:
+              return text.format(**kwargs)
+          except (KeyError, IndexError):
+              return text
+      return text
+  ```
+
+  ## Step 2: Create `core/i18n_data/_generation.py`
+
+  READ `views/ai_generation.py` completely. Extract ALL Chinese strings into:
+  ```python
+  UI_STRINGS = {
+      "zh": {
+          "generation.title": "...",
+          "generation.input_label": "...",
+          "generation.input_ph": "...",
+          "generation.btn_generate": "...",
+          "generation.generating": "...",
+          "generation.complete": "...",
+          "generation.failed": "...",
+          # ... ALL Chinese strings
+      },
+      "en": {
+          # ... ALL English translations
+      },
+  }
+  ```
+
+  ## Step 3: Create `core/i18n_data/_polish.py`
+
+  READ `views/ai_polish.py` completely. Extract ALL Chinese strings into:
+  ```python
+  UI_STRINGS = {
+      "zh": {
+          "polish.general": "通用润色",
+          "polish.targeted": "定向润色",
+          "polish.diagnosis": "简历诊断",
+          "polish.input_label": "...",
+          "polish.btn_polish": "...",
+          "polish.polishing": "...",
+          "polish.complete": "...",
+          "polish.failed": "...",
+          "polish.score_label": "...",
+          "polish.suggestion_original": "...",
+          "polish.suggestion_improved": "...",
+          # ... ALL Chinese strings
+      },
+      "en": {
+          "polish.general": "General Polish",
+          "polish.targeted": "Targeted Polish",
+          "polish.diagnosis": "Resume Diagnosis",
+          # ... ALL English translations
+      },
+  }
+  ```
+
+  ## Step 4: Update the 2 view files
+
+  For each file (`views/ai_generation.py`, `views/ai_polish.py`):
+  1. Add `from core.i18n import t` at top
+  2. Replace EVERY Chinese string with t() call
+  3. For f-strings with variables → t("key", var=value)
+  4. Keep code language identifiers (e.g., `language="json"`) unchanged
+  5. Keep variable names and data keys unchanged
+
+  ## Verification
+  - `grep -c "[一-鿿]" views/ai_generation.py views/ai_polish.py` — Chinese should only remain in comments
+
+  ## Commit
+  Message: `feat(i18n): translate ai_generation and ai_polish UI strings`

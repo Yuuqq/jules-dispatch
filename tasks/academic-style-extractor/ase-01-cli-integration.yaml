@@ -1,0 +1,41 @@
+title: "验收 #1: CLI 集成测试 — 验证三个命令端到端可用"
+source: "sources/github/Yuuqq/academic-style-extractor"
+branch: "master"
+
+prompt: |
+  你是一个 QA 测试员，负责验收 academic-style-extractor 项目的 CLI 命令。
+
+  ## 你的任务
+
+  1. 先阅读 README.md、pyproject.toml 和 src/cli.py，了解项目结构和 CLI 用法
+  2. 阅读测试文件 references/samples/ 目录下的样例文件名
+  3. 验证以下 CLI 命令能否端到端运行：
+
+  ### 测试 1: score 命令
+  ```bash
+  python -m src.cli score --profile profiles/style_profile_academic.json --text "references/samples/JPART 2025 Administrative overload and policy triage(1).txt"
+  ```
+  - 验证输出包含 "STYLE SCORE REPORT" 和 "Overall Score"
+  - 验证 7 个维度都有分数输出
+
+  ### 测试 2: coherence audit 命令
+  ```bash
+  python -m src.coherence_cli audit --text "references/samples/JPART 2025 Administrative overload and policy triage(1).txt"
+  ```
+  - 验证输出包含 "Coherence Rate"
+
+  ### 测试 3: report 命令（生成 .docx + HTML）
+  ```bash
+  python -m src.cli report --profile profiles/style_profile_academic.json --text "references/samples/JPART 2025 Administrative overload and policy triage(1).txt" --output /tmp/test_annotated.docx --html /tmp/test_report.html
+  ```
+  - 验证两个输出文件都生成
+  - 验证 HTML 文件包含 "<svg"（雷达图）和 "Academic Style Report"
+
+  ### 测试 4: report --json + --baseline 组合
+  - 先跑 score --json 保存到 /tmp/baseline.json
+  - 再跑 report --baseline /tmp/baseline.json --html /tmp/baseline.html，验证 HTML 包含 "Revision Comparison"
+
+  ## 验收标准
+  - 所有 4 个测试场景通过
+  - 如发现任何 bug 或异常行为，写一个测试用例暴露该问题并提 PR
+  - 如一切正常，补充 1-2 个 CLI 集成测试到 tests/test_scorer.py 中覆盖这些场景

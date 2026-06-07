@@ -110,6 +110,28 @@ describe('collectStatus error handling', () => {
     expect(client.listSessions).not.toHaveBeenCalled();
   });
 
+  it('fetches requested sessions concurrently while preserving requested order', async () => {
+    const client = mockClient();
+    let inFlight = 0;
+    let maxInFlight = 0;
+
+    client.getSession.mockImplementation(async (id: string) => {
+      inFlight += 1;
+      maxInFlight = Math.max(maxInFlight, inFlight);
+      await new Promise(resolve => setTimeout(resolve, 0));
+      inFlight -= 1;
+      return session({ id, title: `Session ${id}`, state: 'RUNNING' });
+    });
+    client.listActivities.mockResolvedValue({ activities: [] });
+
+    const ids = Array.from({ length: 12 }, (_, i) => `session-${i + 1}`);
+    const result = await collectStatus(client as unknown as JulesClient, config, { sessionIds: ids });
+
+    expect(result.map(r => r.sessionId)).toEqual(ids);
+    expect(maxInFlight).toBe(10);
+    expect(client.listSessions).not.toHaveBeenCalled();
+  });
+
   it('no empty catch blocks remain', () => {
     expect(fs.readFileSync('src/collector.ts', 'utf-8')).not.toContain('catch {\n');
   });

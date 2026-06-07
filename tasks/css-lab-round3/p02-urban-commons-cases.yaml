@@ -1,0 +1,17 @@
+title: "P02: Digitize urban commons cases (Ostrom SES)"
+source: "sources/github/Yuuqq/css-lab-commons-db"
+branch: "main"
+prompt: |
+  Expand `data/commons_urban_commons.json` with at least 10 real-world urban commons cases using Ostrom's SES framework.
+
+  For each case:
+  - `case_name`, `city`, `country`, `resource_type` ("urban_commons")
+  - `biophysical`: { `space_type` (park/community garden/co-working/public space), `area_m2`, `location_type` }
+  - `governance`: { `management_model`, `decision_making`, `funding_source`, `access_rules`, `maintenance` }
+  - `actors`: { `community_members`, `organization_type`, `government_partnership`, `volunteer_structure` }
+  - `outcomes`: { `community_cohesion` (1-5), `sustainability` (1-5), `usage_frequency`, `replication_potential` }
+  - `references`, `iad_analysis`
+
+  Real cases: Copenhagen community gardens, Seoul sharing city, Barcelona superblocks, Detroit urban farming, Tokyo machizukuri, Chinese community governance experiments, Berlin neighborhood management, etc.
+
+  Commit with message: "feat: add 10+ urban commons cases with SES framework"

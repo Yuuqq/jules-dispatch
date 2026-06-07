@@ -1,0 +1,18 @@
+title: "P01: document_number extraction improvement"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+prompt: |
+  In `data/processed/normalized_all_policies.json`, many documents have empty `document_number` field.
+
+  For ALL documents with empty `document_number`:
+  1. Read `full_text` (first 5000 chars)
+  2. Extract document number using these patterns:
+     - `国发〔2024〕X号` or `国办发〔2024〕X号`
+     - `XX部令第X号`
+     - `中华人民共和国主席令第X号`
+     - `第XX号` (standalone at beginning of law text)
+     - Any `〔YYYY〕X号` pattern
+  3. Update `document_number` field
+  4. Save
+
+  Commit with message: "fix: extract document_number for all empty records"

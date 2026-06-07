@@ -1,0 +1,95 @@
+# Phase 10: Bilingual integration tests — extraction + polish + preview
+title: "Phase 10 — Bilingual Integration Tests (Extraction + Polish + Preview)"
+source: "sources/github/Yuuqq/smart-resume-builder"
+branch: "master"
+autoMode: "AUTO_CREATE_PR"
+
+prompt: |
+  ## Context
+  Streamlit + Python resume builder. Phase 8 (UI i18n) and Phase 9 (English prompts) are running in parallel.
+  Your job: create integration tests for the bilingual flow.
+
+  These tests verify the complete bilingual pipeline works. They will be run after all parallel PRs merge.
+
+  ## Step 1: Create `tests/test_bilingual_extraction.py`
+
+  Test cases:
+  1. `test_extract_chinese_input_zh_locale` — Chinese input, zh locale → Chinese JSON output
+  2. `test_extract_english_input_en_locale` — English input, en locale → English JSON output
+  3. `test_extract_returns_valid_schema` — Both locales produce valid JSON with expected top-level keys (profile, education, experience, skills, etc.)
+  4. `test_extraction_prompt_selection` — Verify correct prompt template is selected based on lang parameter
+  5. `test_fallback_template_zh` — Fallback resume data is Chinese when lang=zh
+  6. `test_fallback_template_en` — Fallback resume data has English placeholder values when lang=en
+
+  Use mock for AI API calls (don't call real API). Mock the response to return valid JSON.
+
+  ```python
+  import pytest
+  from unittest.mock import patch, MagicMock
+
+  @pytest.fixture
+  def mock_api_response_zh():
+      """Mock Chinese API response."""
+      return {"choices": [{"message": {"content": '{"profile": {"name": "张三"}, ...}'}}]}
+
+  @pytest.fixture
+  def mock_api_response_en():
+      """Mock English API response."""
+      return {"choices": [{"message": {"content": '{"profile": {"name": "John Doe"}, ...}'}}]}
+  ```
+
+  ## Step 2: Create `tests/test_bilingual_polish.py`
+
+  Test cases:
+  1. `test_polish_resume_zh_uses_zh_prompt` — lang="zh" → POLISH_RESUME_PROMPT used
+  2. `test_polish_resume_en_uses_en_prompt` — lang="en" → POLISH_RESUME_PROMPT_EN used
+  3. `test_targeted_polish_zh` — Targeted polish with Chinese JD
+  4. `test_targeted_polish_en` — Targeted polish with English JD
+  5. `test_polish_preserves_structure` — Both locales preserve JSON structure
+  6. `test_diagnose_zh` — Diagnosis returns Chinese feedback
+  7. `test_diagnose_en` — Diagnosis returns English feedback
+
+  Mock AI API calls.
+
+  ## Step 3: Create `tests/test_bilingual_templates.py`
+
+  Test cases:
+  1. `test_template_labels_zh` — All templates render Chinese labels when locale=zh
+  2. `test_template_labels_en` — All templates render English labels when locale=en
+  3. `test_template_lang_attr_zh` — HTML lang="zh-CN" when locale=zh
+  4. `test_template_lang_attr_en` — HTML lang="en" when locale=en
+  5. `test_no_hardcoded_chinese_in_templates` — grep templates for hardcoded Chinese headings
+  6. `test_all_12_templates_render_both_locales` — Iterate all 12 templates, render with both locales
+  7. `test_font_switching` — English locale loads Inter/Lora, Chinese loads Noto Sans SC
+  8. `test_pdf_export_both_languages` — Verify PDF generation works with both locales (if weasyprint available)
+
+  ```python
+  from core.config import get_config
+
+  TEMPLATE_NAMES = ["modern", "classic", "agency", "visual", "minimal",
+                    "elegant", "creative", "compact", "timeline", "magazine", "formal", "fresh"]
+
+  @pytest.mark.parametrize("template_name", TEMPLATE_NAMES)
+  def test_template_renders_zh(self, template_name):
+      """Each template renders with Chinese labels."""
+      ...
+  ```
+
+  ## Step 4: Create `tests/test_bilingual_switching.py`
+
+  Test cases:
+  1. `test_locale_toggle_updates_session` — Toggle changes session state
+  2. `test_locale_persistence` — Locale saved to user config
+  3. `test_locale_loads_on_login` — Saved locale loaded on login
+  4. `test_switch_mid_session` — Switch zh→en mid-session, regenerate, no Chinese artifacts
+  5. `test_default_locale_is_zh` — Default locale is Chinese
+
+  ## Important
+  - Use pytest with unittest.mock
+  - Don't call real AI APIs — mock all external calls
+  - Tests should be runnable independently (no dependency on Phase 8/9 code being present)
+  - Use try/except imports to handle missing Phase 8/9 modules gracefully (tests may run before merge)
+  - Add `@pytest.mark.skipif` for tests requiring merged Phase 8/9 code
+
+  ## Commit
+  Message: `test(i18n): add bilingual integration tests for extraction, polish, templates, and switching`

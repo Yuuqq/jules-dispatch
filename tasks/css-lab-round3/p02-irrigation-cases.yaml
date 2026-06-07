@@ -1,0 +1,18 @@
+title: "P02: Digitize irrigation commons cases (Ostrom SES)"
+source: "sources/github/Yuuqq/css-lab-commons-db"
+branch: "main"
+prompt: |
+  Expand `data/commons_irrigation.json` with at least 10 real-world irrigation commons cases using Ostrom's SES framework.
+
+  For each case, fill these SES variables:
+  - `case_name`, `country`, `region`, `resource_type` ("irrigation")
+  - `biophysical`: { `water_source`, `canal_length_km`, `command_area_hectares`, `climate_zone` }
+  - `governance`: { `institution_type`, `water_allocation_rule`, `maintenance_rule`, `conflict_resolution`, `monitoring_mechanism` }
+  - `actors`: { `user_groups`, `number_of_farmers`, `governance_body`, `external_agencies` }
+  - `outcomes`: { `sustainability_rating` (1-5), `equity_rating` (1-5), `conflict_frequency`, `infrastructure_condition` }
+  - `references`: [list of academic sources]
+  - `iad_analysis`: { `action_arena`, `exogenous_variables`, `interactions`, `outcomes` }
+
+  Use real cases from literature: Nepal irrigation systems, Spanish huertas, Bali subak, Philippines zanjeras, Sri Lanka tank systems, Japanese irrigation districts, etc.
+
+  Commit with message: "feat: add 10+ irrigation commons cases with SES framework"

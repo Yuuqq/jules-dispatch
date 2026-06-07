@@ -1,0 +1,203 @@
+# P01 Tools Batch 4: Orchestrator enhancement + Documentation
+---
+title: "[TOOL-05] Enhance run_all.py with Exa pipeline and proper merge logic"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Enhance `scripts/run_all.py` to support the full pipeline including Exa API collection.
+
+  Current issues:
+  1. Missing Exa collection phase (tasks/collect_exa_*.py scripts)
+  2. Phase 6 merge is just file copy, not real merging
+  3. No deduplication across sources (FLK, GOV.CN, Exa, ministries)
+  4. No intermediate data merging between phases
+  5. Missing progress reporting for each sub-script
+
+  Requirements:
+
+  ## Phase restructuring
+
+  Add these phases to the pipeline:
+
+  ```
+  Phase 1: Exa API collection (NEW)
+    - tasks/collect_exa_environmental.py
+    - tasks/collect_exa_data_security.py
+    - tasks/collect_exa_urban.py
+    - tasks/collect_exa_commons.py
+    - tasks/collect_exa_platform.py
+    - tasks/collect_exa_ministries.py
+    - Output: data/exa/*.json
+
+  Phase 2: FLK collection (existing, but make optional)
+  Phase 3: GOV.CN collection (existing, but make optional)
+  Phase 4: Ministry collection (existing, but make optional)
+
+  Phase 5: Merge all sources (NEW)
+    - Read all JSON files from data/exa/, data/flk/, data/govcn/, data/ministry/
+    - Normalize to common schema format
+    - Save merged to data/merged/all_sources.json
+
+  Phase 6: Deduplicate (existing)
+  Phase 7: Clean text (existing)
+  Phase 8: Extract metadata (existing)
+  Phase 9: Auto-tag (existing)
+  Phase 10: Link related docs (existing)
+  Phase 11: Quality check (existing)
+  Phase 12: Generate statistics (existing)
+  Phase 13: Export final database (NEW)
+    - Merge all processed data into data/final/policy_database.json
+    - Format: {"metadata": {...}, "documents": [...]}
+    - metadata includes: total_count, domains, date_range, sources
+  ```
+
+  ## CLI improvements
+
+  Add arguments:
+  - `--exa-only`: Only run Exa collection + processing (skip FLK/GOV.CN/ministry)
+  - `--skip-exa`: Skip Exa collection
+  - `--output-dir`: Custom output directory (default: data/final/)
+
+  ## Error handling
+
+  - Each phase failure logs error but continues (existing behavior, keep it)
+  - At end, print summary: phases completed/failed/skipped, final document count
+  - Save run_report.json with detailed per-phase status
+
+  ## Merge logic (Phase 5 + Phase 13)
+
+  Implement proper merge:
+  ```python
+  def merge_all_sources() -> list[dict]:
+      """Read and normalize all source JSON files."""
+      all_docs = []
+      source_dirs = ["data/exa", "data/flk", "data/govcn", "data/ministry"]
+      for src_dir in source_dirs:
+          for json_file in Path(src_dir).rglob("*.json"):
+              docs = normalize_to_schema(json_file)
+              all_docs.extend(docs)
+      return all_docs
+  ```
+
+  The `normalize_to_schema()` function should handle different input formats:
+  - Exa format: {"results": [{...}]}
+  - FLK format: list of dicts or {"data": [...]}
+  - GOV.CN format: similar variations
+  - Ministry format: similar variations
+
+  ## Implementation notes
+
+  - Keep the existing subprocess-based execution for individual scripts
+  - Add the merge logic as native Python functions (not subprocess)
+  - Ensure backward compatibility: `python scripts/run_all.py` still works as before
+  - Add type hints and docstrings
+  - Test: `python scripts/run_all.py --exa-only --skip-clean` should run without errors
+
+  Commit the enhanced file.
+---
+title: "[TOOL-06] Update documentation: README + COLLECTION_GUIDE"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Update project documentation.
+
+  ## File 1: `README.md`
+
+  Review and enhance the existing README.md. Ensure it includes:
+
+  1. **Project title and description** — P01 公共政策文本数据库
+  2. **Quick Start** (3 steps max):
+     ```bash
+     git clone https://github.com/Yuuqq/css-lab-policy-db.git
+     cd css-lab-policy-db
+     pip install -r requirements.txt
+     python scripts/run_all.py --exa-only
+     ```
+  3. **Directory structure** with explanation:
+     ```
+     schema/          # JSON Schema for policy documents
+     scrapers/        # Web scrapers (FLK, GOV.CN, ministries)
+     scripts/         # Collection scripts per domain
+     tasks/           # Exa API collection tasks
+     tools/           # Data processing pipeline tools
+     tests/           # Unit and integration tests
+     configs/         # Domain keyword configurations
+     data/            # Collected data (gitignored)
+     reports/         # Quality reports and statistics
+     ```
+  4. **Schema fields table** — list all 15+ fields with type and description
+  5. **Data sources coverage**:
+     | Source | Domain | Method | Count |
+     |--------|--------|--------|-------|
+     | Exa API | All | API search | ~600 |
+     | FLK | Laws | Web scraping | ~300 |
+     | GOV.CN | Policies | Web scraping | ~280 |
+     | Ministries | Regulations | Web scraping | ~140 |
+  6. **Processing pipeline** diagram (text-based):
+     ```
+     Collect → Merge → Deduplicate → Clean → Enrich → Tag → Link → Quality Check → Export
+     ```
+  7. **Contributing** — how to add a new domain
+  8. **License** — academic use only
+
+  ## File 2: `COLLECTION_GUIDE.md`
+
+  Replace the current 50-line placeholder with a comprehensive guide:
+
+  1. **Environment setup**
+     - Python 3.12+ requirement
+     - `pip install -r requirements.txt`
+     - Exa API key setup (EXA_API_KEY env var)
+
+  2. **Configuration files**
+     - Full `configs/*.yaml` format specification with example
+     - How to add keywords for a new domain
+
+  3. **Collection methods**
+     - **Exa API collection** (recommended, bypasses 403 blocks):
+       ```bash
+       export EXA_API_KEY=your_key
+       python tasks/collect_exa_environmental.py
+       ```
+     - **FLK collection** (requires stable network):
+       ```bash
+       python scripts/collect_data_security_flk.py
+       ```
+     - **GOV.CN collection** (may fail due to anti-bot):
+       ```bash
+       python scripts/collect_data_security_govcn.py
+       ```
+     - **Ministry collection** (may fail due to anti-bot):
+       ```bash
+       python scripts/collect_mee.py
+       ```
+
+  4. **Data processing**
+     - Step-by-step pipeline execution
+     - Expected inputs/outputs for each tool
+     - Example: `python tools/deduplicate.py --input data/merged/ --output data/dedup/`
+
+  5. **One-command execution**
+     - Full pipeline: `python scripts/run_all.py`
+     - Exa-only: `python scripts/run_all.py --exa-only`
+     - Skip collection: `python scripts/run_all.py --skip-collect`
+     - Incremental update: `python scripts/run_delta.py`
+
+  6. **Troubleshooting**
+     - **Encoding errors**: GBK/UTF-8 auto-detection
+     - **Anti-bot blocks (403)**: Switch to Exa API collection
+     - **DNS failures**: Use Exa API or VPN
+     - **Rate limiting**: Increase rate_limit in scraper configs
+     - **Empty results**: Check keyword relevance, try broader terms
+     - **Missing dependencies**: `pip install -r requirements.txt`
+
+  7. **Output file reference**
+     - Complete table of all output directories and file formats
+
+  8. **Schema compliance**
+     - How to validate collected data: `python tools/validate.py data/final/`
+     - How to check quality: `python tools/quality_check.py data/final/`
+
+  Commit both updated files.

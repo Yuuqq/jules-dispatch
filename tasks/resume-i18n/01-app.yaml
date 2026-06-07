@@ -1,0 +1,253 @@
+# Phase 8: app.py UI i18n (fully independent — no dependencies)
+title: "UI i18n — app.py Landing + Auth + Navigation"
+source: "sources/github/Yuuqq/smart-resume-builder"
+branch: "master"
+autoMode: "AUTO_CREATE_PR"
+
+prompt: |
+  ## Context
+  Streamlit + Python resume builder. Adding bilingual support.
+  Your job: create the i18n infrastructure stubs + translate ALL Chinese strings in `app.py`.
+
+  ## Step 1: Create shared i18n infrastructure (identical to other parallel tasks)
+
+  Create `core/i18n_data/__init__.py`:
+  ```python
+  """i18n string data — auto-discovers all _*.py modules."""
+  from pathlib import Path
+  from typing import Dict
+  import importlib
+  import pkgutil
+
+  _ui_strings: Dict[str, Dict[str, str]] = {"zh": {}, "en": {}}
+  _loaded = False
+
+  def _load():
+      global _loaded, _ui_strings
+      if _loaded:
+          return
+      for module_info in pkgutil.iter_modules([str(Path(__file__).parent)]):
+          if module_info.name.startswith("_"):
+              try:
+                  mod = importlib.import_module(f"core.i18n_data.{module_info.name}")
+                  if hasattr(mod, "UI_STRINGS"):
+                      for locale, strings in mod.UI_STRINGS.items():
+                          _ui_strings.setdefault(locale, {}).update(strings)
+              except Exception:
+                  pass
+      _loaded = True
+
+  def get_ui_strings() -> Dict[str, Dict[str, str]]:
+      _load()
+      return _ui_strings
+  ```
+
+  Create `core/i18n.py`:
+  ```python
+  """Bilingual i18n module."""
+  import logging
+  from typing import Dict
+
+  import streamlit as st
+
+  logger = logging.getLogger(__name__)
+
+  LOCALE_ZH = "zh"
+  LOCALE_EN = "en"
+  DEFAULT_LOCALE = LOCALE_ZH
+
+  def get_locale() -> str:
+      return st.session_state.get("locale", DEFAULT_LOCALE)
+
+  def set_locale(locale: str) -> None:
+      st.session_state["locale"] = locale
+      try:
+          from core.user_manager import get_user_manager
+          user_session = st.session_state.get("user_session")
+          if user_session and user_session.user.role not in ("guest",):
+              mgr = get_user_manager()
+              mgr.update_locale(user_session.user.user_id, locale)
+      except Exception as e:
+          logger.warning("Failed to persist locale: %s", e)
+
+  def t(key: str, **kwargs) -> str:
+      from core.i18n_data import get_ui_strings
+      strings = get_ui_strings()
+      locale = get_locale()
+      text = strings.get(locale, {}).get(key, key)
+      if kwargs:
+          try:
+              return text.format(**kwargs)
+          except (KeyError, IndexError):
+              return text
+      return text
+
+  def render_locale_toggle(location: str = "sidebar") -> None:
+      current = get_locale()
+      options = {"中文": LOCALE_ZH, "English": LOCALE_EN}
+      display = list(options.keys())
+      idx = 0 if current == LOCALE_ZH else 1
+      key = f"_locale_{location}"
+      if location == "sidebar":
+          selected = st.selectbox("🌐 Language", display, index=idx, key=key)
+      else:
+          selected = st.selectbox("🌐 Language", display, index=idx, key=key, label_visibility="collapsed")
+      new_locale = options[selected]
+      if new_locale != current:
+          set_locale(new_locale)
+          st.rerun()
+  ```
+
+  ## Step 2: Create `core/i18n_data/_app.py` with all app.py strings
+
+  READ `app.py` completely and extract EVERY Chinese user-facing string. Create:
+  ```python
+  UI_STRINGS = {
+      "zh": {
+          "app.title": "职点AI简历工坊",
+          "app.subtitle": "AI 驱动的简历生成工具 — 专为新闻传播学院打造",
+          "app.login": "登录",
+          "app.register": "注册",
+          "app.student_id": "学号/工号",
+          "app.student_id_ph": "请输入学号或工号",
+          "app.password": "密码",
+          "app.password_ph": "请输入密码",
+          "app.name": "姓名",
+          "app.name_ph": "请输入真实姓名",
+          "app.major": "专业",
+          "app.password2": "确认密码",
+          "app.password2_ph": "再次输入密码",
+          "app.register_ph": "3-20位字母、数字或下划线",
+          "app.password_rule": "密码至少8个字符",
+          "app.submit_login": "登录",
+          "app.submit_register": "注册",
+          "app.fill_all": "请填写完整信息",
+          "app.password_mismatch": "两次密码不一致",
+          "app.guest_mode": "游客模式",
+          "app.guest_hint": "数据不会保存，刷新后丢失",
+          "app.guest_btn": "游客模式",
+          "app.guest_or": "或者以游客身份快速体验：",
+          "app.logout": "退出登录",
+          "app.new_resume": "新建简历",
+          "app.version_count": "{count} 个版本",
+          "app.resume_tab": "简历工坊",
+          "app.admin_tab": "数据统计",
+          "app.error_title": "😕 页面「{tab}」加载出错",
+          "app.error_retry": "请尝试以下操作：\n1. **刷新页面** — 点击浏览器刷新按钮\n2. **清除数据重试** — 退出登录后重新登录\n3. **联系管理员** — 如果问题持续，请提供以下编号反馈",
+          "app.error_id": "错误编号：`{tab}-{ts}`",
+          "app.stats_title": "数据统计",
+          "app.stats_total_users": "总用户",
+          "app.stats_total_resumes": "总简历",
+          "app.stats_active_today": "今日活跃: {count}",
+          "app.footer": "汕头大学长江新闻与传播学院 — 职点AI简历工坊",
+          # Version type labels
+          "app.type_initial": "初始生成",
+          "app.type_polish_general": "通用润色",
+          "app.type_polish_targeted": "定向润色",
+          "app.type_manual": "手动保存",
+          # Feature cards
+          "app.feature_ai_gen": "AI 生成",
+          "app.feature_ai_gen_desc": "自然语言描述经历，自动提炼专业简历",
+          "app.feature_polish": "智能润色",
+          "app.feature_polish_desc": "通用润色与岗位定向优化",
+          "app.feature_score": "能力评分",
+          "app.feature_score_desc": "多维度分析，生成可视化雷达图",
+          "app.feature_copilot": "求职顾问",
+          "app.feature_copilot_desc": "对话式问答，回答有据可查",
+          "app.feature_version": "版本管理",
+          "app.feature_version_desc": "历史追踪，对比回溯",
+          "app.register_success": "{msg} 请登录",
+          # ... add ALL remaining Chinese strings you find in app.py
+      },
+      "en": {
+          "app.title": "CareerPoint AI Resume Builder",
+          "app.subtitle": "AI-Powered Resume Builder — Built for Journalism School",
+          "app.login": "Login",
+          "app.register": "Register",
+          "app.student_id": "Student ID",
+          "app.student_id_ph": "Enter your student or staff ID",
+          "app.password": "Password",
+          "app.password_ph": "Enter your password",
+          "app.name": "Name",
+          "app.name_ph": "Enter your full name",
+          "app.major": "Major",
+          "app.password2": "Confirm Password",
+          "app.password2_ph": "Re-enter password",
+          "app.register_ph": "3-20 letters, digits, or underscores",
+          "app.password_rule": "At least 8 characters",
+          "app.submit_login": "Login",
+          "app.submit_register": "Register",
+          "app.fill_all": "Please fill in all fields",
+          "app.password_mismatch": "Passwords do not match",
+          "app.guest_mode": "Guest Mode",
+          "app.guest_hint": "Data will not be saved; lost on refresh",
+          "app.guest_btn": "Guest Mode",
+          "app.guest_or": "Or try as guest:",
+          "app.logout": "Logout",
+          "app.new_resume": "New Resume",
+          "app.version_count": "{count} versions",
+          "app.resume_tab": "Resume Builder",
+          "app.admin_tab": "Statistics",
+          "app.error_title": "😕 Error loading \"{tab}\"",
+          "app.error_retry": "Try the following:\n1. **Refresh** — click browser refresh\n2. **Re-login** — log out and back in\n3. **Contact admin** — provide the error ID below",
+          "app.error_id": "Error ID: `{tab}-{ts}`",
+          "app.stats_title": "Statistics",
+          "app.stats_total_users": "Total Users",
+          "app.stats_total_resumes": "Total Resumes",
+          "app.stats_active_today": "Active today: {count}",
+          "app.footer": "Shantou University School of Journalism and Communication — CareerPoint AI",
+          "app.type_initial": "Initial Generation",
+          "app.type_polish_general": "General Polish",
+          "app.type_polish_targeted": "Targeted Polish",
+          "app.type_manual": "Manual Save",
+          "app.feature_ai_gen": "AI Generate",
+          "app.feature_ai_gen_desc": "Describe experience in natural language, auto-extract professional resume",
+          "app.feature_polish": "Smart Polish",
+          "app.feature_polish_desc": "General and job-targeted resume optimization",
+          "app.feature_score": "Skill Scoring",
+          "app.feature_score_desc": "Multi-dimensional analysis with radar charts",
+          "app.feature_copilot": "Career Advisor",
+          "app.feature_copilot_desc": "Conversational Q&A with cited sources",
+          "app.feature_version": "Version History",
+          "app.feature_version_desc": "Track changes, compare and revert",
+          "app.register_success": "{msg} Please login",
+          # ... matching English translations for ALL keys above
+      },
+  }
+  ```
+
+  IMPORTANT: The lists above are NOT exhaustive. READ app.py line by line and add EVERY Chinese string. Common patterns:
+  - st.radio options, st.form labels, st.text_input labels/placeholders
+  - st.error/warning/success/info messages
+  - st.markdown content with user-visible text
+  - st.toast messages
+  - f-strings with Chinese text → use {var} placeholders and kwargs in t()
+
+  ## Step 3: Update `app.py`
+
+  Add at top: `from core.i18n import t, render_locale_toggle`
+
+  Replace ALL Chinese strings with t() calls:
+  - `"登录"` → `t("app.login")`
+  - `f"已切换模板：{layout}"` → `t("app.template_switched", layout=layout)` (add key to _app.py)
+  - `st.error("请填写完整信息")` → `st.error(t("app.fill_all"))`
+  - Feature cards in st.markdown HTML — replace Chinese text with t() calls
+  - Landing page toggle: add `render_locale_toggle(location="landing")` before auth form
+  - Auth sidebar: replace all Chinese in render_auth_sidebar()
+  - safe_render error template
+  - Footer text
+
+  For st.markdown with HTML + Chinese text:
+  ```python
+  # Before:
+  st.markdown(f'<div class="sidebar-user-card"><div class="user-name">游客模式</div>...', unsafe_allow_html=True)
+  # After:
+  st.markdown(f'<div class="sidebar-user-card"><div class="user-name">{t("app.guest_mode")}</div>...', unsafe_allow_html=True)
+  ```
+
+  ## Verification
+  - `grep -c "[一-鿿]" app.py` — remaining Chinese should only be in comments, major preset names, and CSS class references
+  - All st.button/st.text_input/st.error etc. label parameters should use t()
+
+  ## Commit
+  Message: `feat(i18n): add app.py UI strings and translate to t() calls`

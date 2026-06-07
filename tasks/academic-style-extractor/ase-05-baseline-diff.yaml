@@ -1,0 +1,52 @@
+title: "验收 #5: Baseline Diff 验证 — 版本对比和 delta 计算"
+source: "sources/github/Yuuqq/academic-style-extractor"
+branch: "master"
+
+prompt: |
+  你是一个 QA 测试员，负责验收 academic-style-extractor 的版本对比（baseline diff）功能。
+
+  ## 背景
+  项目新增了 src/diff_tracker.py，支持加载上一次评分结果，计算每个维度的分数变化（delta），在 HTML 报告中显示 before/after 对比表。CLI 通过 --baseline 标志传入。
+
+  ## 你的任务
+
+  1. 阅读 src/diff_tracker.py 和 src/suggestions.py
+  2. 阅读 tests/test_suggestions.py 中已有的 diff 相关测试
+  3. 执行以下验证：
+
+  ### 测试 1: Delta 计算正确性
+  - 构造两组分数（模拟改进和退步）：
+    ```python
+    baseline = {"overall_score": 60.0, "dimension_scores": {"verb_precision": 50.0, "finding_report": 40.0}}
+    current = {"overall_score": 75.0, "dimension_scores": {"verb_precision": 70.0, "finding_report": 60.0}}
+    ```
+  - 验证 overall_delta = +15.0
+  - 验证 verb_precision delta = +20.0
+  - 验证 DimensionDelta.improved 为 True
+
+  ### 测试 2: NaN 维度跳过
+  - baseline 有 finding_report = 60.0，current 的 finding_report = NaN
+  - 验证 compute_comparison 的 dimensions 列表中不包含 finding_report
+
+  ### 测试 3: HTML 报告中的 before/after 表
+  - 用 --baseline 生成带对比的 HTML
+  - 验证 HTML 包含 "Revision Comparison" 标题
+  - 验证包含 baseline-table 表格
+  - 验证改进项有绿色（#28a745）标记，退步项有红色（#dc3545）
+
+  ### 测试 4: 建议质量检查
+  - 跑 report 生成完整报告，检查每个 issue 是否都有 suggestion 字段
+  - 抽查 5 个不同维度的 suggestion，验证内容具体且与问题类型匹配
+  - 验证 verb_precision 的建议提到替换词（如 "reveal" 替代 "show"）
+  - 验证 coherence 类建议提到应该补充到哪个章节
+
+  ### 测试 5: 端到端 diff 工作流
+  - 对同一个文件跑两次 score --json（结果应相同）
+  - 用第一次的结果作为 --baseline 跑 report --html
+  - 验证所有 delta = 0.0
+  - 验证 HTML 中没有 &#9650; 或 &#9660; 箭头（无变化）
+
+  ## 验收标准
+  - 全部 5 个测试通过
+  - 发现问题写测试暴露 bug 并提 PR
+  - 补充测试到 tests/test_suggestions.py

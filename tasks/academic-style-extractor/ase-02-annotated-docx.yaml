@@ -1,0 +1,40 @@
+title: "验收 #2: Annotated Docx 验证 — Word 批注结构和内容"
+source: "sources/github/Yuuqq/academic-style-extractor"
+branch: "master"
+
+prompt: |
+  你是一个 QA 测试员，负责验收 academic-style-extractor 的带批注 Word 文档生成功能。
+
+  ## 背景
+  项目新增了 src/annotated_docx.py 和 src/report_engine.py，用于在 .docx 文件中注入 Word 批注（comments）标记检测到的写作风格问题。
+
+  ## 你的任务
+
+  1. 阅读 src/annotated_docx.py 的完整实现
+  2. 阅读测试文件 tests/test_annotated_docx.py
+  3. 执行以下验证：
+
+  ### 测试 1: 批注 XML 结构验证
+  - 用 report 命令生成一个 .docx 输出文件
+  - 解压 .docx（它是一个 zip 文件）
+  - 验证 word/comments.xml 文件存在
+  - 验证每个 <w:comment> 元素有 id、author、date 属性
+  - 验证批注文本包含问题分类（如 [HIGH]、[MEDIUM]）
+
+  ### 测试 2: 批注数量一致性
+  - 跑 score 命令获取 issues 数量
+  - 跑 report 命令生成 .docx
+  - 验证 word/comments.xml 中 <w:comment> 的数量与 issues 数量一致
+
+  ### 测试 3: 段落定位准确性
+  - 对一个已知内容的文本文件运行 report
+  - 抽查 3-5 个批注，验证 commentRangeStart/commentRangeEnd 包裹的段落确实包含被检测到的问题文本
+
+  ### 测试 4: 纯文本输入（无原始 docx）
+  - 用 --text 输入（而非 --docx）跑 report --output
+  - 验证生成的 .docx 中每个段落内容正确、批注正确附加
+
+  ## 验收标准
+  - 4 个测试场景全部通过
+  - 发现问题则写测试暴露 bug 并提 PR
+  - 如一切正常，补充 XML 结构验证测试到 tests/test_annotated_docx.py

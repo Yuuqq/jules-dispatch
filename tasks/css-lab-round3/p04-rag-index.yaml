@@ -1,0 +1,25 @@
+title: "P04: Build RAG vector index from policy database"
+source: "sources/github/Yuuqq/css-lab-rag-agent"
+branch: "main"
+prompt: |
+  Build a working RAG (Retrieval-Augmented Generation) system for the policy database.
+
+  Requirements:
+  1. Read `data/all_policy_texts.json` (or the normalized data file)
+  2. Create a simple keyword-based search index (no external vector DB needed):
+     - Build TF-IDF index from title + full_text
+     - Index by: title keywords, domain, doc_type, hierarchy, issuing_body
+     - Support Chinese tokenization using jieba
+  3. Implement `search(query, top_k=10)` function that:
+     - Tokenizes the query
+     - Scores documents by TF-IDF similarity
+     - Returns ranked results with metadata
+  4. Implement `rag_query(query)` function that:
+     - Retrieves top 5 relevant documents
+     - Formats context from document titles + text excerpts
+     - Returns structured answer with citations
+  5. Add a CLI interface: `python rag_search.py "环境治理政策" --top 10`
+  6. Save index to `index/search_index.json`
+
+  Dependencies: jieba, json, math, re (no heavy ML libraries needed)
+  Commit: "feat: build TF-IDF based RAG search system"

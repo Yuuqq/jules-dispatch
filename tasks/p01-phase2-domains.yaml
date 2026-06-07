@@ -1,0 +1,258 @@
+# Phase 2: Domain Collection — 15 tasks
+---
+title: "[P2-T011] Data security keyword config"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Create `configs/data_security.yaml` — keyword config for data security & AI governance domain.
+
+  Content:
+  ```yaml
+  domain: "数据安全与AI治理"
+  domain_id: "data_security"
+  flk_categories: ["法律", "行政法规", "部门规章"]
+  keywords_zh:
+    - "数据安全"
+    - "个人信息保护"
+    - "网络安全"
+    - "信息安全"
+    - "算法推荐"
+    - "生成式人工智能"
+    - "人工智能管理"
+    - "深度合成"
+    - "数据出境"
+    - "数据分类分级"
+    - "数据交易"
+    - "数据要素"
+    - "公共数据"
+    - "人脸识别"
+    - "生物识别"
+    - "App违法违规收集"
+    - "隐私保护"
+    - "关键信息基础设施"
+    - "网络安全审查"
+    - "云计算服务"
+    - "大数据"
+    - "数据共享"
+    - "数据开放"
+    - "未成年人保护"
+    - "互联网信息服务"
+    - "电子商务"
+    - "网络安全等级保护"
+    - "密码法"
+    - "电子签名"
+    - "消费者权益保护"
+    - "反电信网络诈骗"
+  keywords_en:
+    - "data security law"
+    - "personal information protection"
+    - "cybersecurity"
+    - "AI regulation"
+    - "generative AI"
+    - "algorithm recommendation"
+    - "deep synthesis"
+    - "data cross-border transfer"
+    - "data classification"
+    - "privacy protection"
+    - "critical information infrastructure"
+    - "cybersecurity review"
+    - "cloud computing"
+    - "big data"
+    - "data sharing"
+    - "minors protection"
+    - "internet information service"
+    - "e-commerce"
+    - "consumer protection"
+    - "anti-fraud"
+  expected_count:
+    flk_laws: 20
+    flk_regulations: 15
+    flk_rules: 15
+    govcn_policies: 50
+  ```
+  Create the file and commit.
+---
+title: "[P2-T012] Data security FLK collection script"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Create `scripts/collect_data_security_flk.py` — FLK collection script for data security domain.
+
+  1. Load config from `configs/data_security.yaml` using PyYAML
+  2. Import FLKCollector from `scrapers/flk_collector.py`
+  3. For each keyword in keywords_zh, run collector.collect(keyword, category)
+  4. Output to `data/flk/data_security/`
+  5. Print progress: "[3/31] 数据安全 → found 8 results"
+  6. On completion, merge all results into `data/flk/data_security/all_results.json`
+  7. Print final summary: total unique documents collected
+
+  Add `if __name__ == "__main__"` block.
+  Add PyYAML to requirements.
+
+  Create the file and commit.
+---
+title: "[P2-T013] Data security GOV.CN collection script"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Create `scripts/collect_data_security_govcn.py` — gov.cn collection script for data security domain.
+
+  1. Load config from `configs/data_security.yaml`
+  2. Import GovCNCollector from `scrapers/govcn_collector.py`
+  3. Collect policies from departments: ["国务院", "国务院办公厅", "中央网信办"]
+  4. Filter by keywords from config
+  5. Output to `data/govcn/data_security/`
+  6. Print progress and summary
+
+  Create the file and commit.
+---
+title: "[P2-T014] Environmental governance keyword config"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Create `configs/environmental.yaml` — keyword config for environmental governance domain.
+
+  Same structure as data_security.yaml but with:
+  - domain: "环境治理"
+  - domain_id: "environmental"
+  - keywords_zh: 环境保护, 碳排放, 碳达峰, 碳中和, 环境影响评价, 污染防治, 大气污染防治, 水污染防治, 土壤污染防治, 固体废物, 噪声污染防治, 海洋环境保护, 清洁生产, 循环经济, 节约能源, 可再生能源, 生态保护, 生态补偿, 自然保护区, 野生动物保护, 生物多样性, 森林法, 草原法, 湿地保护, 长江保护, 黄河保护, 排污许可, 环保督察, 环境公益诉讼, 气候变化, 温室气体
+  - keywords_en: environmental protection, carbon emission, carbon neutrality, environmental impact assessment, pollution prevention, clean air, water pollution, soil pollution, solid waste, marine protection, clean production, circular economy, energy conservation, renewable energy, ecological protection, nature reserve, wildlife protection, biodiversity, wetland protection, climate change, greenhouse gas
+  - expected_count: flk_laws: 30, flk_regulations: 25, flk_rules: 25, govcn_policies: 80
+
+  Create the file and commit.
+---
+title: "[P2-T015] Environmental FLK collection script"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Create `scripts/collect_environmental_flk.py`.
+
+  Same pattern as collect_data_security_flk.py but:
+  - Load configs/environmental.yaml
+  - Output to data/flk/environmental/
+
+  Create the file and commit.
+---
+title: "[P2-T016] Environmental GOV.CN collection script"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Create `scripts/collect_environmental_govcn.py`.
+
+  Same pattern as collect_data_security_govcn.py but:
+  - Load configs/environmental.yaml
+  - Departments: ["国务院", "国务院办公厅", "生态环境部"]
+  - Output to data/govcn/environmental/
+
+  Create the file and commit.
+---
+title: "[P2-T017] Urban governance keyword config"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Create `configs/urban_governance.yaml`.
+
+  - domain: "城市治理与社区管理"
+  - domain_id: "urban_governance"
+  - keywords_zh: 城市规划, 城市更新, 智慧城市, 社区治理, 物业管理, 住房保障, 廉租房, 公租房, 房地产管理, 建筑法, 拆迁, 征收补偿, 市政公用, 城市道路, 城市供水, 城市排水, 垃圾处理, 城市绿化, 城市交通, 轨道交通, 停车管理, 老旧小区改造, 数字化城市管理, 城管执法, 街道管理, 社区服务, 居民委员会, 业主委员会, 房屋租赁, 房地产开发, 土地管理, 户籍制度, 居住证
+  - keywords_en: urban planning, urban renewal, smart city, community governance, property management, housing security, real estate, municipal services, urban transport, digital governance, community service, neighborhood committee, land management, household registration
+  - expected_count: flk_laws: 20, flk_regulations: 20, flk_rules: 20, govcn_policies: 60
+
+  Create the file and commit.
+---
+title: "[P2-T018] Urban governance FLK collection script"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Create `scripts/collect_urban_flk.py`.
+  Same pattern as collect_data_security_flk.py but using configs/urban_governance.yaml, output to data/flk/urban_governance/.
+
+  Create the file and commit.
+---
+title: "[P2-T019] Urban governance GOV.CN collection script"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Create `scripts/collect_urban_govcn.py`.
+  Same pattern as collect_data_security_govcn.py but using configs/urban_governance.yaml, departments: ["国务院", "国务院办公厅", "住房和城乡建设部"], output to data/govcn/urban_governance/.
+
+  Create the file and commit.
+---
+title: "[P2-T020] Commons resource keyword config"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Create `configs/commons_resource.yaml`.
+
+  - domain: "公地资源治理"
+  - domain_id: "commons_resource"
+  - keywords_zh: 水法, 森林法, 草原法, 渔业法, 土地管理法, 矿产资源法, 水土保持法, 防沙治沙法, 海域使用管理, 海岛保护, 水资源, 水利工程, 河长制, 林长制, 集体林权, 国有林场, 渔业资源, 耕地保护, 基本农田, 宅基地, 农村土地承包, 土地流转, 自然资源确权, 国土空间规划, 湿地保护法, 长江保护法, 黄河保护法, 青藏高原保护, 国家公园, 自然保护地
+  - keywords_en: water law, forest law, grassland law, fishery law, land management, mineral resources, water conservation, desertification prevention, marine resources, farmland protection, wetland protection, river chief system, natural resource rights, national park
+  - expected_count: flk_laws: 25, flk_regulations: 20, flk_rules: 25, govcn_policies: 70
+
+  Create the file and commit.
+---
+title: "[P2-T021] Commons resource FLK collection script"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Create `scripts/collect_commons_flk.py`.
+  Same pattern as collect_data_security_flk.py but using configs/commons_resource.yaml, output to data/flk/commons_resource/.
+
+  Create the file and commit.
+---
+title: "[P2-T022] Commons resource GOV.CN collection script"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Create `scripts/collect_commons_govcn.py`.
+  Same pattern as collect_data_security_govcn.py but using configs/commons_resource.yaml, departments: ["国务院", "国务院办公厅", "自然资源部", "水利部", "农业农村部"], output to data/govcn/commons_resource/.
+
+  Create the file and commit.
+---
+title: "[P2-T023] Platform governance keyword config"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Create `configs/platform_governance.yaml`.
+
+  - domain: "平台与AI治理"
+  - domain_id: "platform_governance"
+  - keywords_zh: 互联网信息服务, 电子商务, 平台经济, 反垄断, 反不正当竞争, 消费者权益保护, 广告法, 网络安全审查, 算法备案, 算法推荐, 生成式人工智能, 深度合成, 互联网直播, 网络表演, 网络游戏, 未成年人网络保护, 个人信息保护, 数据出境, 网络安全等级保护, 关键信息基础设施, 互联网新闻信息服务, 网络信息内容生态治理, 数据安全审查, 平台责任, 数字经济, 新就业形态, 外卖骑手, 网约车, 共享经济, 信用评价, 网络安全漏洞
+  - keywords_en: internet information service, e-commerce, platform economy, antitrust, anti-monopoly, consumer protection, algorithm regulation, generative AI, content moderation, platform responsibility, digital economy, gig economy, data protection
+  - expected_count: flk_laws: 15, flk_regulations: 15, flk_rules: 20, govcn_policies: 40
+
+  Create the file and commit.
+---
+title: "[P2-T024] Platform governance FLK collection script"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Create `scripts/collect_platform_flk.py`.
+  Same pattern as collect_data_security_flk.py but using configs/platform_governance.yaml, output to data/flk/platform_governance/.
+
+  Create the file and commit.
+---
+title: "[P2-T025] Platform governance GOV.CN collection script"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Create `scripts/collect_platform_govcn.py`.
+  Same pattern as collect_data_security_govcn.py but using configs/platform_governance.yaml, departments: ["国务院", "国务院办公厅", "中央网信办", "市场监管总局"], output to data/govcn/platform_governance/.
+
+  Create the file and commit.

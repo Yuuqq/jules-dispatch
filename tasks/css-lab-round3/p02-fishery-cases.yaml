@@ -1,0 +1,17 @@
+title: "P02: Digitize fishery commons cases (Ostrom SES)"
+source: "sources/github/Yuuqq/css-lab-commons-db"
+branch: "main"
+prompt: |
+  Expand `data/commons_fishery.json` with at least 10 real-world fishery commons cases using Ostrom's SES framework.
+
+  For each case, fill these SES variables:
+  - `case_name`, `country`, `region`, `resource_type` ("fishery")
+  - `biophysical`: { `water_body_type`, `species_targeted`, `ecosystem_health`, `catch_trends` }
+  - `governance`: { `access_rules`, `quota_system`, `seasonal_restrictions`, `gear_restrictions`, `monitoring` }
+  - `actors`: { `fisher_groups`, `number_of_fishers`, `cooperative_structure`, `government_role` }
+  - `outcomes`: { `stock_sustainability` (1-5), `income_equity` (1-5), `compliance_rate`, `conflict_level` }
+  - `references`, `iad_analysis`
+
+  Use real cases: Turkish Mediterranean fisheries, Japanese coastal fisheries, Chilean TURFs, Nova Scotia lobster fishery, Lake Victoria fisheries, Mekong fisheries, Icelandic ITQ system, etc.
+
+  Commit with message: "feat: add 10+ fishery commons cases with SES framework"

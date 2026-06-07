@@ -1,0 +1,18 @@
+title: "P01: issuing_body deep extraction batch 2 (remaining docs)"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+prompt: |
+  In the file `data/processed/normalized_all_policies.json`, there are ~378 documents with empty `issuing_body` field.
+
+  For documents 251 onwards that still have empty `issuing_body`:
+  1. Read the `full_text` and `title` of each document
+  2. Extract the issuing body (发文机关) using these patterns:
+     - Standard: "中华人民共和国XXX部/委员会/总局/局/署/办/厅"
+     - "国务院", "全国人大", "最高法", "最高检"
+     - If the text starts with law content like "第一章 总则", extract from title
+     - Match patterns like "XX部令" or "国发〔2024〕X号" → "国务院"
+  3. Update the `issuing_body` field
+  4. Save the updated JSON
+
+  Do NOT modify any other fields. Preserve the exact JSON structure.
+  Commit with message: "fix: extract issuing_body for batch 2 (remaining docs)"

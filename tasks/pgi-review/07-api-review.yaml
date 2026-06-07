@@ -1,0 +1,77 @@
+---
+title: "[API Review] REST endpoint consistency"
+prompt: |
+  You are an API design reviewer. Audit REST endpoint consistency:
+
+  Files to review:
+  - artifacts/api-server/src/routes/index.ts
+  - All route files in artifacts/api-server/src/routes/
+
+  Check for:
+  - Are all routes versioned consistently (/v1/...)?
+  - Are resource names consistent (plural vs singular)?
+  - Are HTTP methods used correctly (GET for read, POST for create, etc.)?
+  - Are route parameter names consistent (:id, :workspaceId, :paperId)?
+  - Do all routes return consistent response format?
+  - Are there any routes that violate REST conventions?
+  - Is the route registration order correct (specific before generic)?
+
+  Create REVIEW-api-consistency.md with findings. Include file:line. Do NOT modify source code.
+---
+title: "[API Review] Error response format and error codes"
+prompt: |
+  You are an API design reviewer. Audit error responses:
+
+  Files to review:
+  - artifacts/api-server/src/lib/errors.ts
+  - artifacts/api-server/src/lib/validate.ts
+  - All route files
+
+  Check for:
+  - Is the error response format: { error: string, code: string, message?: string }?
+  - Are error codes machine-readable (not just HTTP status text)?
+  - Are validation errors detailed enough (which fields failed, why)?
+  - Do error codes follow a naming convention (e.g., VALIDATION_*, AUTH_*)?
+  - Are there duplicate error codes for the same error type?
+  - Does the client SDK correctly parse error responses?
+
+  Create REVIEW-api-errors.md with findings. Include file:line. Do NOT modify source code.
+---
+title: "[API Review] OpenAPI spec accuracy"
+prompt: |
+  You are an API design reviewer. Audit the OpenAPI specification:
+
+  Files to review:
+  - lib/api-spec/ (OpenAPI spec files)
+  - lib/api-zod/src/generated/api.ts (generated Zod schemas)
+  - lib/api-client-react/src/generated/api.ts (generated client)
+
+  Check for:
+  - Does the OpenAPI spec match the actual route implementations?
+  - Are all endpoints documented with request/response schemas?
+  - Are error responses documented?
+  - Are pagination parameters documented?
+  - Is the /v1/ version prefix reflected in the spec?
+  - Do generated Zod schemas match the spec exactly?
+  - Do generated client methods match the actual API?
+
+  Create REVIEW-api-openapi.md with findings. Include file:line. Do NOT modify source code.
+---
+title: "[API Review] Response format and data contracts"
+prompt: |
+  You are an API design reviewer. Audit response formats:
+
+  Files to review:
+  - All route files in artifacts/api-server/src/routes/
+  - lib/api-zod/src/generated/api.ts
+
+  Check for:
+  - Are successful responses wrapped in { success, data } or returned directly?
+  - Are list responses paginated consistently ({ items, nextCursor })?
+  - Do all endpoints return the same envelope format?
+  - Are timestamps in consistent format (ISO 8601)?
+  - Are IDs consistently typed (number vs string vs cuid2)?
+  - Are null vs undefined handled consistently?
+  - Does the frontend correctly handle the response format?
+
+  Create REVIEW-api-format.md with findings. Include file:line. Do NOT modify source code.

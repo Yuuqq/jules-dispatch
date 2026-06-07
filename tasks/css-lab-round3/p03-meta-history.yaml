@@ -1,0 +1,18 @@
+title: "P03: Meta (Facebook/Instagram) governance policy history"
+source: "sources/github/Yuuqq/css-lab-platform-governance"
+branch: "main"
+prompt: |
+  Expand `data/Meta_Facebook_Instagram_policies.json` with a comprehensive policy timeline from 2018 to 2026.
+
+  Collect major policy changes:
+  1. Community Standards updates
+  2. Oversight Board decisions and impact
+  3. Political advertising policy (post-2020 election)
+  4. Instagram content recommendation guidelines
+  5. Meta AI content labeling requirements
+  6. Cross-check (XCheck) program revelations
+  7. Teen safety features evolution
+
+  For each: `policy_name`, `platform`: "Meta/Facebook/Instagram", `version`, `effective_date`, `policy_type`, `content_summary`, `key_changes_from_previous`, `source_url`, `collection_date`
+
+  Search the web. Commit: "feat: Meta governance policy timeline 2018-2026"

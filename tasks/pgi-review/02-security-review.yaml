@@ -1,0 +1,178 @@
+---
+title: "[Security Review] Auth middleware and workspace ownership"
+prompt: |
+  You are a security reviewer. Perform a thorough security audit of authentication and authorization:
+
+  Files to review:
+  - artifacts/api-server/src/middlewares/requireAuth.ts
+  - artifacts/api-server/src/middlewares/clerkProxyMiddleware.ts
+  - artifacts/api-server/src/test-app.ts
+  - artifacts/api-server/src/routes/workspaces.ts (check workspace ownership checks)
+  - artifacts/api-server/src/routes/papers.ts (check workspace ownership checks)
+  - artifacts/api-server/src/routes/graph.ts (check workspace ownership checks)
+  - artifacts/api-server/src/routes/chat.ts (check workspace ownership checks)
+
+  Check for:
+  - Can a user access another users workspace by guessing workspace IDs?
+  - Can a user delete another users papers/entities/conversations?
+  - Is requireAuth applied consistently to all routes that need it?
+  - Does the Clerk proxy middleware leak any auth tokens or session data?
+  - Is the test-app.ts auth bypass safely isolated from production?
+  - Are there any routes that should have auth but do not?
+
+  Create REVIEW-security-auth.md with findings by severity (CRITICAL/HIGH/MEDIUM/LOW).
+  Include file:line for each finding. Do NOT modify source code.
+---
+title: "[Security Review] Input validation — all routes"
+prompt: |
+  You are a security reviewer. Audit input validation across all API routes:
+
+  Files to review:
+  - artifacts/api-server/src/lib/validate.ts
+  - artifacts/api-server/src/routes/workspaces.ts
+  - artifacts/api-server/src/routes/papers.ts
+  - artifacts/api-server/src/routes/graph.ts
+  - artifacts/api-server/src/routes/chat.ts
+  - artifacts/api-server/src/routes/search.ts
+  - artifacts/api-server/src/routes/demo.ts
+  - lib/api-zod/src/generated/api.ts (Zod schemas)
+
+  Check for:
+  - Missing validation on POST/PATCH request bodies
+  - Path parameter injection (can :id be non-numeric or SQL?)
+  - Query parameter injection (can source, q, cursor be manipulated?)
+  - Unbounded string inputs (no maxLength)
+  - Prototype pollution via JSON body
+  - File upload: size limits, type validation (if applicable)
+  - Do Zod schemas cover all edge cases (empty strings, null, arrays)?
+
+  Create REVIEW-security-input.md. Include file:line. Do NOT modify source code.
+---
+title: "[Security Review] SQL injection and DB layer"
+prompt: |
+  You are a security reviewer. Audit the database layer for SQL injection and data integrity:
+
+  Files to review:
+  - lib/db/src/schema/*.ts (all schema files)
+  - lib/db/src/index.ts
+  - lib/db/src/test-db.ts
+  - artifacts/api-server/src/lib/external/arxiv.ts (URL construction)
+  - artifacts/api-server/src/lib/external/semanticScholar.ts (URL construction)
+
+  Check for:
+  - Any raw SQL that concatenates user input (SQL injection risk)
+  - Drizzle ORM: are all queries using parameterized methods?
+  - Can pagination cursors be decoded to leak data?
+  - Are FK constraints enforced at the DB level?
+  - Can truncateAllTables run against a production database (safety guard)?
+  - URL construction: can user input inject into external API URLs (SSRF)?
+
+  Create REVIEW-security-db.md. Include file:line. Do NOT modify source code.
+---
+title: "[Security Review] XSS prevention and frontend security"
+prompt: |
+  You are a security reviewer. Audit the React frontend for XSS and client-side security:
+
+  Files to review:
+  - artifacts/scholarmind/src/pages/workspaces/graph/index.tsx
+  - artifacts/scholarmind/src/pages/workspaces/graph/EntityNode.tsx
+  - artifacts/scholarmind/src/pages/workspaces/chat/index.tsx
+  - artifacts/scholarmind/src/pages/workspaces/papers/index.tsx
+  - artifacts/scholarmind/src/pages/workspaces/papers/detail.tsx
+  - artifacts/scholarmind/src/App.tsx
+  - artifacts/scholarmind/src/main.tsx
+
+  Check for:
+  - dangerouslySetInnerHTML usage
+  - Unescaped user input in JSX
+  - SSE response: is chat content sanitized before rendering?
+  - Can external paper titles/descriptions contain script injection?
+  - localStorage/sessionStorage: is sensitive data stored client-side?
+  - CORS: are API responses safe against cross-origin attacks?
+  - Content Security Policy headers (if any)
+
+  Create REVIEW-security-xss.md. Include file:line. Do NOT modify source code.
+---
+title: "[Security Review] SSE streaming and resource exhaustion"
+prompt: |
+  You are a security reviewer. Audit SSE streaming and resource limits:
+
+  Files to review:
+  - artifacts/api-server/src/routes/chat.ts
+  - artifacts/api-server/src/lib/extraction.ts
+
+  Check for:
+  - Can a client open unlimited SSE connections? (connection limit)
+  - Can a client keep a connection open forever? (timeout)
+  - Can a client send extremely large chat messages? (body size limit)
+  - Can extraction pipeline be triggered repeatedly for the same paper? (idempotency)
+  - Does the SSE stream properly clean up on client disconnect?
+  - Can malformed SSE data confuse the client?
+
+  Create REVIEW-security-sse.md. Include file:line. Do NOT modify source code.
+---
+title: "[Security Review] Secrets, env vars, and production safety"
+prompt: |
+  You are a security reviewer. Audit secrets management and production safety:
+
+  Files to review:
+  - artifacts/api-server/src/lib/demoSeed.ts
+  - artifacts/api-server/src/lib/feature-flags.ts
+  - artifacts/api-server/src/app.ts
+  - artifacts/api-server/src/index.ts
+  - lib/db/drizzle.config.ts
+  - Any .env.example or config files
+
+  Check for:
+  - Hardcoded API keys, secrets, or tokens in source code
+  - Are all secrets read from environment variables?
+  - Is demoSeed.ts gated from production environments?
+  - Can feature flags be manipulated by end users?
+  - Does drizzle config prevent accidental production schema push?
+  - Error messages: do they leak sensitive system info?
+
+  Create REVIEW-security-secrets.md. Include file:line. Do NOT modify source code.
+---
+title: "[Security Review] OWASP Top 10 comprehensive check"
+prompt: |
+  You are a security reviewer. Perform a comprehensive OWASP Top 10 audit of the entire application:
+
+  Scan all production source files in:
+  - artifacts/api-server/src/ (excluding __tests__)
+  - lib/db/src/
+  - lib/api-zod/src/
+
+  Check for each OWASP Top 10 item:
+  1. Broken Access Control — can users access other workspaces data?
+  2. Cryptographic Failures — any sensitive data stored/transmitted in plaintext?
+  3. Injection — SQL injection, NoSQL injection, command injection
+  4. Insecure Design — authentication bypass, missing rate limiting
+  5. Security Misconfiguration — CORS, headers, debug mode in production
+  6. Vulnerable Components — known vulnerable dependencies (check package.json)
+  7. Auth Failures — weak session management, missing brute force protection
+  8. Data Integrity Failures — insecure deserialization, unsigned updates
+  9. Logging Failures — missing audit logs for security events
+  10. SSRF — can users trigger requests to internal services?
+
+  Create REVIEW-security-owasp.md. Include file:line. Do NOT modify source code.
+---
+title: "[Security Review] Rate limiting and abuse prevention"
+prompt: |
+  You are a security reviewer. Audit rate limiting and abuse prevention:
+
+  Files to review:
+  - artifacts/api-server/src/app.ts
+  - artifacts/api-server/src/routes/*.ts (all route files)
+  - artifacts/api-server/src/lib/external/arxiv.ts
+  - artifacts/api-server/src/lib/external/semanticScholar.ts
+  - artifacts/api-server/src/lib/extraction.ts
+
+  Check for:
+  - Is there any rate limiting on API endpoints?
+  - Can a user create unlimited workspaces/papers/entities?
+  - Can a user trigger unlimited extractions?
+  - Are external API calls rate-limited (arXiv, Semantic Scholar)?
+  - Can the demo seed endpoint be called repeatedly?
+  - Is there any protection against brute force auth attempts?
+
+  Create REVIEW-security-ratelimit.md. Include file:line. Do NOT modify source code.

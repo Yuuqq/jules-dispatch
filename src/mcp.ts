@@ -9,6 +9,8 @@ import { dispatchTaskDefinition } from './dispatcher.js';
 import { planTasks, loadPlannerConfig, isPlannerConfigured } from './planner.js';
 import type { JulesConfig, TaskDefinition, DispatchResult } from './types.js';
 import { ok, fail, computeRecoveryHint } from './mcp-helpers.js';
+import { runBatches } from './batch.js';
+import { summarizeSession, summarizeSessionLegacy } from './session-summary.js';
 
 export interface McpServerOptions {
   projectDir: string;
@@ -203,7 +205,7 @@ export function createMcpServer(
     { sessionIds: z.array(z.string()).min(1) },
     async (args) => {
       const results = await Promise.all(
-        (args.sessionIds as string[]).map(id => summarizeSessionLegacy(id)),
+        (args.sessionIds as string[]).map(id => summarizeSessionLegacy(client, id)),
       );
       return ok({ results });
     },
@@ -305,97 +307,17 @@ export function createMcpServer(
     parallel: number,
     taskFile: string,
   ): Promise<{ summary: { total: number; dispatched: number; failed: number }; results: DispatchResult[] }> {
-    const results: DispatchResult[] = [];
-    for (let i = 0; i < tasks.length; i += parallel) {
-      const slice = tasks.slice(i, i + parallel);
-      const batchResults = await Promise.all(
-        slice.map(t => dispatchTaskDefinition(client, config, t, taskFile)),
-      );
-      results.push(...batchResults);
-    }
+    const results = await runBatches(
+      tasks,
+      parallel,
+      task => dispatchTaskDefinition(client, config, task, taskFile),
+    );
 
     const dispatched = results.filter(r => r.status === 'dispatched').length;
     return {
       summary: { total: tasks.length, dispatched, failed: results.length - dispatched },
       results,
     };
-  }
-
-  async function summarizeSession(sessionId: string): Promise<{
-    sessionId: string;
-    title?: string;
-    state?: string;
-    status: ReturnType<typeof deriveStatus> | 'error';
-    prUrl?: string;
-    lastActivity?: string;
-  }> {
-    try {
-      const session = await client.getSession(sessionId);
-      const { activities } = await client.listActivities(sessionId, 10);
-      const status = deriveStatus(session, activities);
-      const pr = session.outputs?.find(o => o.pullRequest)?.pullRequest;
-      const failedAct = activities.find(a => a.sessionFailed);
-      const latestProgress = activities
-        .filter(a => a.progressUpdated)
-        .sort((a, b) => (a.createTime > b.createTime ? -1 : 1))[0];
-
-      let lastActivity: string;
-      if (status === 'failed') {
-        lastActivity = failedAct?.sessionFailed?.message ?? 'Failed';
-      } else if (status === 'completed') {
-        lastActivity = 'Completed';
-      } else if (status === 'awaiting_plan') {
-        lastActivity = 'Awaiting plan approval';
-      } else if (status === 'cancelled') {
-        lastActivity = 'Cancelled';
-      } else {
-        lastActivity = latestProgress?.progressUpdated?.title ?? 'In progress';
-      }
-
-      return {
-        sessionId,
-        title: session.title,
-        state: session.state,
-        status,
-        prUrl: pr?.url,
-        lastActivity,
-      };
-    } catch (err) {
-      return {
-        sessionId,
-        status: 'error',
-        lastActivity: (err as Error).message,
-      };
-    }
-  }
-
-  async function summarizeSessionLegacy(sessionId: string): Promise<{
-    sessionId: string;
-    title?: string;
-    state?: string;
-    status: ReturnType<typeof deriveStatus> | 'error';
-    prUrl?: string;
-    prTitle?: string;
-    activities?: number;
-    error?: string;
-  }> {
-    try {
-      const session = await client.getSession(sessionId);
-      const { activities } = await client.listActivities(sessionId, 10);
-      const status = deriveStatus(session, activities);
-      const pr = session.outputs?.find(o => o.pullRequest)?.pullRequest;
-      return {
-        sessionId,
-        title: session.title,
-        state: session.state,
-        status,
-        prUrl: pr?.url,
-        prTitle: pr?.title,
-        activities: activities.length,
-      };
-    } catch (err) {
-      return { sessionId, status: 'error' as const, error: (err as Error).message };
-    }
   }
 
   // ---------- Consolidated orchestration ----------
@@ -435,7 +357,7 @@ export function createMcpServer(
       failFast: z.boolean().optional().default(false),
     },
     async (args) => {
-      let sessions = await Promise.all((args.sessionIds as string[]).map(id => summarizeSession(id)));
+      let sessions = await Promise.all((args.sessionIds as string[]).map(id => summarizeSession(client, id)));
       if (!(args.wait ?? false)) return ok({ sessions });
 
       const waitResult = await pollSessions(
@@ -445,7 +367,7 @@ export function createMcpServer(
       );
 
       // Re-summarize all sessions after wait completes.
-      sessions = await Promise.all((args.sessionIds as string[]).map(id => summarizeSession(id)));
+      sessions = await Promise.all((args.sessionIds as string[]).map(id => summarizeSession(client, id)));
 
       return ok({
         sessions,
@@ -564,14 +486,11 @@ export function createMcpServer(
         });
 
         const parallel = args.parallel ?? 10;
-        const results: DispatchResult[] = [];
-        for (let i = 0; i < plan.tasks.length; i += parallel) {
-          const slice = plan.tasks.slice(i, i + parallel);
-          const r = await Promise.all(
-            slice.map(t => dispatchTaskDefinition(client, config, t, '<mcp-auto>')),
-          );
-          results.push(...r);
-        }
+        const results = await runBatches(
+          plan.tasks,
+          parallel,
+          task => dispatchTaskDefinition(client, config, task, '<mcp-auto>'),
+        );
         const dispatched = results.filter(r => r.status === 'dispatched').length;
         return ok({
           plan: { model: plan.model, rationale: plan.rationale, tasks: plan.tasks, usage: plan.usage },

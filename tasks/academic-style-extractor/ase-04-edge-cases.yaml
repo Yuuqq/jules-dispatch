@@ -1,0 +1,42 @@
+title: "验收 #4: 边界情况测试 — 空输入、超长文本、纯中文、单段落"
+source: "sources/github/Yuuqq/academic-style-extractor"
+branch: "master"
+
+prompt: |
+  你是一个 QA 测试员，负责对 academic-style-extractor 进行边界情况（edge case）压力测试。
+
+  ## 你的任务
+
+  1. 阅读以下核心模块：src/scorer.py、src/coherence_checker.py、src/report_engine.py、src/section_parser.py、src/text_utils.py
+  2. 对以下边界场景逐一测试：
+
+  ### 场景 1: 空输入
+  - 空字符串 "" → score、audit、report 三个命令都不能崩溃
+  - 纯空白 "   \n\n  " → 同上
+
+  ### 场景 2: 单句/单段落
+  - "This is a single sentence." → score 不崩溃，维度返回合理值
+  - 验证 coherence audit 对无章节结构的文本不崩溃（返回 body section）
+
+  ### 场景 3: 超长文本
+  - 生成一个 1000 段的文本（每段重复同一段落），跑 score
+  - 验证能在合理时间内完成（< 30 秒）
+  - 验证不内存溢出
+
+  ### 场景 4: 纯中文文本
+  - 输入一段纯中文文本（如："本研究探讨了公共服务绩效对中国公民满意度的影响。"）
+  - 验证不崩溃，维度分数合理（大部分应返回 0 或 NaN 因为是中文）
+
+  ### 场景 5: 特殊字符
+  - 包含 LaTeX 公式的文本（"$\beta = 0.23^{***}$"）
+  - 包含大量 Unicode 字符（em dash —, 引号 " ", 省略号 …）
+  - 验证 split_sentences 不误切
+
+  ### 场景 6: 所有维度 NaN
+  - 构造一个没有任何系数段落、没有任何稳健性段落的纯理论文本
+  - 验证 overall score 正确跳过 NaN 维度，不返回 NaN
+
+  ## 验收标准
+  - 每个场景写出对应的 pytest 测试用例
+  - 发现任何 bug 写测试暴露并提 PR
+  - 新测试文件放到 tests/test_edge_cases.py

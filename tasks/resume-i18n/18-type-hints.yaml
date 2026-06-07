@@ -1,0 +1,71 @@
+# Quality: Add comprehensive type hints to core/ modules
+title: "Add Type Hints to Core Modules"
+source: "sources/github/Yuuqq/smart-resume-builder"
+branch: "master"
+autoMode: "AUTO_CREATE_PR"
+
+prompt: |
+  ## Context
+  Streamlit resume builder. Core modules lack comprehensive type hints. Add proper type annotations for better IDE support and maintainability.
+
+  ## Task
+
+  ### 1. Add type hints to these core modules:
+
+  **`core/config.py`** — Add return type annotations to all methods:
+  - `get_cv_config_path(name: str) -> Path`
+  - `get_student_config_path(student_id: str, version: str) -> Path`
+  - `get_template_path(layout: str) -> Path`
+  - `_load_json(path: Path) -> Dict`
+  - All properties already typed (verify)
+
+  **`core/user_manager.py`** — Add parameter and return types:
+  - `login(user_id: str, password: str) -> tuple[Optional[UserSession], str]`
+  - `register(user_id: str, name: str, password: str, major: str) -> tuple[bool, str]`
+  - `get_user(user_id: str) -> Optional[User]`
+  - `get_statistics() -> Dict[str, Any]`
+  - `_load_user_record(user_id: str) -> Optional[Dict[str, Any]]`
+  - `_check_registration_rate_limit(ip: str) -> tuple[bool, str]`
+  - All other public methods
+
+  **`core/data_manager.py`** — Add types:
+  - `load_student_data(student_id: str, version: str) -> Dict[str, Any]`
+  - `save_student_data(student_id: str, version: str, data: Dict[str, Any]) -> bool`
+  - `load_template(layout: str) -> str`
+  - `get_available_students() -> Dict[str, str]`
+  - `load_student_history(student_id: str) -> List[Dict[str, Any]]`
+  - All other public methods
+
+  **`core/session_token.py`** — Add types:
+  - `set_session_cookie(user_id: str, role: str) -> None`
+  - `clear_session_cookie() -> None`
+  - `get_session_cookie() -> Optional[str]`
+  - All other functions
+
+  **`core/ai_guard.py`** — Add types:
+  - `slot(operation: str, requester: str) -> ContextManager`
+  - `check_rate_limit(user_id: str, operation: str) -> tuple[bool, str]`
+  - `record_usage(user_id: str, tokens: int, ...) -> None`
+  - `get_usage_summary() -> Dict[str, Any]`
+  - All other public methods
+
+  ### 2. Add `from __future__ import annotations` to all modified files
+
+  This enables forward reference resolution and modern type syntax.
+
+  ### 3. Verify no runtime errors
+
+  ```bash
+  python -c "import core.config; import core.user_manager; import core.data_manager; import core.session_token; import core.ai_guard; print('All imports OK')"
+  ```
+
+  ## Important
+  - ONLY modify files in `core/`
+  - Do NOT change any logic — only add type annotations
+  - Use `from typing import Optional, Dict, List, Any, Tuple` etc.
+  - Use `from __future__ import annotations` for modern syntax
+  - Don't add new dependencies (no `mypy` required)
+  - Private methods (`_method`) should also be typed
+
+  ## Commit
+  Message: `quality: add comprehensive type hints to core modules`

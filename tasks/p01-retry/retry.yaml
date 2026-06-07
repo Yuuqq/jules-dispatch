@@ -1,0 +1,293 @@
+# Retry batch — 15 failed tasks
+---
+title: "[P1-T002] Create Schema validation CLI tool"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Create `tools/validate.py` — a CLI tool that validates JSON data files against the policy document schema in schema/policy_document.json.
+
+  Requirements:
+  1. Load schema from `schema/policy_document.json`
+  2. Accept command: `python tools/validate.py <data_file.json>` or `python tools/validate.py <directory>`
+  3. For each record in the data file, validate against schema
+  4. Print: total records, passed, failed
+  5. For failed records, print: record index, field name, error message
+  6. Exit code: 0 if all pass, 1 if any fail
+  7. Handle encoding (UTF-8/GBK auto-detect)
+
+  Also create test fixtures:
+  - `tests/fixtures/valid_law.json` — 1 valid policy doc (数据安全法)
+  - `tests/fixtures/valid_regulation.json` — 1 valid regulation (行政法规)
+  - `tests/fixtures/invalid_missing_field.json` — missing required field
+  - `tests/fixtures/invalid_wrong_type.json` — wrong type for doc_type
+  - `tests/fixtures/invalid_enum.json` — enum value not in allowed list
+
+  Add `requirements.txt` update if jsonschema not already listed.
+
+  Create the files and commit.
+---
+title: "[P1-T005] Build FLK detail page parser"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Create `scrapers/flk_detail.py` — detail page parser for flk.npc.gov.cn law pages.
+
+  Implement function `parse_law_detail(url: str) -> dict | None`:
+  1. Fetch the URL using requests
+  2. Parse HTML with BeautifulSoup
+  3. Extract: title, full_text (complete law text), issuing_body, document_number, publish_date, effective_date, status
+  4. full_text must be the COMPLETE legal text, not truncated
+  5. Handle encoding: auto-detect GBK/UTF-8
+  6. Return None if parsing fails (log the error, don't raise)
+  7. Return dict matching the schema in schema/policy_document.json
+
+  Also implement `parse_law_detail_from_html(html: str) -> dict | None` for testing without HTTP.
+
+  Create tests in `tests/test_flk_detail.py` with sample HTML fixtures.
+  Create `tests/fixtures/flk_sample_page.html` — a sample law page HTML (synthetic but realistic).
+
+  Create all files and commit.
+---
+title: "[P1-T007] Build gov.cn policy list scraper"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Create `scrapers/govcn_list.py` — list page scraper for www.gov.cn/zhengce/.
+
+  Implement class `GovCNLister`:
+  1. `__init__(self, rate_limit: float = 2.0)`
+  2. `list_latest(self, page: int = 1) -> list[dict]` — returns: {title, url, date, department, document_type}
+  3. `list_by_department(self, department: str) -> list[dict]`
+  4. `list_by_date_range(self, start: str, end: str) -> list[dict]`
+  5. Auto-detect total pages, support pagination
+  6. Rate limiting (>= 2 seconds), retry on failures
+  7. Use requests + BeautifulSoup
+
+  Create tests in `tests/test_govcn_list.py` with mock HTTP.
+  Create all files and commit.
+---
+title: "[P1-T008] Build gov.cn policy detail parser"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Create `scrapers/govcn_detail.py` — detail page parser for gov.cn policy pages.
+
+  Implement function `parse_policy_detail(url: str) -> dict | None`:
+  1. Fetch the URL using requests
+  2. Parse HTML with BeautifulSoup
+  3. Extract: title, full_text (complete policy text), issuing_body, document_number, publish_date, effective_date, status, department
+  4. full_text must be COMPLETE, not truncated
+  5. Handle encoding auto-detection (GBK/UTF-8)
+  6. Return None on failure (log error)
+  7. Output matches schema/policy_document.json
+
+  Also implement `parse_policy_detail_from_html(html: str) -> dict | None` for testing.
+  Create tests in `tests/test_govcn_detail.py` with sample HTML fixture.
+  Create all files and commit.
+---
+title: "[P2-T012] Data security FLK collection script"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Create `scripts/collect_data_security_flk.py` — FLK collection script for data security domain.
+
+  1. Load config from `configs/data_security.yaml` using PyYAML
+  2. Import FLKCollector from `scrapers/flk_collector.py`
+  3. For each keyword in keywords_zh, run collector.collect(keyword, category)
+  4. Output to `data/flk/data_security/`
+  5. Print progress: "[3/31] 数据安全 -> found 8 results"
+  6. On completion, merge all results into `data/flk/data_security/all_results.json`
+  7. Print final summary: total unique documents collected
+
+  Add `if __name__ == "__main__"` block. Create the file and commit.
+---
+title: "[P2-T015] Environmental FLK collection script"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Create `scripts/collect_environmental_flk.py` — FLK collection script for environmental governance domain.
+
+  1. Load config from `configs/environmental.yaml` using PyYAML
+  2. Import FLKCollector from `scrapers/flk_collector.py`
+  3. For each keyword in keywords_zh, run collector.collect(keyword, category)
+  4. Output to `data/flk/environmental/`
+  5. Print progress and final summary
+
+  Create the file and commit.
+---
+title: "[P2-T017] Urban governance keyword config"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Create `configs/urban_governance.yaml` — keyword config for urban governance domain.
+
+  Content structure (same format as configs/data_security.yaml):
+  - domain: "城市治理与社区管理"
+  - domain_id: "urban_governance"
+  - flk_categories: ["法律", "行政法规", "部门规章"]
+  - keywords_zh: 30+ keywords including: 城市规划, 城市更新, 智慧城市, 社区治理, 物业管理, 住房保障, 廉租房, 公租房, 房地产管理, 建筑法, 拆迁, 征收补偿, 市政公用, 城市道路, 城市供水, 城市排水, 垃圾处理, 城市绿化, 城市交通, 轨道交通, 停车管理, 老旧小区改造, 数字化城市管理, 城管执法, 街道管理, 社区服务, 居民委员会, 业主委员会, 房屋租赁, 房地产开发, 土地管理, 户籍制度, 居住证
+  - keywords_en: 20+ keywords
+  - expected_count: flk_laws: 20, flk_regulations: 20, flk_rules: 20, govcn_policies: 60
+
+  Create the file and commit.
+---
+title: "[P2-T019] Urban governance GOV.CN collection script"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Create `scripts/collect_urban_govcn.py` — gov.cn collection script for urban governance domain.
+
+  1. Load config from `configs/urban_governance.yaml`
+  2. Import GovCNCollector from `scrapers/govcn_collector.py`
+  3. Departments: ["国务院", "国务院办公厅", "住房和城乡建设部"]
+  4. Filter by keywords from config
+  5. Output to `data/govcn/urban_governance/`
+  6. Print progress and summary
+
+  Create the file and commit.
+---
+title: "[P2-T024] Platform governance FLK collection script"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Create `scripts/collect_platform_flk.py` — FLK collection script for platform governance domain.
+
+  1. Load config from `configs/platform_governance.yaml` using PyYAML
+  2. Import FLKCollector from `scrapers/flk_collector.py`
+  3. For each keyword in keywords_zh, run collector.collect(keyword, category)
+  4. Output to `data/flk/platform_governance/`
+  5. Print progress and final summary
+
+  Create the file and commit.
+---
+title: "[P3-T028] MOHURD (住建部) ministry scraper"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Create two files for 住建部 (MOHURD) data collection:
+
+  1. `scrapers/ministry_mohurd.py` — scraper for www.mohurd.gov.cn
+     - class `MOHURDScraper` with list_regulations(keyword) and get_detail(url) methods
+     - Extract: title, full_text, publish_date, document_number
+     - Rate limiting (>= 2s), retry on failure
+     - Schema-compliant output, source="住建部"
+
+  2. `scripts/collect_mohurd.py` — runner script
+     - Keywords: 城市更新, 物业管理, 保障性住房, 老旧小区改造, 建筑节能
+     - Output to `data/ministry/mohurd/`
+     - Checkpoint support, print progress and summary
+
+  Create the files and commit.
+---
+title: "[P4-T032] Text cleaning pipeline"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Create `tools/clean_text.py` — clean and normalize policy text.
+
+  Implement:
+  1. `clean_text(text: str) -> str` — single document cleaner
+  2. `clean_file(input_file: str, output_file: str) -> dict` — batch cleaner
+  3. Cleaning steps:
+     a. Remove HTML tags
+     b. Normalize whitespace (multiple spaces/newlines -> single)
+     c. Normalize quotes: ""'' to standard quotes
+     d. Normalize Chinese punctuation: fullwidth/halfwidth consistency
+     e. Preserve legal clause numbering (第X条第X款第X项)
+     f. Remove navigation text, breadcrumbs, page footers (web artifacts)
+     g. Strip leading/trailing whitespace
+  4. Update text_length field after cleaning
+  5. CLI: `python tools/clean_text.py --input data/dedup/merged.json --output data/cleaned/merged.json`
+  6. Print: records processed, average text length before/after
+
+  Create the file and commit.
+---
+title: "[P4-T034] Domain keyword auto-tagger"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Create `tools/auto_tagger.py` — auto-tag documents with domain labels and keywords.
+
+  Implement:
+  1. `load_configs(config_dir: str = "configs/") -> dict[str, list[str]]` — load all YAML keyword configs
+  2. `tag_document(doc: dict, configs: dict) -> tuple[list[str], list[str]]` — returns (domains, keywords)
+  3. Domain matching: if text contains >= 3 keywords from a config -> assign that domain
+  4. Keyword extraction: use jieba for Chinese segmentation, then TF-IDF top 10 terms filtered against config keywords
+  5. `tag_file(input_file: str, output_file: str, config_dir: str) -> dict`
+  6. CLI: `python tools/auto_tagger.py --input data/enriched/merged.json --output data/tagged/merged.json`
+  7. Print: domain distribution, top keywords
+
+  Use jieba for Chinese text segmentation. Create the file and commit.
+---
+title: "[P4-T035] Related document linker"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Create `tools/link_related.py` — find related documents by cross-referencing legal citations.
+
+  Implement:
+  1. `extract_citations(text: str) -> list[str]` — extract patterns like "《中华人民共和国XX法》", "XX规定", "XX办法"
+  2. `match_citations(citations: list[str], all_docs: list[dict]) -> list[dict]` — match against doc titles (fuzzy)
+  3. `link_documents(input_file: str, output_file: str) -> dict`
+     - For each doc, populate related_docs field with matched doc_ids
+     - Unresolved citations stored in "unresolved_citations" field
+  4. CLI: `python tools/link_related.py --input data/tagged/merged.json --output data/linked/merged.json`
+  5. Print: total citations found, resolved count, unresolved count, top unresolved citations
+
+  Create the file and commit.
+---
+title: "[P5-T039] Master collection orchestrator"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Create `scripts/run_all.py` — master orchestrator that runs the entire pipeline sequentially.
+
+  Pipeline steps:
+  1. Run all domain FLK collection scripts (5 scripts)
+  2. Run all domain GOV.CN collection scripts (5 scripts)
+  3. Run all ministry collection scripts (5 scripts)
+  4. Deduplicate -> clean -> enrich -> tag -> link -> quality check
+  5. Generate statistics
+  6. Merge into data/final/policy_database.json
+
+  Requirements:
+  - Each step prints progress: "[Step 3/11] Deduplicating... found 1200 docs"
+  - Any step failure is logged but doesn't stop the pipeline
+  - Generate reports/run_report.json with started_at, completed_at, steps, final_count, errors
+  - CLI: `python scripts/run_all.py [--skip-collect] [--skip-clean]`
+  - --skip-collect skips Phase 1-3 (for re-running pipeline on existing data)
+
+  Create the file and commit.
+---
+title: "[P5-T040] Delta update mechanism"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Create `scripts/run_delta.py` — incremental update that only collects new documents.
+
+  Implement:
+  1. Load existing data/final/policy_database.json (if exists)
+  2. Load all checkpoint files from data/**/checkpoint.json
+  3. Determine last collection date per source
+  4. Run collection scripts with date filter (only since last collection)
+  5. Merge new documents into existing database (no deletions)
+  6. Re-run dedup + clean + enrich + tag on new documents only
+  7. Output delta report: reports/delta_report.json with previous_count, new_collected, after_dedup, final_count, new_sources
+  8. CLI: `python scripts/run_delta.py`
+
+  Create the file and commit.

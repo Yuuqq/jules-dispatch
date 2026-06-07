@@ -1,0 +1,19 @@
+title: "P06: Sentiment - platform worker rights debate collection"
+source: "sources/github/Yuuqq/css-lab-sentiment-analysis"
+branch: "main"
+prompt: |
+  Create a new sentiment dataset for "platform worker rights" (平台劳动者权益) debate.
+
+  File: `data/platform_worker_rights_debate.json`
+
+  Collect discussions about:
+  1. Food delivery rider safety and insurance (外卖骑手)
+  2. Ride-hailing driver income and working conditions (网约车司机)
+  3. Algorithm management of platform workers (算法管理)
+  4. Flexible employment social security (灵活就业社保)
+  5. Platform labor law enforcement
+
+  At least 50 records. Structure same as existing files.
+  Include `sentiment_label`, `key_arguments`, `stakeholder_type`, `time_period`.
+
+  Search the web. Commit: "feat: platform worker rights sentiment dataset"

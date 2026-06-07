@@ -1,0 +1,25 @@
+title: "P05: Annotate policy sentiment themes (batch 1)"
+source: "sources/github/Yuuqq/css-lab-annotation-tool"
+branch: "main"
+prompt: |
+  Expand annotation coverage. Currently only 4 small sample files exist.
+
+  Task: Read `../css-lab-policy-db/data/processed/normalized_all_policies.json` (or copy it locally first).
+
+  For the first 500 documents, generate rule-based annotations:
+  1. `governance_theme` — classify into: 环境治理, 数据安全, 平台经济, 城市治理, 公地资源, 公共安全, 科学技术, 农业, 其他
+  2. `policy_sentiment` — classify as: 积极(鼓励/促进/支持), 限制(禁止/限制/处罚), 中性(规范/标准/程序)
+  3. `target_sector` — classify as: 企业, 政府, 个人, 平台, 金融机构, 社会组织, 混合
+
+  Use keyword-based rules (no LLM needed):
+  - governance_theme: match against domain field + title keywords
+  - policy_sentiment: match against words like 鼓励/促进/支持/奖励 vs 禁止/限制/处罚/撤销 vs 规范/标准/程序/管理
+  - target_sector: match against text content keywords
+
+  Output format per record:
+  ```json
+  {"doc_id": "...", "title": "...", "governance_theme": "...", "policy_sentiment": "...", "target_sector": "..."}
+  ```
+
+  Save as `data/annotated_policies_batch1.json`.
+  Commit: "feat: rule-based annotation for 500 policy docs (batch 1)"

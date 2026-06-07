@@ -1,0 +1,16 @@
+title: "P03: Xiaohongshu governance policy history (2019-2026)"
+source: "sources/github/Yuuqq/css-lab-platform-governance"
+branch: "main"
+prompt: |
+  Expand `data/小红书_policies.json` with a policy timeline of Xiaohongshu (小红书) governance rules from 2019 to 2026.
+
+  Collect at least 5 policy updates:
+  1. Xiaohongshu community guidelines (社区规范)
+  2. Xiaohongshu content review rules (笔记审核规范)
+  3. Xiaohongshu commercial collaboration rules (商业合作规范)
+  4. Xiaohongshu live commerce rules (直播带货规范)
+  5. Xiaohongshu minor protection policies (未成年人保护)
+
+  For each: `policy_name`, `platform`: "小红书", `version`, `effective_date`, `policy_type`, `content_summary`, `key_changes_from_previous`, `source_url`, `collection_date`
+
+  Search the web. Commit: "feat: Xiaohongshu governance policy timeline 2019-2026"

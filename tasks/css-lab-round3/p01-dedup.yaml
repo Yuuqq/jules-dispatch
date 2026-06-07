@@ -1,0 +1,16 @@
+title: "P01: title deduplication by similarity"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+prompt: |
+  In `data/processed/normalized_all_policies.json`, there may be near-duplicate records with slightly different titles but the same policy document.
+
+  Task:
+  1. Load all 2045 documents
+  2. For each pair of documents with similar titles (Levenshtein distance < 5, or same title with minor suffix/prefix differences like "（全文）", "（最新版）", "_转载", etc.):
+     a. If they share the same URL, keep the one with longer `full_text`
+     b. If different URLs but very similar content (>80% text overlap in first 500 chars), keep the one from higher-tier source (A > B > C)
+  3. Remove duplicates, renumber `doc_id` sequentially
+  4. Update `metadata.total_records`
+  5. Save
+
+  Commit with message: "fix: deduplicate near-duplicate policy records"

@@ -1,0 +1,67 @@
+title: "Cross-project: Build unified search index across all projects"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+prompt: |
+  Build a unified cross-project index that maps all CSS Lab data across repositories.
+
+  Create `unified_index.json` in the root with this structure:
+  ```json
+  {
+    "projects": {
+      "P01-policy-db": {
+        "source": "css-lab-policy-db",
+        "records": 2045,
+        "type": "policy_documents",
+        "fields": ["doc_id", "title", "doc_type", "issuing_body", "domain", "publish_date"],
+        "data_path": "data/processed/normalized_all_policies.json"
+      },
+      "P02-commons-db": {
+        "source": "css-lab-commons-db",
+        "records": "<count from all_commons_cases.json>",
+        "type": "commons_cases",
+        "fields": ["case_name", "resource_type", "country", "outcomes"],
+        "data_path": "data/all_commons_cases.json"
+      },
+      "P03-platform-governance": {
+        "source": "css-lab-platform-governance",
+        "records": "<count from all_platform_policies.json>",
+        "type": "platform_policies",
+        "fields": ["platform", "policy_name", "effective_date", "policy_type"],
+        "data_path": "data/all_platform_policies.json"
+      },
+      "P06-sentiment-analysis": {
+        "source": "css-lab-sentiment-analysis",
+        "records": "<count>",
+        "type": "sentiment_data",
+        "fields": ["topic", "sentiment_label", "stakeholder_type"],
+        "data_path": "data/all_sentiment_data.json"
+      },
+      "P04-rag-agent": {
+        "source": "css-lab-rag-agent",
+        "records": 2045,
+        "type": "search_index",
+        "note": "TF-IDF index built from P01 data"
+      },
+      "P05-annotation-tool": {
+        "source": "css-lab-annotation-tool",
+        "records": "<count>",
+        "type": "annotations"
+      },
+      "P07-visualization": {
+        "source": "css-lab-visualization",
+        "type": "visualization_exports"
+      },
+      "P08-data-atlas": {
+        "source": "css-lab-data-atlas",
+        "records": "<count from data_resource_atlas.json>",
+        "type": "data_resources"
+      }
+    },
+    "generated_at": "<timestamp>",
+    "total_records_across_projects": "<sum>"
+  }
+  ```
+
+  Read actual data files to fill in record counts. For files in other repos, search the web for the repo structure or use reasonable estimates based on the file sizes.
+
+  Commit: "feat: add unified cross-project index"

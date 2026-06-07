@@ -1,0 +1,265 @@
+# Phase 8: i18n Foundation — Infrastructure + Templates + Fonts + User Manager + Rendering
+title: "i18n Foundation — Infrastructure + Templates + Fonts + Rendering Pipeline"
+source: "sources/github/Yuuqq/smart-resume-builder"
+branch: "master"
+autoMode: "AUTO_CREATE_PR"
+
+prompt: |
+  ## Context
+  Streamlit + Python resume builder. Adding bilingual (Chinese/English) support.
+  You create the i18n infrastructure. Other parallel tasks create their own string files.
+
+  ## Step 1: Create `core/i18n_data/` directory with shared infrastructure
+
+  ### Create `core/i18n_data/__init__.py`
+  ```python
+  """i18n string data — auto-discovers all _*.py modules."""
+  from pathlib import Path
+  from typing import Dict
+  import importlib
+  import pkgutil
+
+  _ui_strings: Dict[str, Dict[str, str]] = {"zh": {}, "en": {}}
+  _loaded = False
+
+  def _load():
+      global _loaded, _ui_strings
+      if _loaded:
+          return
+      for module_info in pkgutil.iter_modules([str(Path(__file__).parent)]):
+          if module_info.name.startswith("_"):
+              try:
+                  mod = importlib.import_module(f"core.i18n_data.{module_info.name}")
+                  if hasattr(mod, "UI_STRINGS"):
+                      for locale, strings in mod.UI_STRINGS.items():
+                          _ui_strings.setdefault(locale, {}).update(strings)
+              except Exception:
+                  pass
+      _loaded = True
+
+  def get_ui_strings() -> Dict[str, Dict[str, str]]:
+      _load()
+      return _ui_strings
+  ```
+
+  ### Create `core/i18n_data/_templates.py`
+  Define `TEMPLATE_LABELS` dict — per-template, per-locale section headings.
+  Structure: `TEMPLATE_LABELS[template_name][locale] = {label_key: translated_string}`
+
+  READ all 12 template files in `journalism_cv/template*.html` to extract ALL hardcoded Chinese section headings.
+  Template names: modern, classic, agency, visual, minimal, elegant, creative, compact, timeline, magazine, formal, fresh
+
+  Chinese heading patterns to find (variants per template):
+  - 实习/工作经历, 实习与工作经历, 工作经历
+  - 专业技能, 技能专长, 技能
+  - 语言能力, 语言
+  - 荣誉奖项, 获奖情况, 奖项荣誉
+  - 教育经历, 教育背景, 教育信息
+  - 项目经验, 项目经历
+  - 自我评价, 个人简介, 关于我
+  - 兴趣爱好, 兴趣特长, 兴趣
+  - 作品集, 作品展示
+  - 软件工具, 工具技能
+  - 简历 (in title tag)
+
+  Map EACH template's EXACT Chinese headings to English. Preserve per-template nuances.
+  Label keys: experience, education, skills, skills_pro, skills_software, skills_lang, awards, projects, summary, interests, portfolio, resume_title
+
+  Example:
+  ```python
+  TEMPLATE_LABELS = {
+      "modern": {
+          "zh": {"experience": "实习/工作经历", "skills": "技能专长", ...},
+          "en": {"experience": "Internship & Work Experience", "skills": "Skills", ...},
+      },
+      "classic": {
+          "zh": {"experience": "实习与工作经历", ...},
+          "en": {"experience": "Internship & Experience", ...},
+      },
+      ... # all 12 templates
+  }
+  ```
+
+  ### Create `core/i18n_data/_fonts.py`
+  ```python
+  FONT_CONFIGS = {
+      "zh": {
+          "google_fonts_url": "https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&family=Noto+Serif+SC:wght@400;500;700&display=swap",
+          "extra_font_link": '<link href="https://cdn.jsdelivr.net/gh/pluwen/MiSans-CDN@main/misans.min.css" rel="stylesheet">',
+          "html_lang": "zh-CN",
+          "font_classes": {
+              "font-misans": "font-family: 'MiSans', 'Noto Sans SC', 'Helvetica Neue', 'PingFang SC', 'Microsoft YaHei', sans-serif;",
+              "font-noto-sans": "font-family: 'Noto Sans SC', 'MiSans', 'Helvetica Neue', 'PingFang SC', 'Microsoft YaHei', sans-serif;",
+              "font-noto-serif": "font-family: 'Noto Serif SC', 'Songti SC', 'SimSun', 'Georgia', serif;",
+              "font-system-sans": "font-family: 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-serif;",
+              "font-system-serif": "font-family: 'Songti SC', 'SimSun', 'Georgia', 'Times New Roman', serif;",
+              "font-sans": "font-family: 'MiSans', 'Noto Sans SC', 'Helvetica Neue', 'PingFang SC', 'Microsoft YaHei', sans-serif;",
+          },
+      },
+      "en": {
+          "google_fonts_url": "https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700&family=Lora:wght@400;500;700&display=swap",
+          "extra_font_link": "",
+          "html_lang": "en",
+          "font_classes": {
+              "font-misans": "font-family: 'Inter', 'Helvetica Neue', 'Arial', sans-serif;",
+              "font-noto-sans": "font-family: 'Inter', 'Helvetica Neue', 'Arial', sans-serif;",
+              "font-noto-serif": "font-family: 'Lora', 'Georgia', 'Times New Roman', serif;",
+              "font-system-sans": "font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;",
+              "font-system-serif": "font-family: 'Lora', 'Georgia', 'Times New Roman', serif;",
+              "font-sans": "font-family: 'Inter', 'Helvetica Neue', 'Arial', sans-serif;",
+          },
+      },
+  }
+  ```
+
+  ## Step 2: Create `core/i18n.py`
+
+  ```python
+  """Bilingual i18n module — locale management, string lookup, template labels, font configs."""
+  import logging
+  from typing import Dict, Optional
+
+  import streamlit as st
+
+  logger = logging.getLogger(__name__)
+
+  LOCALE_ZH = "zh"
+  LOCALE_EN = "en"
+  DEFAULT_LOCALE = LOCALE_ZH
+
+  def get_locale() -> str:
+      """Read locale from st.session_state, default to LOCALE_ZH."""
+      return st.session_state.get("locale", DEFAULT_LOCALE)
+
+  def set_locale(locale: str) -> None:
+      """Set locale in session state and persist to user config."""
+      st.session_state["locale"] = locale
+      try:
+          from core.user_manager import get_user_manager
+          user_session = st.session_state.get("user_session")
+          if user_session and user_session.user.role not in ("guest",):
+              mgr = get_user_manager()
+              mgr.update_locale(user_session.user.user_id, locale)
+      except Exception as e:
+          logger.warning("Failed to persist locale: %s", e)
+
+  def t(key: str, **kwargs) -> str:
+      """Get translated UI string for current locale. Supports format kwargs."""
+      from core.i18n_data import get_ui_strings
+      strings = get_ui_strings()
+      locale = get_locale()
+      text = strings.get(locale, {}).get(key, key)
+      if kwargs:
+          try:
+              return text.format(**kwargs)
+          except (KeyError, IndexError):
+              return text
+      return text
+
+  def get_template_labels(template_name: str) -> dict:
+      """Get label dict for template in current locale. Falls back to 'modern'."""
+      from core.i18n_data._templates import TEMPLATE_LABELS
+      locale = get_locale()
+      template_data = TEMPLATE_LABELS.get(template_name, TEMPLATE_LABELS.get("modern", {}))
+      return template_data.get(locale, {})
+
+  def get_font_config() -> dict:
+      """Get font config dict for current locale."""
+      from core.i18n_data._fonts import FONT_CONFIGS
+      return FONT_CONFIGS.get(get_locale(), FONT_CONFIGS[DEFAULT_LOCALE])
+
+  def render_locale_toggle(location: str = "sidebar") -> None:
+      """Render language toggle widget.
+      location: 'sidebar' — prominent selectbox in sidebar
+                'landing' — small inline toggle on landing page
+      """
+      current = get_locale()
+      options = {"中文": LOCALE_ZH, "English": LOCALE_EN}
+      display = list(options.keys())
+      idx = 0 if current == LOCALE_ZH else 1
+
+      if location == "sidebar":
+          selected = st.selectbox("🌐 Language", display, index=idx, key="_locale_sidebar")
+      else:
+          selected = st.selectbox("🌐 Language", display, index=idx, key="_locale_landing", label_visibility="collapsed")
+
+      new_locale = options[selected]
+      if new_locale != current:
+          set_locale(new_locale)
+          st.rerun()
+  ```
+
+  ## Step 3: Update `core/user_manager.py`
+
+  - Add `locale: str = "zh"` field to the `User` dataclass (after `resume_versions`)
+  - In `login()` method: after loading user data and creating UserSession, add:
+    ```python
+    import streamlit as st
+    st.session_state["locale"] = user_data.get("locale", "zh")
+    ```
+  - Add method:
+    ```python
+    def update_locale(self, user_id: str, locale: str) -> bool:
+        user_data = self._load_user_record(user_id)
+        if not user_data:
+            return False
+        user_data["locale"] = locale
+        self._users[user_id] = user_data
+        return self._save_users()
+    ```
+
+  ## Step 4: Update `views/common.py` — `_render_cv_to_html()`
+
+  After the line `render_data['meta'] = style`, add:
+  ```python
+  from core.i18n import get_locale, get_template_labels, get_font_config
+  locale = get_locale()
+  template_name = style.get('layout', 'modern')
+  render_data['labels'] = get_template_labels(template_name)
+  render_data['fonts'] = get_font_config()
+  render_data['lang'] = locale
+  ```
+
+  ## Step 5: Update all 12 HTML templates in `journalism_cv/`
+
+  For each template file (template.html, template_classic.html, template_agency.html, template_visual.html, template_minimal.html, template_elegant.html, template_creative.html, template_compact.html, template_timeline.html, template_magazine.html, template_formal.html, template_fresh.html):
+
+  1. Replace `<html lang="zh-CN">` with `<html lang="{{ lang }}">`
+  2. Replace the Google Fonts link tags with dynamic fonts:
+     ```html
+     <link rel="preconnect" href="https://fonts.googleapis.com">
+     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+     <link href="{{ fonts.google_fonts_url }}" rel="stylesheet">
+     {% if fonts.extra_font_link %}
+     {{ fonts.extra_font_link }}
+     {% endif %}
+     ```
+  3. Replace ALL hardcoded Chinese section headings with `{{ labels.<key> }}` (use keys from TEMPLATE_LABELS)
+  4. Replace font CSS class definitions with dynamic values:
+     ```css
+     .font-misans { {{ fonts.font_classes.font-misans }} }
+     .font-noto-sans { {{ fonts.font_classes.font-noto-sans }} }
+     .font-noto-serif { {{ fonts.font_classes.font-noto-serif }} }
+     .font-system-sans { {{ fonts.font_classes.font-system-sans }} }
+     .font-system-serif { {{ fonts.font_classes.font-system-serif }} }
+     .font-sans { {{ fonts.font_classes.font-sans }} }
+     ```
+  5. Replace title tag "简历" with `{{ labels.resume_title }}`
+
+  ## Step 6: Add language toggles
+
+  ### Sidebar toggle — `views/resume_builder.py`
+  In the sidebar section, add: `from core.i18n import render_locale_toggle; render_locale_toggle(location="sidebar")`
+
+  ### Landing page toggle — `app.py`
+  In `_render_landing_page()`, before the auth form, add: `from core.i18n import render_locale_toggle; render_locale_toggle(location="landing")`
+
+  ## Verification
+  ```bash
+  python -c "from core.i18n import t, get_locale, get_template_labels, get_font_config; print('OK')"
+  grep -c "工作经历\|专业技能\|教育经历\|语言能力\|荣誉奖项\|获奖情况\|技能专长" journalism_cv/template*.html
+  ```
+  Template grep should return 0 for each file.
+
+  ## Commit
+  Message: `feat(i18n): add i18n infrastructure, template labels, font switching, language toggle`

@@ -1,0 +1,18 @@
+title: "P03: YouTube governance policy history (2018-2026)"
+source: "sources/github/Yuuqq/css-lab-platform-governance"
+branch: "main"
+prompt: |
+  Expand `data/YouTube_policies.json` with a comprehensive policy timeline from 2018 to 2026.
+
+  Collect major policy changes:
+  1. Community guidelines updates
+  2. Monetization policy changes (YPP requirements)
+  3. Content ID and copyright enforcement
+  4. Children's content (COPPA) policy
+  5. Hate speech and harassment policy
+  6. Misinformation / election integrity policy
+  7. AI-generated content disclosure requirements
+
+  For each: `policy_name`, `platform`: "YouTube", `version`, `effective_date`, `policy_type`, `content_summary`, `key_changes_from_previous`, `source_url`, `collection_date`
+
+  Search the web. Commit: "feat: YouTube governance policy timeline 2018-2026"

@@ -1,0 +1,29 @@
+title: "Main repo: Generate comprehensive project documentation"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+prompt: |
+  Generate comprehensive documentation for the CSS Lab project ecosystem.
+
+  The CSS Lab has 8 sub-projects across separate GitHub repos:
+  - P01: css-lab-policy-db — Policy text database (2045 documents)
+  - P02: css-lab-commons-db — Commons governance cases (Ostrom SES framework)
+  - P03: css-lab-platform-governance — Platform governance policy timelines
+  - P04: css-lab-rag-agent — RAG search system with TF-IDF index
+  - P05: css-lab-annotation-tool — Rule-based and LLM annotation tools
+  - P06: css-lab-sentiment-analysis — Sentiment analysis datasets
+  - P07: css-lab-visualization — Visualization data exports + dashboard
+  - P08: css-lab-data-atlas — Open data resource catalog
+
+  Create `CSS_LAB_OVERVIEW.md` in the root with:
+  1. **Project overview** — What CSS Lab is, research domains, lab orientation
+  2. **Architecture diagram** — How the 8 projects relate (text-based mermaid diagram)
+  3. **Data inventory** — Per-project: record count, file sizes, key fields, data format
+  4. **Quick start** — How to clone all repos, set up Python environment, run search
+  5. **Project details** — Per-project: purpose, data schema, key scripts, outputs
+  6. **Data collection methodology** — Exa API, Ostrom SES framework, platform policy extraction
+  7. **Usage examples** — How to search policies, query commons cases, access sentiment data
+  8. **Tech stack** — Python, jieba, Flask, Exa API, GitHub Actions
+
+  Chinese + English mixed is fine.
+
+  Commit: "docs: add comprehensive CSS Lab project overview documentation"

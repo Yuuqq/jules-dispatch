@@ -1,0 +1,91 @@
+# Refactor: Split ai_service.py (2483 lines) into focused modules
+title: "Refactor — Split ai_service.py into Sub-modules"
+source: "sources/github/Yuuqq/smart-resume-builder"
+branch: "master"
+autoMode: "AUTO_CREATE_PR"
+
+prompt: |
+  ## Context
+  `core/ai_service.py` is 2483 lines — the largest file in the project. Split it into focused sub-modules for maintainability.
+
+  ## Task
+
+  ### 1. Read `core/ai_service.py` completely
+
+  Map all functions, classes, and constants. Identify logical groups.
+
+  Expected groups:
+  - **AIConfig + helpers** — `AIConfig`, `get_ai_config()`, `reset_ai_config()`, `_extract_usage_tokens()`
+  - **Extraction** — `RESUME_EXTRACTION_PROMPT`, `extract_resume_from_text()`, `_parse_json_from_response()`, `_get_major_hint()`, `_get_template_resume()`, `_build_local_resume_fallback()`, `_return_local_resume_fallback()`
+  - **Section optimization** — `optimize_resume_section()`
+  - **Job match** — `JOB_MATCH_ANALYSIS_PROMPT`, `analyze_job_match()`, `_get_default_match_analysis()`, `_return_default_match_analysis()`
+  - **Polish** — `POLISH_RESUME_PROMPT`, `TARGETED_POLISH_PROMPT`, `polish_resume()`, `polish_resume_stream()`, `_consume_stream()`
+  - **Diagnosis** — `RESUME_DIAGNOSIS_PROMPT`, `diagnose_resume()`, `diagnose_resume_stream()`
+  - **Copilot** — `COPILOT_SYSTEM_PROMPT`, `generate_copilot_response()`
+  - **Scoring** — `calculate_resume_score()`
+
+  ### 2. Create sub-modules in `core/ai/`
+
+  ```
+  core/ai/
+    __init__.py    — re-exports all public names for backward compatibility
+    config.py      — AIConfig, get_ai_config, reset_ai_config, _extract_usage_tokens
+    extraction.py  — extract_resume_from_text + helpers + prompts
+    optimization.py — optimize_resume_section
+    job_match.py   — analyze_job_match + helpers + prompts
+    polish.py      — polish_resume, polish_resume_stream, _consume_stream + prompts
+    diagnosis.py   — diagnose_resume, diagnose_resume_stream + prompts
+    copilot.py     — generate_copilot_response + prompt
+    scoring.py     — calculate_resume_score
+  ```
+
+  ### 3. Create `core/ai/__init__.py` with re-exports
+
+  ```python
+  """AI service modules — re-export all public names for backward compatibility."""
+  from core.ai.config import AIConfig, get_ai_config, reset_ai_config
+  from core.ai.extraction import extract_resume_from_text
+  from core.ai.optimization import optimize_resume_section
+  from core.ai.job_match import analyze_job_match
+  from core.ai.polish import polish_resume, polish_resume_stream
+  from core.ai.diagnosis import diagnose_resume, diagnose_resume_stream
+  from core.ai.copilot import generate_copilot_response
+  from core.ai.scoring import calculate_resume_score
+  ```
+
+  ### 4. Update `core/ai_service.py` to be a thin wrapper
+
+  ```python
+  """Legacy import path — delegates to core/ai/ sub-modules."""
+  from core.ai import *  # noqa: F401,F403 — backward compatibility
+  ```
+
+  This ensures all existing `from core.ai_service import X` still works.
+
+  ### 5. Verify no imports break
+
+  Check all files that import from `core.ai_service`:
+  ```bash
+  grep -r "from core.ai_service import" --include="*.py" .
+  grep -r "import core.ai_service" --include="*.py" .
+  ```
+
+  All should still work via the re-exports.
+
+  ## Important
+  - Do NOT change any function signatures or behavior
+  - The refactored code must be functionally identical
+  - All existing imports must continue to work (backward compatibility via re-exports)
+  - Shared utilities (like `_consume_stream`, AIGuard imports) go in `config.py` or a shared `_utils.py`
+  - Keep the `_` prefixed private functions private within their module
+  - DO NOT modify any files outside of `core/ai/` and `core/ai_service.py`
+
+  ## Verification
+  ```bash
+  python -c "from core.ai_service import extract_resume_from_text, polish_resume, analyze_job_match, diagnose_resume, generate_copilot_response, calculate_resume_score, AIConfig; print('All imports OK')"
+  python -c "from core.ai import extract_resume_from_text, polish_resume; print('New imports OK')"
+  python -m pytest tests/ -x -q  # existing tests still pass
+  ```
+
+  ## Commit
+  Message: `refactor: split ai_service.py (2483 lines) into focused sub-modules under core/ai/`

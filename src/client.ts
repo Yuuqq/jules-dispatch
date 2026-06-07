@@ -53,9 +53,8 @@ export class JulesClient {
       const attempt = MAX_RETRIES - retries;
       const expBackoff = BASE_DELAY_MS * Math.pow(2, attempt);
       const jitter = Math.random() * 250;
-      const delay = retryAfter
-        ? Math.max(Number(retryAfter) * 1000, 0) + jitter
-        : expBackoff + jitter;
+      const retryAfterMs = parseRetryAfterMs(retryAfter);
+      const delay = (retryAfterMs ?? expBackoff) + jitter;
       await sleep(delay);
       return this.request<T>(path, options, retries - 1);
     }
@@ -70,7 +69,12 @@ export class JulesClient {
 
     if (res.status === 204) return undefined as T;
     const text = await res.text();
-    return (text ? JSON.parse(text) : undefined) as T;
+    if (!text) return undefined as T;
+    try {
+      return JSON.parse(text) as T;
+    } catch (err) {
+      throw new Error(`Jules API returned invalid JSON at ${path}: ${(err as Error).message}`);
+    }
   }
 
   // ---------- sources ----------
@@ -187,6 +191,17 @@ export class JulesClient {
 
 function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function parseRetryAfterMs(value: string | null): number | undefined {
+  if (!value) return undefined;
+
+  const seconds = Number(value);
+  if (Number.isFinite(seconds)) return Math.max(seconds * 1000, 0);
+
+  const dateMs = Date.parse(value);
+  if (Number.isNaN(dateMs)) return undefined;
+  return Math.max(dateMs - Date.now(), 0);
 }
 
 /** Derive normalized status from a session + its recent activities. */

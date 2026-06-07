@@ -1,0 +1,29 @@
+title: "P02: Ostrom SES cross-case comparative analysis"
+source: "sources/github/Yuuqq/css-lab-commons-db"
+branch: "main"
+prompt: |
+  Analyze all 6 commons case files in `data/` to produce a cross-case comparative study.
+
+  Read all JSON files: commons_irrigation.json, commons_fishery.json, commons_forest.json, commons_water_watershed.json, commons_pasture_rangeland.json, commons_urban_commons.json.
+
+  Produce `analysis/ses_cross_case_analysis.json` with:
+
+  1. **Summary matrix** — For each resource type, extract and compare:
+     - Average sustainability_rating, equity_rating
+     - Most common governance mechanisms
+     - Key actor groups
+     - Dominant conflict types
+     - Institutional design patterns (Ostrom's 8 design principles scored 0/1)
+
+  2. **Institutional analysis** — For each resource type:
+     - Which of Ostrom's 8 design principles are present?
+     - What rules work best (by outcome correlation)?
+     - Common failure modes
+
+  3. **Cross-type patterns** — What governance patterns are universal vs resource-specific?
+
+  4. **Policy implications** — 5-10 evidence-based recommendations for commons governance
+
+  Also generate `analysis/ses_summary.md` — a readable Markdown report with tables and key findings.
+
+  Commit: "feat: Ostrom SES cross-case comparative analysis"

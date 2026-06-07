@@ -1,0 +1,79 @@
+# Phase 10: Bilingual job match + scoring + end-to-end tests
+title: "Phase 10 — Bilingual Job Match + Scoring + E2E Tests"
+source: "sources/github/Yuuqq/smart-resume-builder"
+branch: "master"
+autoMode: "AUTO_CREATE_PR"
+
+prompt: |
+  ## Context
+  Streamlit + Python resume builder. Phases 8-9 running in parallel.
+  Your job: create integration tests for bilingual job match, scoring, and end-to-end flows.
+
+  ## Step 1: Create `tests/test_bilingual_job_match.py`
+
+  Test cases:
+  1. `test_job_match_analysis_zh` — Job match with Chinese JD → Chinese results
+  2. `test_job_match_analysis_en` — Job match with English JD → English results
+  3. `test_analyze_job_match_lang_parameter` — lang parameter selects correct prompt
+  4. `test_preset_jds_available` — All 12 preset JDs exist and are loadable
+  5. `test_match_result_structure` — Both locales produce valid result JSON structure
+  6. `test_match_fallback_both_languages` — Fallback analysis works in both languages
+
+  Mock AI API calls.
+
+  ## Step 2: Create `tests/test_bilingual_scoring.py`
+
+  Test cases:
+  1. `test_scoring_dimensions_zh` — Chinese locale → Chinese dimension labels
+  2. `test_scoring_dimensions_en` — English locale → English dimension labels
+  3. `test_radar_chart_labels_zh` — Radar chart uses Chinese labels
+  4. `test_radar_chart_labels_en` — Radar chart uses English labels
+  5. `test_growth_twin_labels_zh` — Growth digital twin uses Chinese labels
+  6. `test_growth_twin_labels_en` — Growth digital twin uses English labels
+  7. `test_score_improvement_suggestions_zh` — Suggestions in Chinese
+  8. `test_score_improvement_suggestions_en` — Suggestions in English
+
+  ## Step 3: Create `tests/test_bilingual_e2e.py`
+
+  End-to-end flow tests:
+  1. `test_full_chinese_flow` — Generate Chinese resume → preview → polish → score → export (all mocked)
+  2. `test_full_english_flow` — Generate English resume → preview → polish → score → export (all mocked)
+  3. `test_switch_language_mid_flow` — Start in Chinese, switch to English, regenerate → clean English output
+  4. `test_no_mixed_language_artifacts` — English locale produces no Chinese UI strings in resume output
+  5. `test_locale_independence` — Two users with different locales get independent results
+
+  ```python
+  @pytest.fixture
+  def sample_chinese_input():
+      return "我在汕头大学新闻学院读书，大三期间在南方日报实习了三个月..."
+
+  @pytest.fixture
+  def sample_english_input():
+      return "I am a journalism student at Shantou University. During my junior year, I interned at a major newspaper for three months..."
+  ```
+
+  ## Step 4: Create `tests/test_i18n_module.py`
+
+  Unit tests for the i18n module itself:
+  1. `test_get_locale_default` — Default locale is "zh"
+  2. `test_set_locale` — set_locale updates session state
+  3. `test_t_zh` — t() returns Chinese string for zh locale
+  4. `test_t_en` — t() returns English string for en locale
+  5. `test_t_missing_key` — Missing key returns key itself
+  6. `test_t_format_kwargs` — t() with kwargs formats correctly
+  7. `test_get_template_labels_all_templates` — All 12 templates have label dicts
+  8. `test_get_font_config_zh` — Chinese font config has correct families
+  9. `test_get_font_config_en` — English font config has Inter/Lora
+  10. `test_template_labels_no_missing_keys` — All templates have same label keys
+  11. `test_ui_strings_zh_en_parity` — Every zh key has an en counterpart
+
+  Use `try/except ImportError` with `@pytest.mark.skipif` for tests that depend on Phase 8 code.
+
+  ## Important
+  - Mock ALL external calls (AI API, Streamlit session_state where needed)
+  - Tests should be runnable after all PRs merge
+  - Use `@pytest.mark.skipif` for tests requiring Phase 8/9 modules not yet available
+  - Follow existing test patterns in `tests/` directory
+
+  ## Commit
+  Message: `test(i18n): add bilingual job match, scoring, e2e, and i18n module tests`

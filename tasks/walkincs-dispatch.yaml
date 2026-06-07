@@ -99,5 +99,5 @@ prompt: |
   1. Read web/main.js, web/spots-data.js, web/api-client.js
   2. Add city dropdown in index.html header
   3. Switch city via setWebCitySlug(), clear cache, reload
- 4. Persist selection in localStorage
+  4. Persist selection in localStorage
   5. Commit web/ files only

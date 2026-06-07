@@ -1,0 +1,31 @@
+title: "P06: Sentiment - platform antitrust debate collection"
+source: "sources/github/Yuuqq/css-lab-sentiment-analysis"
+branch: "main"
+prompt: |
+  Create a new sentiment dataset for "platform antitrust" (平台反垄断) debate.
+
+  File: `data/platform_antitrust_debate.json`
+
+  Collect social media discussions, news comments, and opinion pieces about:
+  1. Alibaba antitrust case (2021) - public reaction
+  2. Platform "二选一" (exclusive dealing) debates
+  3. Meituan antitrust fine (2021)
+  4. Platform economic regulation debates (2020-2026)
+
+  Structure each record as:
+  ```json
+  {
+    "topic": "platform_antitrust",
+    "time_period": "2020-2021" or "2022-2024" or "2025-2026",
+    "source_platform": "weibo/zhihu/weixin",
+    "title": "...",
+    "content": "...",
+    "sentiment_label": "positive/neutral/negative",
+    "key_arguments": ["..."],
+    "stakeholder_type": "consumer/business/academic/regulator",
+    "collection_date": "2026-06-03"
+  }
+  ```
+
+  Aim for at least 50 records across 3 time periods. Search the web.
+  Commit: "feat: platform antitrust sentiment dataset"

@@ -1,0 +1,126 @@
+# Phase 8: admin + version + copilot + remaining views (fully independent)
+title: "UI i18n — admin + version + copilot + remaining views"
+source: "sources/github/Yuuqq/smart-resume-builder"
+branch: "master"
+autoMode: "AUTO_CREATE_PR"
+
+prompt: |
+  ## Context
+  Streamlit + Python resume builder. Adding bilingual support.
+  Your job: create i18n stubs + translate ALL Chinese in 5 remaining view files.
+
+  ## Step 1: Create shared i18n infrastructure
+
+  Create `core/i18n_data/__init__.py`:
+  ```python
+  """i18n string data — auto-discovers all _*.py modules."""
+  from pathlib import Path
+  from typing import Dict
+  import importlib
+  import pkgutil
+
+  _ui_strings: Dict[str, Dict[str, str]] = {"zh": {}, "en": {}}
+  _loaded = False
+
+  def _load():
+      global _loaded, _ui_strings
+      if _loaded:
+          return
+      for module_info in pkgutil.iter_modules([str(Path(__file__).parent)]):
+          if module_info.name.startswith("_"):
+              try:
+                  mod = importlib.import_module(f"core.i18n_data.{module_info.name}")
+                  if hasattr(mod, "UI_STRINGS"):
+                      for locale, strings in mod.UI_STRINGS.items():
+                          _ui_strings.setdefault(locale, {}).update(strings)
+              except Exception:
+                  pass
+      _loaded = True
+
+  def get_ui_strings() -> Dict[str, Dict[str, str]]:
+      _load()
+      return _ui_strings
+  ```
+
+  Create `core/i18n.py`:
+  ```python
+  """Bilingual i18n module."""
+  import logging
+  from typing import Dict
+  import streamlit as st
+
+  logger = logging.getLogger(__name__)
+  LOCALE_ZH = "zh"
+  LOCALE_EN = "en"
+  DEFAULT_LOCALE = LOCALE_ZH
+
+  def get_locale() -> str:
+      return st.session_state.get("locale", DEFAULT_LOCALE)
+
+  def set_locale(locale: str) -> None:
+      st.session_state["locale"] = locale
+      try:
+          from core.user_manager import get_user_manager
+          user_session = st.session_state.get("user_session")
+          if user_session and user_session.user.role not in ("guest",):
+              mgr = get_user_manager()
+              mgr.update_locale(user_session.user.user_id, locale)
+      except Exception as e:
+          logger.warning("Failed to persist locale: %s", e)
+
+  def t(key: str, **kwargs) -> str:
+      from core.i18n_data import get_ui_strings
+      strings = get_ui_strings()
+      locale = get_locale()
+      text = strings.get(locale, {}).get(key, key)
+      if kwargs:
+          try:
+              return text.format(**kwargs)
+          except (KeyError, IndexError):
+              return text
+      return text
+  ```
+
+  ## Step 2: Create string data files
+
+  For each file below, READ the corresponding view file completely and extract ALL Chinese strings.
+
+  ### `core/i18n_data/_admin.py` — from `views/admin_dashboard.py`
+  Dashboard headers, metric labels, chart titles, table headers, export button labels, filter labels.
+
+  ### `core/i18n_data/_version.py` — from `views/version_manager.py`
+  Version list labels, comparison headers, button text (加载/删除/恢复), confirmation dialogs, version type labels (初始生成/通用润色/定向润色/手动保存), date/time labels.
+
+  ### `core/i18n_data/_copilot.py` — from `views/ai_copilot.py`
+  Chat interface labels, expander label, source citation text (来源/相关度), input placeholder, button labels.
+
+  ### `core/i18n_data/_common.py` — from `views/ai_ui.py` + `views/polish_view.py` + any Chinese in `views/common.py` that are UI strings (not function names or data processing)
+  Shared AI UI strings, polish view labels.
+
+  Each file structure:
+  ```python
+  UI_STRINGS = {
+      "zh": { "admin.title": "...", ... },
+      "en": { "admin.title": "...", ... },
+  }
+  ```
+
+  ## Step 3: Update the 5 view files
+
+  For each file:
+  1. Add `from core.i18n import t` at top
+  2. Replace EVERY Chinese string with t() call
+  3. For f-strings → t("key", var=value)
+
+  Files to modify:
+  - `views/admin_dashboard.py`
+  - `views/version_manager.py`
+  - `views/ai_copilot.py`
+  - `views/ai_ui.py`
+  - `views/polish_view.py`
+
+  ## Verification
+  - `grep -c "[一-鿿]" views/admin_dashboard.py views/version_manager.py views/ai_copilot.py views/ai_ui.py views/polish_view.py` — Chinese should only remain in comments
+
+  ## Commit
+  Message: `feat(i18n): translate admin, version, copilot and remaining view UI strings`

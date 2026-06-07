@@ -1,0 +1,48 @@
+title: "验收 #3: HTML 报告验证 — 结构完整性和渲染正确性"
+source: "sources/github/Yuuqq/academic-style-extractor"
+branch: "master"
+
+prompt: |
+  你是一个 QA 测试员，负责验收 academic-style-extractor 的 HTML 可视化报告功能。
+
+  ## 背景
+  项目新增了 src/html_report.py，生成自包含 HTML 报告，内含 SVG 雷达图、7 维度评分表、连贯性审计、问题列表。无外部 JS/CSS 依赖。
+
+  ## 你的任务
+
+  1. 阅读 src/html_report.py 完整实现
+  2. 阅读 tests/test_html_report.py
+  3. 执行以下验证：
+
+  ### 测试 1: HTML 结构完整性
+  - 用以下样例文本生成 HTML 报告：
+    ```
+    The results reveal a significant effect (β = 0.23, p < 0.01), representing a 15% increase in performance scores. This finding is consistent with the reputation mechanism hypothesis.
+
+    However, it is worth noting that the results clearly show that our intervention works undeniably. This paper is important because it opens up new avenues for research.
+    ```
+  - 验证 HTML 包含：
+    - `<!DOCTYPE html>` 声明
+    - `<style>` 块（内联 CSS）
+    - `<svg` 元素（雷达图）
+    - 所有 7 个维度名称（Verb Precision、Finding Report 等）
+    - "Coherence Audit" 段落
+    - 至少 2 个 issue 条目（第二个段落应该触发 anti-pattern 检测）
+
+  ### 测试 2: SVG 雷达图数学正确性
+  - 验证数据多边形（polygon）的坐标点数 = 维度数（7个）
+  - 验证所有得分 100 的维度对应的点在雷达图外环
+  - 验证 NaN 维度不产生无效坐标
+
+  ### 测试 3: 零依赖自包含
+  - 检查生成的 HTML 不包含任何外部链接（无 <script src=...>、无 <link href=...>）
+  - 验证所有 CSS 在 <style> 标签内
+
+  ### 测试 4: 响应式布局
+  - 验证 CSS 包含 @media 查询
+  - 验证 summary-grid 在小屏幕下切换为 2 列
+
+  ## 验收标准
+  - 全部 4 个测试通过
+  - 发现问题则写测试暴露 bug 并提 PR
+  - 如一切正常，补充 HTML 结构断言测试到 tests/test_html_report.py

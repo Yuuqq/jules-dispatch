@@ -1,0 +1,21 @@
+title: "P03: WeChat governance policy history (2018-2026)"
+source: "sources/github/Yuuqq/css-lab-platform-governance"
+branch: "main"
+prompt: |
+  Expand `data/微信_policies.json` with a policy timeline of WeChat (微信) governance rules from 2018 to 2026.
+
+  Collect at least 5 policy versions/updates including:
+  1. WeChat Official Account platform rules (公众号运营规范) - all major versions
+  2. WeChat Mini Program review guidelines (小程序审核规范)
+  3. WeChat Pay merchant rules (微信支付商户规范)
+  4. WeChat content moderation policy updates (内容管理规范)
+  5. WeChat privacy policy updates (隐私保护指引)
+
+  For each policy document, include:
+  - `policy_name`, `platform`: "微信"
+  - `version`, `effective_date`, `policy_type`
+  - `content_summary` (key rules in 200-500 chars)
+  - `key_changes_from_previous` (if applicable)
+  - `source_url`, `collection_date`
+
+  Search the web for these policy documents. Commit with message: "feat: WeChat governance policy timeline 2018-2026"

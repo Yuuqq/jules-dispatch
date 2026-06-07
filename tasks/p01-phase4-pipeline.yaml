@@ -1,0 +1,177 @@
+# Phase 4: Data Pipeline — 8 tasks
+---
+title: "[P4-T031] Document deduplication tool"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Create `tools/deduplicate.py` — deduplicate policy documents by URL and title similarity.
+
+  Implement:
+  1. `deduplicate(input_files: list[str], output_file: str) -> dict`
+  2. Phase 1: Exact URL dedup (remove duplicates, keep first occurrence)
+  3. Phase 2: Title fuzzy dedup using simhash (similarity ≥ 0.9 → merge, keep more complete record)
+  4. For merged records, keep all source URLs in a "source_urls" field
+  5. Input: glob pattern like "data/**/*.json"
+  6. Output: single merged file, e.g. "data/dedup/merged.json"
+  7. Print: "Before: 1200 | After URL dedup: 1150 | After fuzzy dedup: 1100 | Removed: 100"
+  8. Return stats dict
+
+  CLI: `python tools/deduplicate.py --input "data/**/*.json" --output data/dedup/merged.json`
+
+  Add simhash or similar to requirements.
+
+  Create the file and commit.
+---
+title: "[P4-T032] Text cleaning pipeline"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Create `tools/clean_text.py` — clean and normalize policy text.
+
+  Implement:
+  1. `clean_text(text: str) -> str` — single document cleaner
+  2. `clean_file(input_file: str, output_file: str) -> dict` — batch cleaner
+  3. Cleaning steps:
+     a. Remove HTML tags (if any remain)
+     b. Normalize whitespace: multiple spaces/newlines → single
+     c. Normalize quotes: ""'' → standard quotes
+     d. Normalize Chinese punctuation: fullwidth/halfwidth consistency
+     e. Preserve legal clause numbering format (第X条第X款第X项)
+     f. Remove navigation text, breadcrumbs, page footers (common web artifacts)
+     g. Strip leading/trailing whitespace
+  4. Update text_length field after cleaning
+  5. CLI: `python tools/clean_text.py --input data/dedup/merged.json --output data/cleaned/merged.json`
+  6. Print: records processed, average text length before/after
+
+  Create the file and commit.
+---
+title: "[P4-T033] Metadata extraction tool"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Create `tools/extract_metadata.py` — extract structured metadata from full_text using regex.
+
+  Implement:
+  1. `extract_issuing_body(text: str) -> str` — e.g. "全国人民代表大会常务委员会"
+  2. `extract_document_number(text: str) -> str` — e.g. "中华人民共和国主席令第八十四号"
+  3. `extract_effective_date(text: str) -> str` — e.g. "本法自2021年9月1日起施行"
+  4. `extract_amendments(text: str) -> list[dict]` — e.g. "根据2023年修正"
+  5. `enrich_document(doc: dict) -> dict` — apply all extractors, fill missing fields
+  6. `enrich_file(input_file: str, output_file: str) -> dict`
+  7. CLI: `python tools/extract_metadata.py --input data/cleaned/merged.json --output data/enriched/merged.json`
+  8. Print: fields enriched count (e.g. "issuing_body: +120, effective_date: +85")
+
+  Create the file and commit.
+---
+title: "[P4-T034] Domain keyword auto-tagger"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Create `tools/auto_tagger.py` — auto-tag documents with domain labels and keywords.
+
+  Implement:
+  1. `load_configs(config_dir: str = "configs/") -> dict[str, list[str]]` — load all YAML keyword configs
+  2. `tag_document(doc: dict, configs: dict) -> tuple[list[str], list[str]]` — returns (domains, keywords)
+  3. Domain matching: if text contains ≥ 3 keywords from a config → assign that domain
+  4. Keyword extraction: TF-IDF top 10 terms from full_text, filtered against config keywords
+  5. `tag_file(input_file: str, output_file: str, config_dir: str = "configs/") -> dict`
+  6. CLI: `python tools/auto_tagger.py --input data/enriched/merged.json --output data/tagged/merged.json`
+  7. Print: domain distribution, top keywords
+
+  Add scikit-learn or jieba to requirements for TF-IDF/Chinese tokenization.
+  Use jieba for Chinese text segmentation.
+
+  Create the file and commit.
+---
+title: "[P4-T035] Related document linker"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Create `tools/link_related.py` — find related documents by cross-referencing legal citations.
+
+  Implement:
+  1. `extract_citations(text: str) -> list[str]` — extract patterns like "《中华人民共和国XX法》", "XX规定", "XX办法"
+  2. `match_citations(citations: list[str], all_docs: list[dict]) -> list[dict]`
+     - Match citation text against document titles (fuzzy match)
+  3. `link_documents(input_file: str, output_file: str) -> dict`
+     - For each doc, populate related_docs field with matched doc_ids
+     - Unresolved citations stored in "unresolved_citations" field
+  4. CLI: `python tools/link_related.py --input data/tagged/merged.json --output data/linked/merged.json`
+  5. Print: total citations found, resolved count, unresolved count, top unresolved citations
+
+  Create the file and commit.
+---
+title: "[P4-T036] Data quality checker"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Create `tools/quality_check.py` — validate data completeness and quality.
+
+  Implement:
+  1. `check_completeness(doc: dict) -> dict` — check all 15 required fields present
+  2. `check_full_text(doc: dict) -> dict` — check length ≥ 100 chars, not truncated
+  3. `check_dates(doc: dict) -> dict` — check date format YYYY-MM-DD, logical order (effective ≥ publish)
+  4. `run_quality_report(input_file: str, output_file: str) -> dict`
+  5. Output `reports/quality_report.json`:
+     ```json
+     {
+       "total": 800,
+       "field_completeness": {"doc_id": 1.0, "full_text": 0.95, ...},
+       "issues": [
+         {"doc_id": "XXX", "field": "full_text", "issue": "text_length=45, below minimum 100"},
+         ...
+       ],
+       "overall_score": 0.92
+     }
+     ```
+  6. Print terminal summary with color-coded pass/warn/fail
+  7. CLI: `python tools/quality_check.py --input data/linked/merged.json --output reports/quality_report.json`
+
+  Create the file and commit.
+---
+title: "[P4-T037] Collection statistics generator"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Create `tools/collection_stats.py` — generate collection statistics as JSON + Markdown.
+
+  Implement:
+  1. `generate_stats(input_file: str) -> dict`
+  2. Statistics dimensions:
+     - By domain (数据安全/环境治理/城市治理/公地治理/平台治理)
+     - By hierarchy (法律/行政法规/部门规章/规范性文件/司法解释)
+     - By year (publish_date distribution)
+     - By source (FLK/GOV.CN/Ministry/Exa)
+     - By status (现行有效/尚未施行/已废止)
+     - Text length statistics (min/max/mean/median)
+  3. Output `reports/stats.json`
+  4. Output `reports/stats.md` — Markdown tables ready for copy-paste into papers
+  5. CLI: `python tools/collection_stats.py --input data/linked/merged.json`
+
+  Create the file and commit.
+---
+title: "[P4-T038] Data export tool"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Create `tools/export_data.py` — export policy database to multiple formats.
+
+  Implement:
+  1. `export_csv(input_file: str, output_dir: str)` — flatten nested fields, output CSV
+     - Flatten: domain → "domain_1;domain_2", keywords → "kw1;kw2;kw3"
+  2. `export_tsv(input_file: str, output_dir: str)` — same as CSV but tab-separated
+  3. `export_bibtex(input_file: str, output_dir: str)` — legal citation format
+     - @legislation{key, title={...}, author={issuing_body}, year={2021}, note={document_number}, ...}
+  4. CLI: `python tools/export_data.py --input data/linked/merged.json --format csv --output data/export/`
+  5. Support --format all for all three formats
+  6. Print: records exported, file sizes
+
+  Create the file and commit.

@@ -1,0 +1,91 @@
+# Deferred: 80%+ test coverage on core/ modules
+title: "Increase Core Test Coverage to 80%+"
+source: "sources/github/Yuuqq/smart-resume-builder"
+branch: "master"
+autoMode: "AUTO_CREATE_PR"
+
+prompt: |
+  ## Context
+  Streamlit + Python resume builder. Current test coverage is ~71% on `core/` modules. Goal: reach 80%+ by adding targeted tests for uncovered code paths.
+
+  ## Task
+
+  ### 1. Run coverage analysis
+
+  ```bash
+  cd /path/to/project
+  pip install pytest pytest-cov
+  python -m pytest tests/ --cov=core --cov-report=term-missing --no-header -q
+  ```
+
+  Note which modules and specific lines are NOT covered. Focus on:
+  - `core/ai_guard.py` — uncovered branches
+  - `core/ai_service.py` — uncovered functions
+  - `core/data_manager.py` — uncovered methods
+  - `core/user_manager.py` — uncovered edge cases
+  - `core/session_token.py` — uncovered paths
+  - `core/config.py` — uncovered methods
+
+  ### 2. Add targeted tests for uncovered code
+
+  In the existing test files under `tests/`, add test classes/methods for uncovered paths:
+
+  **tests/test_ai_guard.py** — Add:
+  - Global cost cap enforcement (exceeding daily cost cap blocks requests)
+  - Config reload (hot-reload of rate limit config from file)
+  - Circuit breaker half-open → open transition (probe failure)
+  - Circuit breaker half-open → closed transition (probe success)
+  - get_usage_summary() with no data
+  - export_usage_json round-trip
+
+  **tests/test_ai_service.py** — Add or expand:
+  - extract_resume_from_text with empty input
+  - extract_resume_from_text with very long input (>5000 chars)
+  - optimize_resume_section with various section names
+  - analyze_job_match with missing JD
+  - _parse_json_from_response with malformed JSON
+  - _parse_json_from_response with markdown code fences
+  - API retry on transient errors
+  - API timeout handling
+
+  **tests/test_data_manager.py** — Add:
+  - Save and load resume with Unicode characters
+  - Version management (save, list, load specific version)
+  - Load non-existent student/version
+  - Delete version
+  - Cache entry with custom TTL
+  - load_template with invalid layout name (fallback to modern)
+
+  **tests/test_security.py** — Add:
+  - Session token with expired timestamp
+  - Session token with invalid signature
+  - Password validation (too short, exactly 8 chars, very long)
+  - Registration rate limiting
+  - Multiple failed login attempts → lockout → successful unlock after cooldown
+
+  **tests/test_config.py** — Add (create if needed):
+  - Config singleton returns same instance
+  - get_template_path for each layout
+  - competency_matrix lazy loading
+  - _load_json with missing file
+  - _load_json with invalid JSON
+
+  ### 3. Verify coverage
+
+  ```bash
+  python -m pytest tests/ --cov=core --cov-report=term-missing -q
+  ```
+
+  Target: 80%+ line coverage on ALL core/ modules.
+
+  If any module is still below 80%, add more targeted tests for the specific uncovered lines shown in the report.
+
+  ## Important
+  - Use existing fixtures from `tests/conftest.py`
+  - Mock all external dependencies (AI API calls, file I/O where appropriate, Streamlit)
+  - Don't modify production code — only add tests
+  - Follow existing test naming patterns in the project
+  - Each test should be independent (no test ordering dependencies)
+
+  ## Commit
+  Message: `test: increase core module test coverage to 80%+`

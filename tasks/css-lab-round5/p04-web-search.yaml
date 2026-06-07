@@ -1,0 +1,30 @@
+title: "P04: Build simple web search interface for RAG"
+source: "sources/github/Yuuqq/css-lab-rag-agent"
+branch: "main"
+prompt: |
+  Build a simple web search interface for the RAG agent.
+
+  The `index/search_index.json` already has the TF-IDF index. Create a self-contained web interface.
+
+  1. Create `app.py` — a minimal Flask/Python HTTP server:
+     - `GET /` — serves the HTML interface
+     - `GET /search?q=keyword&top=10` — JSON API that:
+       a. Reads search_index.json
+       b. Tokenizes query with jieba
+       c. Scores docs by TF-IDF
+       d. Returns top-k results with metadata
+     - `GET /doc/<doc_id>` — returns full document from policy database
+
+  2. Create `static/index.html` — a clean search UI:
+     - Search bar with auto-suggestions
+     - Results displayed as cards: title, doc_type, issuing_body, domain tags, date
+     - Click to expand full text
+     - Filter by domain, doc_type, hierarchy
+     - Chinese interface
+
+  3. Create `requirements.txt` — flask, jieba
+
+  Do NOT use any heavy ML frameworks. Keep it simple and self-contained.
+  The policy data file is at `../css-lab-policy-db/data/processed/normalized_all_policies.json` — read it at runtime.
+
+  Commit: "feat: add Flask web search interface for RAG agent"

@@ -1,0 +1,37 @@
+---
+title: "[GOV-CN] Collect authoritative policy data from gov.cn via Exa"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Use Exa API with gov.cn domain restriction to collect authoritative Chinese government policy documents.
+
+  This is a SUPPLEMENTARY collection task — we already have 946 records from general Exa search, but only 38% are from government websites. This task specifically targets gov.cn domains to increase authoritative source coverage.
+
+  Steps:
+  1. Ensure the repo is up to date: `git pull origin main`
+  2. Install dependency: `pip install exa-py>=2.0.0`
+  3. Run the gov.cn-limited collection script:
+     ```
+     export EXA_API_KEY=<EXA_API_KEY>
+     python tasks/collect_exa_govcn_all.py
+     ```
+  4. The script will:
+     - Search 6 policy domains with `include_domains=["gov.cn"]`
+     - Save results to `data/by_source/A_authoritative/`
+     - Files will be named: `{domain}_govcn.json`
+  5. If the script fails, check `exa_client.py` for SDK compatibility:
+     - `search()` accepts `include_domains` parameter
+     - Do NOT use deprecated `use_autoprompt`
+     - Use `type="auto"`
+  6. After successful run, verify output files exist:
+     ```
+     ls data/by_source/A_authoritative/*_govcn.json
+     ```
+  7. Count total records collected and include in commit message
+  8. If any domain returns 0 results, note it in the commit message
+
+  IMPORTANT:
+  - The script limits searches to gov.cn domains only
+  - This ensures collected data comes from authoritative government sources
+  - Expected: 30-100 additional authoritative records

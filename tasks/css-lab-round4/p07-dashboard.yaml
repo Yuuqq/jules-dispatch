@@ -1,0 +1,28 @@
+title: "P07: Build static HTML visualization dashboard"
+source: "sources/github/Yuuqq/css-lab-visualization"
+branch: "main"
+prompt: |
+  Create a single-file `dashboard.html` static visualization dashboard for the CSS Lab Policy Database.
+
+  The `data/` directory already has these JSON files:
+  - `domain_distribution.json` - [{domain, count, percentage}, ...]
+  - `timeline.json` - [{year, count}, ...]
+  - `hierarchy_distribution.json` - [{type, count}, ...]
+  - `institution_heatmap.json` - [{institution, domain, count}, ...]
+  - `source_tier_pie.json` - [{tier, count}, ...]
+
+  Also read `all_structured.json` from `../css-lab-policy-db/data/processed/` or from `data/` if available.
+
+  Build a self-contained HTML file (no external dependencies) with:
+  1. **Header**: "CSS Lab 政策数据库可视化" with total doc count
+  2. **Domain Distribution**: Horizontal bar chart (pure SVG, no libs)
+  3. **Timeline**: Line chart showing policy count by year (pure SVG)
+  4. **Hierarchy**: Pie/donut chart for document types
+  5. **Source Quality**: Simple pie for A/B/C tiers
+  6. **Institution Heatmap**: Grid table showing institution × domain coverage
+  7. **Key Stats Cards**: Total docs, avg text length, date range, domains covered
+
+  Use inline CSS. Chinese UI. Color scheme: blues/teals. Responsive layout.
+  Embed the data directly in the HTML as JS variables (read from JSON files).
+
+  Commit with message: "feat: add static HTML visualization dashboard"

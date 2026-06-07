@@ -1,0 +1,35 @@
+title: "P08: Expand data atlas to 60+ resources with detailed metadata"
+source: "sources/github/Yuuqq/css-lab-data-atlas"
+branch: "main"
+prompt: |
+  Expand the data resource atlas from current ~30 resources to 60+.
+
+  Read `data/data_resource_atlas.json` to see existing entries. Then add new resources via web search in these categories:
+
+  **Chinese Government Data (add 8+):**
+  - 北京市政务数据开放平台, 上海市公共数据开放平台, 贵州省数据开放平台
+  - 国家统计局数据库, 中国知网(CNKI), 万方数据
+  - 信用中国, 中国裁判文书网
+
+  **International Open Data (add 8+):**
+  - World Bank Open Data, UN Data Portal, OECD Data
+  - European Data Portal, Data.gov (US), Kaggle Datasets
+  - Google Dataset Search, HAL archives
+
+  **CSS Research Tools (add 6+):**
+  - GDELT Project, Media Cloud, CrowdTangle alternatives
+  - NLPIRC (Chinese NLP), THUOCL (Chinese lexicon)
+  - Computational Social Science Society (CSSSA)
+
+  **Platform Data & APIs (add 6+):**
+  - Weibo API docs, Twitter/X API, Reddit API/PRAW
+  - TikTok Research API, YouTube Data API, Douyin Open Platform
+
+  **Academic Databases (add 4+):**
+  - Google Scholar, Semantic Scholar, JSTOR, SSRN
+
+  For each: id, name, url, domain, subdomain, data_type, access_method (api/web_scraping/download), language (zh/en/both), description (50-100 chars), coverage_period, license, notes
+
+  Search the web for URLs and verify they exist.
+
+  Commit: "feat: expand data resource atlas to 60+ resources"

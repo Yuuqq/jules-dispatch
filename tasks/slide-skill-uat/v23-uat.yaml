@@ -1,0 +1,467 @@
+# UAT Tasks for slide-skill v2.3 (Phases 31-33)
+# Usage: npx tsx src/cli.ts batch tasks/slide-skill-uat
+
+---
+title: "UAT — Phase 31: Advanced Filter Effects (soft edge, glow, effectLst ordering)"
+source: "sources/github/Yuuqq/slide-skill"
+branch: "master"
+prompt: |
+  You are a QA tester performing acceptance testing on Phase 31 of the slide-skill project.
+
+  ## Your Role
+  Simulate a human tester. Do NOT just run existing unit tests — perform exploratory end-to-end verification as described below. Write a detailed report.
+
+  ## Project Setup
+  1. Install the package in dev mode:
+     ```
+     cd tools/slide && pip install -e ".[dev,pdf]"
+     ```
+  2. Verify pytest works:
+     ```
+     python -m pytest tests/test_filter_effects.py -v
+     ```
+     All 32 tests should pass.
+
+  ## Requirements to Verify (from ROADMAP.md)
+
+  **FE-01**: SVG with `feGaussianBlur` on `SourceAlpha` (no companion feOffset/feFlood) → exported PPTX contains `<a:softEdge rad="N"/>` with radius derived from `stdDeviation`
+
+  **FE-02**: SVG with `feGaussianBlur` + `feFlood` + `feComposite` chain (no feOffset) → exported PPTX contains `<a:glow>` with color from feFlood and radius from the Gaussian blur
+
+  **FE-03**: Shape with both glow and shadow effects has both `<a:glow>` and `<a:outerShdw>` in the same `<a:effectLst>`, ordered per XSD sequence (blur, fillOverlay, glow, innerShdw, outerShdw, prstShdw, reflection, softEdge)
+
+  **FE-04**: SVG QA no longer flags `feFlood`, `feComposite`, or `feMerge` as banned tags
+
+  **FE-05**: feFlood, feComposite, feMerge already in SUPPORTED_DRAWABLE_TAGS
+
+  ## End-to-End Verification (CRITICAL — do all of these)
+
+  ### Test A: Soft Edge
+  Create a test SVG file `/tmp/test-soft-edge.svg`:
+  ```xml
+  <svg xmlns="http://www.w3.org/2000/svg" width="960" height="540">
+    <defs>
+      <filter id="soft1" x="-20%" y="-20%" width="140%" height="150%">
+        <feGaussianBlur in="SourceAlpha" stdDeviation="4"/>
+      </filter>
+    </defs>
+    <rect x="100" y="100" width="400" height="200" fill="#3B82F6" filter="url(#soft1)"/>
+  </svg>
+  ```
+  Run: `python -c "from slide_skill.exporter import render_pptx; render_pptx('/tmp/test-soft-edge.svg', '/tmp/test-soft-edge.pptx')"`
+  Unzip the PPTX: `cd /tmp && python -c "import zipfile; zipfile.ZipFile('test-soft-edge.pptx').extractall('test-soft-edge-xml')"`
+  Search for softEdge in the XML: `grep -r "softEdge" /tmp/test-soft-edge-xml/`
+  **VERIFY**: `<a:softEdge rad=` is present with rad > 0.
+
+  ### Test B: Glow Effect
+  Create `/tmp/test-glow.svg`:
+  ```xml
+  <svg xmlns="http://www.w3.org/2000/svg" width="960" height="540">
+    <defs>
+      <filter id="glow1" x="-20%" y="-20%" width="140%" height="150%">
+        <feGaussianBlur in="SourceAlpha" stdDeviation="5" result="blur"/>
+        <feFlood flood-color="#FF6B35" flood-opacity="0.6" result="color"/>
+        <feComposite in="color" in2="blur" operator="in" result="glow"/>
+        <feMerge>
+          <feMergeNode in="glow"/>
+          <feMergeNode in="SourceGraphic"/>
+        </feMerge>
+      </filter>
+    </defs>
+    <rect x="100" y="100" width="400" height="200" fill="#3B82F6" filter="url(#glow1)"/>
+  </svg>
+  ```
+  Export and unzip same way. Search: `grep -r "glow" /tmp/test-glow-xml/`
+  **VERIFY**: `<a:glow rad=` is present AND `<a:srgbClr val="FF6B35"/>` is inside it AND alpha matches 0.6.
+
+  ### Test C: Glow + Shadow Coexistence
+  Create `/tmp/test-glow-shadow.svg` with BOTH a glow chain and a drop shadow in the same filter applied to the same shape:
+  ```xml
+  <svg xmlns="http://www.w3.org/2000/svg" width="960" height="540">
+    <defs>
+      <filter id="glowShadow" x="-20%" y="-20%" width="140%" height="150%">
+        <feGaussianBlur in="SourceAlpha" stdDeviation="5" result="blur"/>
+        <feFlood flood-color="#FF6B35" flood-opacity="0.6" result="color"/>
+        <feComposite in="color" in2="blur" operator="in" result="glow"/>
+        <feDropShadow dx="2" dy="3" stdDeviation="4" flood-color="#000000" flood-opacity="0.25" result="shadow"/>
+        <feMerge>
+          <feMergeNode in="shadow"/>
+          <feMergeNode in="glow"/>
+          <feMergeNode in="SourceGraphic"/>
+        </feMerge>
+      </filter>
+    </defs>
+    <rect x="100" y="100" width="400" height="200" fill="#3B82F6" filter="url(#glowShadow)"/>
+  </svg>
+  ```
+  Export and unzip as above.
+  **VERIFY**: The same exported shape has one `<a:effectLst>` containing both `<a:glow>` and `<a:outerShdw>`. Testing glow and shadow on separate shapes does NOT satisfy FE-03.
+
+  ### Test D: QA Tag Check
+  Run: `python -c "from slide_skill.qa import run_qa; print('QA on glow SVG:'); run_qa('/tmp/test-glow.svg')"`
+  **VERIFY**: No warnings about feFlood, feComposite, or feMerge being unsupported tags.
+
+  ### Test E: XSD Ordering
+  In the glow+shadow test, extract the effectLst XML and verify children appear in this order:
+  blur → fillOverlay → glow → innerShdw → outerShdw → prstShdw → reflection → softEdge
+  (Only the present ones matter, but they must be in this relative order.)
+
+  ## Report
+  Write a detailed UAT report to `.planning/phases/31-advanced-filter-effects/31-UAT-REPORT.md`:
+
+  ```markdown
+  # UAT Report: Phase 31 — Advanced Filter Effects
+  **Tester:** Jules (AI QA Agent)
+  **Date:** <today>
+
+  ## Summary
+  <PASS / FAIL / PARTIAL>
+
+  ## Per-Requirement Results
+
+  | Req | Description | Result | Evidence |
+  |-----|-------------|--------|----------|
+  | FE-01 | Soft edge → PPTX | PASS/FAIL | <what you found in XML> |
+  | FE-02 | Glow → PPTX | PASS/FAIL | <what you found> |
+  | FE-03 | XSD ordering | PASS/FAIL | <XML snippet> |
+  | FE-04 | QA no banned tags | PASS/FAIL | <output> |
+  | FE-05 | SUPPORTED_DRAWABLE_TAGS | PASS/FAIL | <checked code> |
+
+  ## Issues Found
+  <any bugs, unexpected behavior, or edge cases>
+
+  ## Test Artifacts
+  <list all generated files with paths>
+  ```
+
+  Commit the report file only. Do NOT modify any source code or existing tests.
+
+---
+title: "UAT — Phase 32: Bilingual Export (dual-language text layout)"
+source: "sources/github/Yuuqq/slide-skill"
+branch: "master"
+prompt: |
+  You are a QA tester performing acceptance testing on Phase 32 of the slide-skill project.
+
+  ## Your Role
+  Simulate a human tester verifying bilingual (Chinese + English) slide export. Do exploratory testing beyond unit tests.
+
+  ## Project Setup
+  1. Install the package:
+     ```
+     cd tools/slide && pip install -e ".[dev,pdf]"
+     ```
+  2. Run existing tests to confirm baseline:
+     ```
+     python -m pytest tests/test_bilingual.py -v
+     ```
+
+  ## Requirements to Verify (from ROADMAP.md)
+
+  **BI-01**: SVG element with `data-bilingual="true"` containing Chinese and English `<text>` children → two PPTX text frames stacked vertically (Chinese above, English below)
+
+  **BI-02**: Slide with `data-layout="side-by-side"` → Chinese text on LEFT, English text on RIGHT in exported PPTX
+
+  **BI-03**: English text frame uses smaller font size than Chinese frame (e.g., 18pt vs 24pt), customizable via `data-lang-size` attribute
+
+  **BI-04**: `_approx_w_in()` and `i18n.py` LanguageProfile use consistent CJK width factor (unified from 1.0 vs 1.8 mismatch)
+
+  **BI-05**: Arabic/Hebrew text paired with English → correct RTL layout in PPTX bilingual text frames
+
+  ## End-to-End Verification (CRITICAL)
+
+  ### Test A: Stacked Bilingual (BI-01)
+  Create `/tmp/test-bilingual-stacked.svg`:
+  ```xml
+  <svg xmlns="http://www.w3.org/2000/svg" width="960" height="540">
+    <rect width="960" height="540" fill="#1a1a2e"/>
+    <g data-bilingual="true">
+      <text x="80" y="80" font-size="28" fill="#FFFFFF">人工智能与教育创新</text>
+      <text x="80" y="120" font-size="20" fill="#CCCCCC">AI and Educational Innovation</text>
+    </g>
+  </svg>
+  ```
+  Export: `python -c "from slide_skill.exporter import render_pptx; render_pptx('/tmp/test-bilingual-stacked.svg', '/tmp/test-bilingual-stacked.pptx')"`
+  Open the PPTX with python-pptx:
+  ```python
+  from pptx import Presentation
+  prs = Presentation('/tmp/test-bilingual-stacked.pptx')
+  for slide in prs.slides:
+      for shape in slide.shapes:
+          print(f"Shape: {shape.shape_type}, Name: {shape.name}")
+          if shape.has_text_frame:
+              for para in shape.text_frame.paragraphs:
+                  print(f"  Text: {para.text}")
+  ```
+  **VERIFY**:
+  - At least 2 text frames exist (one for Chinese, one for English)
+  - Chinese text contains "人工智能与教育创新"
+  - English text contains "AI and Educational Innovation"
+  - Chinese frame is ABOVE English frame (check top/left positions)
+
+  ### Test B: Side-by-Side Layout (BI-02)
+  Create `/tmp/test-bilingual-sbs.svg` with `data-layout="side-by-side"`:
+  ```xml
+  <svg xmlns="http://www.w3.org/2000/svg" width="960" height="540">
+    <rect width="960" height="540" fill="#1a1a2e"/>
+    <g data-bilingual="true" data-layout="side-by-side">
+      <text x="60" y="80" font-size="24" fill="#FFFFFF">中文内容</text>
+      <text x="500" y="80" font-size="18" fill="#CCCCCC">English Content</text>
+    </g>
+  </svg>
+  ```
+  Export and inspect. **VERIFY**: Chinese frame's left position < English frame's left position.
+
+  ### Test C: Custom Font Sizes (BI-03)
+  Create `/tmp/test-bilingual-sizes.svg` with `data-lang-size="zh:20;en:14"`:
+  ```xml
+  <svg xmlns="http://www.w3.org/2000/svg" width="960" height="540">
+    <rect width="960" height="540" fill="#1a1a2e"/>
+    <g data-bilingual="true" data-lang-size="zh:20;en:14">
+      <text x="80" y="80" font-size="24" fill="#FFFFFF">自定义字号中文</text>
+      <text x="80" y="120" font-size="18" fill="#CCCCCC">Custom size English</text>
+    </g>
+  </svg>
+  ```
+  Export and inspect font sizes of both frames.
+  **VERIFY**: Chinese frame font size = 20pt, English frame font size = 14pt.
+
+  ### Test D: CJK Width Factor Consistency (BI-04)
+  ```python
+  from slide_skill.converters import approx_w_in
+  from slide_skill.i18n import CJK_CHAR_WIDTH, LATIN_CHAR_WIDTH
+  # Verify both use the same factor
+  print(f"CJK factor: {CJK_CHAR_WIDTH}")
+  print(f"Latin factor: {LATIN_CHAR_WIDTH}")
+  cjk_w = approx_w_in("人工智能", 24)
+  lat_w = approx_w_in("Artificial", 24)
+  print(f"CJK '人工智能' width: {cjk_w}")
+  print(f"Latin 'Artificial' width: {lat_w}")
+  # CJK should be wider per character
+  ```
+  **VERIFY**: `CJK_CHAR_WIDTH` and the internal factor in `approx_w_in` are consistent (not one using 1.0 and another using 1.8).
+
+  ### Test E: RTL Support (BI-05)
+  Create `/tmp/test-bilingual-rtl.svg`:
+  ```xml
+  <svg xmlns="http://www.w3.org/2000/svg" width="960" height="540">
+    <rect width="960" height="540" fill="#1a1a2e"/>
+    <g data-bilingual="true">
+      <text x="80" y="80" font-size="24" fill="#FFFFFF" dir="rtl">مرحبا بالعالم</text>
+      <text x="80" y="120" font-size="18" fill="#CCCCCC">Hello World</text>
+    </g>
+  </svg>
+  ```
+  Export and check if PPTX opens without errors. Inspect text frame properties for RTL attributes if accessible.
+
+  ## Report
+  Write to `.planning/phases/32-bilingual-export/32-UAT-REPORT.md`:
+
+  ```markdown
+  # UAT Report: Phase 32 — Bilingual Export
+  **Tester:** Jules (AI QA Agent)
+  **Date:** <today>
+
+  ## Summary
+  <PASS / FAIL / PARTIAL>
+
+  ## Per-Requirement Results
+
+  | Req | Description | Result | Evidence |
+  |-----|-------------|--------|----------|
+  | BI-01 | Stacked bilingual frames | PASS/FAIL | <evidence> |
+  | BI-02 | Side-by-side layout | PASS/FAIL | <evidence> |
+  | BI-03 | Custom font sizes via data-lang-size | PASS/FAIL | <evidence> |
+  | BI-04 | CJK width factor consistency | PASS/FAIL | <values found> |
+  | BI-05 | RTL text support | PASS/FAIL | <evidence> |
+
+  ## Issues Found
+  <any bugs, unexpected behavior, or edge cases>
+
+  ## Test Artifacts
+  <list all generated files>
+  ```
+
+  Create the directory if it doesn't exist: `mkdir -p .planning/phases/32-bilingual-export`
+  Commit the report file only. Do NOT modify any source code or existing tests.
+
+---
+title: "UAT — Phase 33: PDF Handout Export (slides + notes as PDF)"
+source: "sources/github/Yuuqq/slide-skill"
+branch: "master"
+prompt: |
+  You are a QA tester performing acceptance testing on Phase 33 of the slide-skill project.
+
+  ## Your Role
+  Simulate a human tester verifying PDF handout export with slide thumbnails and speaker notes.
+
+  ## Project Setup
+  1. Install with PDF support:
+     ```
+     cd tools/slide && pip install -e ".[dev,pdf]"
+     ```
+  2. Run existing tests:
+     ```
+     python -m pytest tests/test_pdf_handout.py -v
+     ```
+
+  ## Requirements to Verify (from ROADMAP.md)
+
+  **PD-01**: Running PDF handout command on a deck with speaker notes → multi-page PDF where each page has one slide thumbnail at top and speaker notes below
+
+  **PD-02**: 2-up or 3-up layout → PDF arranges 2 or 3 smaller slide thumbnails per page with their respective notes
+
+  **PD-03**: Speaker notes with bold, italic, and bullet lists render with corresponding formatting in PDF
+
+  **PD-04**: Canvas presets (ppt169, xhs, wechat) automatically set correct page aspect ratio
+
+  **PD-05**: Chinese speaker notes render correctly in PDF with embedded CJK font (Noto Sans SC or system font fallback)
+
+  ## End-to-End Verification (CRITICAL)
+
+  ### Test A: Basic 1-up PDF with Notes (PD-01)
+  First, check how to invoke the PDF handout export:
+  ```bash
+  python -m slide_skill --help 2>/dev/null || python -c "from slide_skill.cli import main; main(['--help'])"
+  ```
+  Look for a `pdf-handout` or `handout` subcommand. If it exists, use it. Otherwise check `pdf_handout.py` module directly.
+
+  Create a test deck with speaker notes. You can:
+  1. Create a minimal PPTX file with 3 slides, each having speaker notes
+  2. Or use an existing test fixture from the project
+
+  Example using python-pptx:
+  ```python
+  from pptx import Presentation
+  from pptx.util import Inches
+
+  prs = Presentation()
+  slides = [
+      ("Introduction", [("Welcome to the presentation.", None), ("Point one", "bullet"), ("Point two", "bullet")]),
+      ("Methodology", [("Bold method", "bold"), (" and ", None), ("italic approach", "italic"), ("Step 1", "bullet"), ("Step 2", "bullet")]),
+      ("Results", [("中文笔记内容", None), ("结果一", "bullet"), ("结果二", "bullet")]),
+  ]
+  for title, notes in slides:
+      slide = prs.slides.add_slide(prs.slide_layouts[1])
+      slide.shapes.title.text = title
+      notes_frame = slide.notes_slide.notes_text_frame
+      notes_frame.clear()
+      current_para = notes_frame.paragraphs[0]
+      for text, style in notes:
+          if style == "bullet":
+              current_para = notes_frame.add_paragraph()
+              current_para.text = text
+              current_para.level = 0
+              continue
+          run = current_para.add_run()
+          run.text = text
+          if style == "bold":
+              run.font.bold = True
+          if style == "italic":
+              run.font.italic = True
+  prs.save('/tmp/test-handout.pptx')
+  ```
+
+  Generate PDF handout from this deck. Check the API:
+  ```python
+  from slide_skill.pdf_handout import generate_handout
+  # or whatever the public API is — read pdf_handout.py to find out
+  ```
+
+  **VERIFY**:
+  - PDF file is created and non-empty
+  - PDF has 3 pages (one per slide)
+  - Each page has a slide image/thumbnail and text below it
+  - Page 1 contains "Welcome to the presentation"
+  - Page 2 contains "Bold method" and "italic approach"
+  - Page 3 contains "中文笔记内容"
+
+  You can verify PDF content:
+  ```python
+  import subprocess
+  # Extract text from PDF
+  result = subprocess.run(['python', '-c', '''
+  import fitz  # PyMuPDF if available
+  doc = fitz.open("/tmp/test-handout.pdf")
+  for i, page in enumerate(doc):
+      print(f"--- Page {i+1} ---")
+      print(page.get_text())
+  '''], capture_output=True, text=True)
+  # Or use fpdf2's built-in text extraction, or just check file size > 0
+  ```
+
+  ### Test B: 2-up Layout (PD-02)
+  Generate PDF with 2-up layout (2 slides per page). Check available layout options in `pdf_handout.py`.
+  ```python
+  # Read the module to find layout parameter
+  # Likely: Layout.TWO_UP or Layout(2) or similar
+  ```
+  **VERIFY**: PDF has fewer pages (2 slides fit on 1 page → 2 pages for 3 slides instead of 3).
+
+  ### Test C: Formatted Notes (PD-03)
+  From Test A's page 2 output, verify:
+  - "Bold method" appears and was sourced from a PPTX run with `font.bold = True`
+  - "italic approach" appears and was sourced from a PPTX run with `font.italic = True`
+  - Bullet items "Step 1" and "Step 2" appear
+  Check the PDF text output and inspect the PDF visually or structurally if the handout renderer exposes rich text spans. Plain Markdown markers like `**bold**` do NOT satisfy PD-03.
+
+  ### Test D: Canvas Preset Aspect Ratios (PD-04)
+  ```python
+  from slide_skill.pdf_handout import _page_aspect
+  # or check how canvas format affects page size
+  for fmt in ['ppt169', 'xhs', 'wechat']:
+      # Try each format and check resulting page dimensions
+      print(f"{fmt}: aspect ratio = ...")
+  ```
+  **VERIFY**: ppt169 → 16:9 ratio, xhs → 3:4 (portrait), wechat → appropriate ratio.
+
+  ### Test E: CJK Text in PDF (PD-05)
+  From Test A's page 3, verify Chinese characters "中文笔记内容", "结果一", "结果二" are present.
+  If the PDF contains garbled text or missing characters, that's a FAIL.
+
+  ## Additional Exploratory Tests
+
+  ### Test F: Empty Notes
+  Create a slide with no speaker notes. Generate PDF handout.
+  **VERIFY**: Page is created (with just the thumbnail), no crash.
+
+  ### Test G: Long Notes
+  Create a slide with very long speaker notes (500+ words).
+  **VERIFY**: Notes don't overflow or get cut off (or if they do, it's noted as a limitation).
+
+  ## Report
+  Write to `.planning/phases/33-pdf-handout-export/33-UAT-REPORT.md`:
+
+  ```markdown
+  # UAT Report: Phase 33 — PDF Handout Export
+  **Tester:** Jules (AI QA Agent)
+  **Date:** <today>
+
+  ## Summary
+  <PASS / FAIL / PARTIAL>
+
+  ## Per-Requirement Results
+
+  | Req | Description | Result | Evidence |
+  |-----|-------------|--------|----------|
+  | PD-01 | 1-up PDF with notes | PASS/FAIL | <evidence> |
+  | PD-02 | 2-up/3-up layout | PASS/FAIL | <evidence> |
+  | PD-03 | Formatted notes (bold/italic/bullets) | PASS/FAIL | <evidence> |
+  | PD-04 | Canvas preset aspect ratios | PASS/FAIL | <values> |
+  | PD-05 | CJK text in PDF | PASS/FAIL | <evidence> |
+
+  ## Additional Findings
+  | Test | Description | Result | Notes |
+  |------|-------------|--------|-------|
+  | F | Empty notes handling | PASS/FAIL | |
+  | G | Long notes handling | PASS/FAIL | |
+
+  ## Issues Found
+  <any bugs, unexpected behavior, or edge cases>
+
+  ## Test Artifacts
+  <list all generated files>
+  ```
+
+  Create the directory if it doesn't exist: `mkdir -p .planning/phases/33-pdf-handout-export`
+  Commit the report file only. Do NOT modify any source code or existing tests.

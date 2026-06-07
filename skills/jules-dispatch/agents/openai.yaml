@@ -1,0 +1,4 @@
+interface:
+  display_name: "Jules Dispatch"
+  short_description: "Dispatch parallel coding tasks to Google Jules"
+  default_prompt: "Use $jules-dispatch to split this work into independent Jules tasks, dispatch them through MCP, monitor completion, and report PR URLs."

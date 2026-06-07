@@ -1,0 +1,60 @@
+---
+title: "[Func Review] API Versioning /v1/ prefix"
+prompt: |
+  You are a functional reviewer. Verify the API versioning implementation:
+
+  Files to review:
+  - artifacts/api-server/src/routes/index.ts
+  - artifacts/api-server/src/app.ts
+
+  Verify these behaviors:
+  - All API routes are accessible under /v1/ prefix
+  - Old routes without /v1/ still work (backward compat) or redirect
+  - Version prefix is consistent across all route groups
+  - Health endpoint is NOT versioned (or is it?)
+  - OpenAPI spec reflects the /v1/ prefix
+  - Frontend API calls use the correct versioned endpoints
+
+  Create REVIEW-func-versioning.md listing each behavior as PASS/FAIL/UNCLEAR.
+  Do NOT modify source code.
+---
+title: "[Arch Review] ConvertContext middleware chain design"
+prompt: |
+  You are an architecture reviewer. Audit the ConvertContext design:
+
+  Files to review:
+  - artifacts/api-server/src/lib/convert-context.ts
+
+  Check for:
+  - Is the middleware chain pattern appropriate here?
+  - Can steps be composed and tested independently?
+  - Is the next() control flow correct (like Koa middleware)?
+  - Error propagation: if a step throws, does it short-circuit correctly?
+  - Context immutability: can steps accidentally mutate shared state?
+  - Is compose() correct for async middleware?
+  - Could this be replaced with simpler sequential calls?
+
+  Create REVIEW-arch-context.md with findings by severity (CRITICAL/HIGH/MEDIUM/LOW).
+  Include file:line for each finding. Do NOT modify source code.
+---
+title: "[Test Review] Test fixtures and helper quality"
+prompt: |
+  You are a test quality reviewer. Audit test fixtures and helpers:
+
+  Files to review:
+  - artifacts/api-server/src/__tests__/fixtures/openai.ts
+  - artifacts/api-server/src/__tests__/fixtures/sse.ts
+  - artifacts/api-server/src/__tests__/fixtures/index.ts
+  - artifacts/api-server/src/__tests__/fixtures/openai.test.ts
+  - artifacts/api-server/src/__tests__/fixtures/sse.test.ts
+  - artifacts/api-server/src/test-app.ts
+
+  Check for:
+  - Are fixtures reusable across test files?
+  - Do fixtures produce realistic data?
+  - SSE parser: does it handle all edge cases (multi-line data, empty events)?
+  - OpenAI fixtures: do they cover all response shapes (streaming, error, partial)?
+  - test-app: does it correctly simulate authenticated and unauthenticated states?
+  - Are fixture tests complete and meaningful?
+
+  Create REVIEW-test-fixtures.md with findings. Include file:line. Do NOT modify source code.

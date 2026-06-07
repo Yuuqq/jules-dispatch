@@ -3,5 +3,7 @@ dist/
 .env
 coverage/
 .dispatch-logs/
+.vitest-cache/
+.tmp-doctor-test/
 *.js
 !tasks/*.js

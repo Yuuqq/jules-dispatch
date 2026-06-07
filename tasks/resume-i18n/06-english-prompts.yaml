@@ -1,0 +1,128 @@
+# Phase 9: English AI Prompts + Lang Routing (single task, modifies ai_service.py only)
+title: "Phase 9 — English AI Prompts + Lang Parameter Routing"
+source: "sources/github/Yuuqq/smart-resume-builder"
+branch: "master"
+autoMode: "AUTO_CREATE_PR"
+
+prompt: |
+  ## Context
+  Streamlit + Python resume builder. Phase 8 (UI i18n) is running in parallel.
+  Your job: add English prompt variants and `lang` parameter routing to `core/ai_service.py`.
+
+  ## Step 1: Add English prompt constants
+
+  READ `core/ai_service.py` to find these existing Chinese prompt constants. Add English variants AFTER each one:
+
+  ### 1.1 RESUME_EXTRACTION_PROMPT_EN (after RESUME_EXTRACTION_PROMPT)
+  Same structure but instructions in English. Instruct AI to:
+  - Extract resume data from English natural language input
+  - Output English professional language (action verbs: Led, Managed, Developed, Achieved, etc.)
+  - Use quantified results where possible
+  - JSON field names stay English; VALUES become English
+  - Keep same JSON schema as Chinese version
+
+  ### 1.2 POLISH_RESUME_PROMPT_EN (after POLISH_RESUME_PROMPT)
+  Same structure but optimization principles in English:
+  - Quantify achievements
+  - Use STAR method
+  - Strong action verbs (Led, Spearheaded, Implemented, Optimized, etc.)
+  - Industry keyword integration
+  - Concise expression
+  - Professional resume language
+
+  ### 1.3 TARGETED_POLISH_PROMPT_EN (after TARGETED_POLISH_PROMPT)
+  Same structure but targeted polish instructions in English:
+  - JD keyword matching
+  - Highlight relevant experience
+  - Reorder skills by relevance
+  - Quantify with specific numbers
+  - STAR method
+  - Action verbs relevant to the role
+  - Optimize title for target position
+
+  ### 1.4 RESUME_DIAGNOSIS_PROMPT_EN (after RESUME_DIAGNOSIS_PROMPT)
+  Same JSON output schema but all labels/instructions in English:
+  - Dimensions: Completeness, Professionalism, Quantification, Industry Relevance, Formatting
+  - All feedback, issues, suggestions in English
+  - Level labels: Excellent/Good/Fair/Needs Improvement
+
+  ### 1.5 JOB_MATCH_ANALYSIS_PROMPT_EN (after JOB_MATCH_ANALYSIS_PROMPT)
+  Same structure but analysis instructions in English.
+
+  ### 1.6 COPILOT_SYSTEM_PROMPT_EN (after COPILOT_SYSTEM_PROMPT)
+  Same role but in English. "You are the AI Career Advisor for CareerPoint AI Resume Builder..."
+
+  ## Step 2: Add lang parameter to AI functions
+
+  ### extract_resume_from_text() — add `lang: str = "zh"` parameter
+  ```python
+  def extract_resume_from_text(
+      user_input: str,
+      major: str = "journalism",
+      config: Optional[AIConfig] = None,
+      requester: str = "",
+      lang: str = "zh",   # NEW
+  ) -> Tuple[Dict[str, Any], str]:
+  ```
+  In the function body, select prompt:
+  ```python
+  prompt_template = RESUME_EXTRACTION_PROMPT_EN if lang == "en" else RESUME_EXTRACTION_PROMPT
+  ```
+  Update the line that builds `full_prompt` to use `prompt_template` instead of `RESUME_EXTRACTION_PROMPT`.
+
+  Also update the recursive calls (lines ~402 and ~432) to pass `lang=lang`.
+
+  ### polish_resume() — add `lang: str = "zh"` parameter
+  Select the correct prompt:
+  ```python
+  if lang == "en":
+      general_prompt = POLISH_RESUME_PROMPT_EN
+      targeted_prompt = TARGETED_POLISH_PROMPT_EN
+  else:
+      general_prompt = POLISH_RESUME_PROMPT
+      targeted_prompt = TARGETED_POLISH_PROMPT
+  ```
+
+  ### polish_resume_stream() — add `lang: str = "zh"` parameter
+  Same prompt selection logic as polish_resume().
+
+  ### diagnose_resume() and diagnose_resume_stream() — add `lang: str = "zh"`
+  ```python
+  prompt_template = RESUME_DIAGNOSIS_PROMPT_EN if lang == "en" else RESUME_DIAGNOSIS_PROMPT
+  ```
+
+  ### analyze_job_match() — add `lang: str = "zh"`
+  ```python
+  prompt_template = JOB_MATCH_ANALYSIS_PROMPT_EN if lang == "en" else JOB_MATCH_ANALYSIS_PROMPT
+  ```
+
+  ## Step 3: Add bilingual default suggestions
+
+  Find where skill suggestions and default placeholder values are defined. Create bilingual versions:
+  ```python
+  DEFAULT_SKILL_SUGGESTIONS = {
+      "zh": ["采访", "写作", "编辑", "摄影", "数据分析", "社交媒体运营"],
+      "en": ["Interviewing", "Writing", "Editing", "Photography", "Data Analysis", "Social Media Management"],
+  }
+  ```
+
+  Add a helper function:
+  ```python
+  def get_default_suggestions(lang: str = "zh") -> list:
+      return DEFAULT_SKILL_SUGGESTIONS.get(lang, DEFAULT_SKILL_SUGGESTIONS["zh"])
+  ```
+
+  ## Important
+  - ONLY modify `core/ai_service.py`
+  - Keep ALL existing Chinese prompts exactly as-is (don't modify them)
+  - English prompts should be professional, concise, and maintain the same JSON output schema
+  - All function signatures are backward compatible (lang defaults to "zh")
+
+  ## Verification
+  ```bash
+  python -c "from core.ai_service import RESUME_EXTRACTION_PROMPT_EN, POLISH_RESUME_PROMPT_EN, TARGETED_POLISH_PROMPT_EN, RESUME_DIAGNOSIS_PROMPT_EN, JOB_MATCH_ANALYSIS_PROMPT_EN; print('All English prompts loaded OK')"
+  python -c "from core.ai_service import extract_resume_from_text; import inspect; sig = inspect.signature(extract_resume_from_text); assert 'lang' in sig.parameters; print('lang parameter added OK')"
+  ```
+
+  ## Commit
+  Message: `feat(i18n): add English AI prompts and lang parameter routing for bilingual generation`

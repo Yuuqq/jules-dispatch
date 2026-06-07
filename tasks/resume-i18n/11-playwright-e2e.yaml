@@ -1,0 +1,114 @@
+# Deferred: Playwright E2E tests for critical user flows
+title: "Playwright E2E Tests — Critical User Flows"
+source: "sources/github/Yuuqq/smart-resume-builder"
+branch: "master"
+autoMode: "AUTO_CREATE_PR"
+
+prompt: |
+  ## Context
+  Streamlit + Python resume builder. No E2E tests exist yet. Add Playwright tests for critical user flows.
+
+  ## Task
+
+  ### 1. Setup Playwright
+
+  Add to project:
+  ```bash
+  pip install playwright pytest-playwright
+  playwright install chromium
+  ```
+
+  Create `tests/e2e/` directory with `conftest.py`:
+  ```python
+  import pytest
+  from playwright.sync_api import Page
+  import subprocess
+  import time
+  import requests
+
+  @pytest.fixture(scope="session")
+  def streamlit_url():
+      """Start Streamlit app and return URL."""
+      proc = subprocess.Popen(
+          ["streamlit", "run", "app.py", "--server.port", "8502", "--server.headless", "true"],
+          stdout=subprocess.PIPE,
+          stderr=subprocess.PIPE,
+      )
+      url = "http://localhost:8502"
+      # Wait for app to start
+      for _ in range(30):
+          try:
+              requests.get(url, timeout=2)
+              break
+          except Exception:
+              time.sleep(1)
+      yield url
+      proc.terminate()
+
+  @pytest.fixture
+  def app_page(page, streamlit_url):
+      """Navigate to app and return page."""
+      page.goto(streamlit_url)
+      page.wait_for_load_state("networkidle")
+      return page
+  ```
+
+  ### 2. Create E2E test files
+
+  **tests/e2e/test_landing_auth.py** — Landing page + auth flows:
+  1. `test_landing_page_loads` — Page shows title "职点AI简历工坊" and feature cards
+  2. `test_register_new_user` — Fill registration form, submit, see success message
+  3. `test_login_existing_user` — Login with test credentials, see main page
+  4. `test_login_wrong_password` — Show error message
+  5. `test_guest_mode` — Click guest button, see main page
+  6. `test_logout` — Login → logout → back to landing page
+
+  **tests/e2e/test_resume_generation.py** — AI resume generation:
+  1. `test_generate_resume_from_text` — Enter text in generation area, click generate, see preview update
+  2. `test_ai_generation_shows_loading` — Click generate, see loading indicator
+  3. `test_switch_template` — Click different template in gallery, preview updates
+
+  **tests/e2e/test_resume_editing.py** — Manual resume editing:
+  1. `test_edit_name` — Change name in editor, see preview update
+  2. `test_edit_skills` — Add skill, see preview update
+  3. `test_save_resume` — Click save, see success indicator
+  4. `test_version_save` — Save creates a new version
+
+  **tests/e2e/test_polish_scoring.py** — Polish and scoring:
+  1. `test_general_polish` — Navigate to polish, click general polish, see result
+  2. `test_resume_scoring` — Navigate to scoring, see radar chart
+  3. `test_job_match` — Select a preset JD, run match, see results
+
+  **tests/e2e/test_admin.py** — Admin dashboard:
+  1. `test_admin_login_sees_stats` — Login as admin, see statistics tab
+  2. `test_admin_sees_user_list` — Statistics tab shows user data
+  3. `test_admin_export_csv` — Click export button, file downloads
+
+  ### 3. Add E2E config
+
+  Create `playwright.config.ini` or add to `pytest.ini` / `pyproject.toml`:
+  ```ini
+  [pytest]
+  addopts = --headed --browser chromium --slowmo 500
+  ```
+
+  ### 4. Add convenience scripts
+
+  Create `scripts/e2e.sh`:
+  ```bash
+  #!/bin/bash
+  # Run E2E tests — starts Streamlit, runs tests, stops Streamlit
+  python -m pytest tests/e2e/ -v "$@"
+  ```
+
+  ## Important
+  - Tests need a running Streamlit server (handled by fixture)
+  - Use test data — don't depend on existing user data
+  - Clean up test users after tests
+  - Use `page.wait_for_selector()` to wait for Streamlit rendering
+  - Streamlit renders dynamically — use appropriate waits
+  - Mark tests that need AI API with `@pytest.mark.skipif` when API key not available
+  - Tests should work with local JSON backend (no GCP required)
+
+  ## Commit
+  Message: `test: add Playwright E2E tests for critical user flows`

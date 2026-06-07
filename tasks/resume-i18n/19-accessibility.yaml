@@ -1,0 +1,98 @@
+# Accessibility: ARIA labels, keyboard nav, contrast improvements
+title: "Accessibility — ARIA Labels + Keyboard Nav + Contrast"
+source: "sources/github/Yuuqq/smart-resume-builder"
+branch: "master"
+autoMode: "AUTO_CREATE_PR"
+
+prompt: |
+  ## Context
+  Streamlit resume builder. Improve accessibility for screen readers and keyboard users.
+
+  ## Task
+
+  ### 1. Add ARIA labels to custom HTML components in `app.py`
+
+  Find all `st.markdown(..., unsafe_allow_html=True)` in `app.py` and add ARIA attributes:
+
+  - Landing header: `role="banner"`
+  - Feature cards section: `role="region" aria-label="Features"`
+  - Each feature card: `role="article"`
+  - Auth form: already in a `<form>`, ensure `aria-label` on the radio
+  - User info card in sidebar: `role="status" aria-label="User info"`
+  - Footer: `role="contentinfo"`
+  - Main content area: ensure `role="main"` (Streamlit usually handles this)
+
+  ### 2. Improve color contrast in global CSS (`app.py` init_app)
+
+  Check and fix these specific contrast issues:
+  - Sidebar caption color `#86868b` on `#f5f5f7` — acceptable but could be darker
+  - Feature card description `#64748b` on `#ffffff` — good
+  - Footer `#86868b` on white — acceptable
+  - Button text on primary button — ensure WCAG AA (4.5:1 ratio)
+
+  Add focus-visible styles:
+  ```css
+  /* Keyboard focus indicators */
+  *:focus-visible {
+      outline: 2px solid #007aff;
+      outline-offset: 2px;
+  }
+  .stButton > button:focus-visible {
+      outline: 2px solid #007aff;
+      outline-offset: 2px;
+      box-shadow: 0 0 0 4px rgba(0,122,255,0.2);
+  }
+  .stTextInput input:focus-visible,
+  .stTextArea textarea:focus-visible,
+  .stSelectbox select:focus-visible {
+      outline: 2px solid #007aff;
+      outline-offset: -2px;
+  }
+  ```
+
+  ### 3. Add skip-to-content link
+
+  At the very top of `init_app()` CSS, add:
+  ```css
+  .skip-link {
+      position: absolute;
+      top: -40px;
+      left: 0;
+      background: #007aff;
+      color: white;
+      padding: 8px 16px;
+      z-index: 100;
+      transition: top 0.2s;
+  }
+  .skip-link:focus {
+      top: 0;
+  }
+  ```
+
+  Add skip link HTML at the very start of `main()`:
+  ```python
+  st.markdown('<a href="#main-content" class="skip-link">Skip to main content</a>', unsafe_allow_html=True)
+  ```
+
+  And add `id="main-content"` to the main content area.
+
+  ### 4. Template accessibility
+
+  In `views/common.py`, update `_render_cv_to_html()` to include:
+  - `<html lang="{{ lang }}">` (already done if Phase 8 merged)
+  - Add `role="document"` to the resume HTML wrapper
+  - Ensure images have `alt` attributes (profile photo placeholders)
+
+  ### 5. Form field labels
+
+  Check all `st.text_input`, `st.text_area`, `st.selectbox` calls across views. Ensure every widget has a visible label (not just placeholder). Streamlit handles this but verify.
+
+  ## Important
+  - Modify: `app.py`, `views/common.py`
+  - Add ARIA attributes but don't restructure HTML
+  - Keep all existing functionality
+  - Test that the app still renders correctly
+  - Total changes: ~40-50 lines of CSS/HTML additions
+
+  ## Commit
+  Message: `a11y: add ARIA labels, focus indicators, skip link, and contrast improvements`

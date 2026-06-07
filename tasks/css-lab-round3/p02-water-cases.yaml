@@ -1,0 +1,17 @@
+title: "P02: Digitize water/watershed commons cases (Ostrom SES)"
+source: "sources/github/Yuuqq/css-lab-commons-db"
+branch: "main"
+prompt: |
+  Expand `data/commons_water_watershed.json` with at least 10 real-world water/watershed commons cases using Ostrom's SES framework.
+
+  For each case:
+  - `case_name`, `country`, `region`, `resource_type` ("water_watershed")
+  - `biophysical`: { `watershed_area_km2`, `water_use_type`, `pollution_level`, `climate_risk` }
+  - `governance`: { `allocation_mechanism`, `quality_standards`, `upstream_downstream_rules`, `monitoring` }
+  - `actors`: { `stakeholder_groups`, `governance_level`, `conflict_history` }
+  - `outcomes`: { `water_quality` (1-5), `availability` (1-5), `conflict_resolution_rate`, `ecosystem_health` }
+  - `references`, `iad_analysis`
+
+  Real cases: Rhine River basin, Murray-Darling Basin, Colorado River, Lake Biwa watershed, Chinese South-North Water Transfer, Mekong River governance, Cauvery River dispute, etc.
+
+  Commit with message: "feat: add 10+ water/watershed commons cases with SES framework"

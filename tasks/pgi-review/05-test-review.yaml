@@ -1,0 +1,120 @@
+---
+title: "[Test Review] API server unit tests — coverage gaps"
+prompt: |
+  You are a test quality reviewer. Audit the API server unit tests:
+
+  Files to review:
+  - artifacts/api-server/src/__tests__/*.test.ts (all test files)
+
+  Check for:
+  - Are all requirement scenarios covered (happy path, edge cases, error handling)?
+  - Are mocks too tightly coupled to implementation (testing implementation, not behavior)?
+  - Missing test cases: empty inputs, null values, boundary conditions
+  - Are status transitions fully covered in extraction tests?
+  - Is the cache test coverage complete (hit, miss, TTL, invalidation, clear)?
+  - Are there any skipped tests (.skip)?
+  - Test isolation: can tests run independently in any order?
+  - Coverage gaps: which production files have no corresponding test file?
+
+  Create REVIEW-test-api-unit.md with findings. Include file:line. Do NOT modify source code.
+---
+title: "[Test Review] Route integration tests — coverage completeness"
+prompt: |
+  You are a test quality reviewer. Audit the route integration tests:
+
+  Files to review:
+  - artifacts/api-server/src/__tests__/routes.test.ts
+  - artifacts/api-server/src/__tests__/test-app.test.ts
+
+  Check for:
+  - Does every route have at least one integration test?
+  - Are error responses tested (400, 401, 403, 404, 500)?
+  - Is pagination tested for all paginated endpoints?
+  - Is the validation middleware tested with invalid inputs?
+  - Are workspace ownership boundaries tested?
+  - Is SSE streaming tested end-to-end?
+  - Are edge cases tested: empty workspace, non-existent IDs, invalid formats?
+
+  Create REVIEW-test-routes.md with findings. Include file:line. Do NOT modify source code.
+---
+title: "[Test Review] Frontend component tests — mock quality"
+prompt: |
+  You are a test quality reviewer. Audit the frontend component and hook tests:
+
+  Files to review:
+  - artifacts/scholarmind/src/__tests__/*.test.tsx (all test files)
+  - artifacts/scholarmind/src/mocks/ (MSW handlers used in tests)
+
+  Check for:
+  - Do component tests use MSW handlers instead of vi.mock?
+  - Are loading and error states tested?
+  - Is the graph rendering tested (ReactFlow components)?
+  - Is the worker layout tested (message protocol)?
+  - Are user interactions tested (click, type, submit)?
+  - Are hooks tested independently (useLayoutWorker, custom hooks)?
+  - Do MSW handlers produce realistic mock data?
+
+  Create REVIEW-test-frontend.md with findings. Include file:line. Do NOT modify source code.
+---
+title: "[Test Review] E2E tests — reliability and coverage"
+prompt: |
+  You are a test quality reviewer. Audit the E2E tests:
+
+  Files to review:
+  - e2e/*.spec.ts (all spec files)
+  - playwright.config.ts
+  - e2e/global-setup.ts
+  - e2e/fixtures/index.ts
+
+  Check for:
+  - Are critical user journeys covered (auth, import, graph, chat)?
+  - Are assertions specific (not just "page is visible")?
+  - Timeouts: are they reasonable? Too short = flaky, too long = slow CI
+  - Retry strategy: is retries: 2 appropriate for CI?
+  - Test data cleanup: do tests clean up after themselves?
+  - Parallel safety: can all tests run in parallel without interference?
+  - Missing scenarios: error states, edge cases, offline behavior
+  - Are there MSW-backed E2E tests for deterministic CI?
+
+  Create REVIEW-test-e2e.md with findings. Include file:line. Do NOT modify source code.
+---
+title: "[Test Review] MSW handler contract tests — schema parity"
+prompt: |
+  You are a test quality reviewer. Audit the MSW contract tests:
+
+  Files to review:
+  - artifacts/scholarmind/src/mocks/__tests__/schema-contract.test.ts (if exists)
+  - artifacts/scholarmind/src/mocks/handlers/*.ts
+  - lib/api-zod/src/generated/api.ts
+
+  Check for:
+  - Does every handler response pass its Zod schema .parse()?
+  - Are all scenarios tested (default, empty, error)?
+  - Is the schema contract test CI-blocking?
+  - Can the contract test become circular (schema validates itself)?
+  - Are there route-contract tests against the real Express app?
+  - If a schema changes, will the contract test catch the drift?
+
+  Create REVIEW-test-msw-contract.md with findings. Include file:line. Do NOT modify source code.
+---
+title: "[Test Review] Test fixtures and helper quality"
+prompt: |
+  You are a test quality reviewer. Audit test fixtures and helpers:
+
+  Files to review:
+  - artifacts/api-server/src/__tests__/fixtures/openai.ts
+  - artifacts/api-server/src/__tests__/fixtures/sse.ts
+  - artifacts/api-server/src/__tests__/fixtures/index.ts
+  - artifacts/api-server/src/__tests__/fixtures/openai.test.ts
+  - artifacts/api-server/src/__tests__/fixtures/sse.test.ts
+  - artifacts/api-server/src/test-app.ts
+
+  Check for:
+  - Are fixtures reusable across test files?
+  - Do fixtures produce realistic data?
+  - SSE parser: does it handle all edge cases (multi-line data, empty events)?
+  - OpenAI fixtures: do they cover all response shapes (streaming, error, partial)?
+  - test-app: does it correctly simulate authenticated and unauthenticated states?
+  - Are fixture tests complete and meaningful?
+
+  Create REVIEW-test-fixtures.md with findings. Include file:line. Do NOT modify source code.

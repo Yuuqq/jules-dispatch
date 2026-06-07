@@ -1,6 +1,7 @@
 import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { parseAllDocuments } from 'yaml';
+import { parse as parseDotenv } from 'dotenv';
 import type { JulesConfig, TaskDefinition } from './types.js';
 
 export interface LoadConfigOptions {
@@ -14,17 +15,8 @@ export function loadConfig(projectDir: string, options: LoadConfigOptions = {}):
 
   if (existsSync(envPath)) {
     const envContent = readFileSync(envPath, 'utf8');
-    for (const rawLine of envContent.split('\n')) {
-      let line = rawLine.trim();
-      if (!line || line.startsWith('#')) continue;
-      if (line.startsWith('export ')) line = line.slice(7).trim();
-      const eq = line.indexOf('=');
-      if (eq === -1) continue;
-      const key = line.slice(0, eq).trim();
-      let value = line.slice(eq + 1).trim();
-      if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
-        value = value.slice(1, -1);
-      }
+    const parsed = parseDotenv(envContent);
+    for (const [key, value] of Object.entries(parsed)) {
       if (!process.env[key]) process.env[key] = value;
     }
   }

@@ -1,0 +1,81 @@
+# P01 Code Review: Fix compatibility issues in existing tools
+---
+title: "[TOOL-08] Fix config compatibility and schema alignment in existing tools"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Review and fix compatibility issues in the existing tool files.
+
+  ## Problem: Config format mismatch
+
+  The YAML configs in `configs/` use this structure:
+  ```yaml
+  domain: "数据安全与AI治理"
+  domain_id: "data_security"
+  keywords_zh:
+    - 数据安全
+    - 个人信息保护
+    - ...
+  keywords_en:
+    - data security
+    - ...
+  flk_categories: ["法律", "行政法规"]
+  expected_count:
+    flk_laws: 20
+    flk_regulations: 15
+  ```
+
+  But some tools expect `data['keywords']` (old format). This causes configs to load as empty.
+
+  ## Files to review and fix:
+
+  ### 1. `tools/auto_tagger.py`
+
+  Issues found:
+  - Line 23: `data['keywords']` should be `data.get('keywords_zh', [])` or `data.get('keywords', data.get('keywords_zh', []))`
+  - Line 36: `doc.get("text", "")` should be `doc.get("full_text", doc.get("text", ""))` to match schema
+  - Line 89: `doc['domains'] = domains` should be `doc['domain'] = domains` to match schema (schema uses singular `domain` as array)
+  - Add fallback: if neither `keywords` nor `keywords_zh` exists, try `keywords_en`
+  - Ensure backward compatibility: support both old format (`keywords`) and new format (`keywords_zh`)
+
+  ### 2. `tools/link_related.py`
+
+  Review the file. Check for:
+  - Schema field name mismatches (e.g., `text` vs `full_text`, `domains` vs `domain`)
+  - Config loading compatibility
+  - Fix any issues found
+
+  ### 3. `tools/structure_data.py`
+
+  Review the file. Check for:
+  - Schema field name mismatches
+  - Input format handling (Exa format with `results`, FLK format, etc.)
+  - Fix any issues found
+
+  ### 4. `tools/export_data.py`
+
+  Review the file. Check for:
+  - Schema field name mismatches
+  - Input format compatibility
+  - Fix any issues found
+
+  ## Requirements for all fixes:
+
+  1. **Backward compatibility**: Support BOTH old config format (`keywords`) and new format (`keywords_zh`/`keywords_en`)
+  2. **Schema alignment**: Use schema field names (`full_text`, `domain`, `doc_type`, etc.)
+  3. **Input format handling**: Support multiple input formats:
+     - Exa: `{"results": [{...}]}`
+     - Merged: `{"documents": [...]}` or `{"data": [...]}`
+     - Flat: `[{...}, {...}]`
+  4. **No breaking changes**: Existing working code should continue to work
+  5. **Add defensive coding**: Use `.get()` with defaults instead of direct key access where possible
+
+  After fixing, run a quick validation:
+  ```bash
+  python -c "from tools.auto_tagger import load_configs; c=load_configs('configs/'); print(f'Loaded {len(c)} domain configs')"
+  ```
+
+  This should show >0 domains loaded.
+
+  Commit all changes.

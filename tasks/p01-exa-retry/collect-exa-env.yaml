@@ -1,0 +1,26 @@
+---
+title: "[EXA-01-RETRY] Collect environmental governance policies via Exa"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Use Exa API to collect Chinese environmental governance policy documents.
+
+  Steps:
+  1. Ensure the repo is up to date: `git pull origin main`
+  2. Install dependency: `pip install exa-py>=2.0.0`
+  3. Run the collection script with Exa API key:
+     ```
+     export EXA_API_KEY=<EXA_API_KEY>
+     python tasks/collect_exa_environmental.py
+     ```
+  4. Verify output: `data/exa/environmental_governance_exa.json` should exist and have >0 records
+  5. If the script fails due to API errors, check `exa_client.py` for SDK compatibility issues:
+     - Exa.search() parameters: do NOT use `use_autoprompt` (deprecated)
+     - Use `type="auto"` instead of `type="keyword"`
+     - Wrap text and highlights in `contents={...}` dict
+     - For highlights, use `max_characters` instead of `num_sentences`
+  6. Commit the output file with message including the record count
+  7. If no data collected after retries, commit `data/exa/environmental_FAILED.md` explaining the issue
+
+  IMPORTANT: The collected data file MUST be committed.

@@ -1,0 +1,184 @@
+---
+title: "[Func Review] Workspace CRUD — create, list, get, update, delete"
+prompt: |
+  You are a functional reviewer. Verify the workspace CRUD feature works correctly by reviewing:
+
+  Files to review:
+  - artifacts/api-server/src/routes/workspaces.ts
+  - lib/db/src/schema/workspaces.ts
+
+  Verify these behaviors:
+  - POST /api/workspaces creates a workspace with correct ownerId from auth
+  - GET /api/workspaces returns only workspaces owned by the authenticated user
+  - GET /api/workspaces/:id returns workspace details only if user owns it
+  - PATCH /api/workspaces/:id updates name/description only if user owns it
+  - DELETE /api/workspaces/:id deletes and all cascading data only if user owns it
+  - GET /api/workspaces/:id/stats returns correct paper/entity/relation counts
+  - Unauthenticated requests return 401
+  - Non-owner requests return 403 or empty
+  - Pagination works correctly (cursor-based)
+
+  Create REVIEW-func-workspaces.md listing each behavior as PASS/FAIL/UNCLEAR with evidence.
+  Do NOT modify source code.
+---
+title: "[Func Review] Paper import and extraction pipeline"
+prompt: |
+  You are a functional reviewer. Verify the paper import and extraction pipeline:
+
+  Files to review:
+  - artifacts/api-server/src/routes/papers.ts
+  - artifacts/api-server/src/lib/extraction.ts
+  - artifacts/api-server/src/lib/recovery.ts
+  - artifacts/api-server/src/lib/retry.ts
+  - lib/db/src/schema/papers.ts
+
+  Verify these behaviors:
+  - POST /papers (arXiv search): search returns results, import creates paper with pending status
+  - POST /papers/upload: file upload creates paper with correct workspaceId
+  - GET /papers: lists papers in workspace with pagination
+  - GET /papers/:id: returns paper detail
+  - DELETE /papers/:id: removes paper and cascades to entities/relations
+  - POST /papers/:id/reanalyze: re-triggers extraction
+  - Extraction pipeline: pending -> analyzing -> ready/failed with correct status transitions
+  - Retry: transient errors (429, 500, 503) retry up to 3 times with backoff
+  - Recovery: stuck papers detected and re-fired without throwing
+  - Duplicate paper import handling
+
+  Create REVIEW-func-papers.md listing each behavior as PASS/FAIL/UNCLEAR.
+  Do NOT modify source code.
+---
+title: "[Func Review] Knowledge Graph — entity and relation CRUD"
+prompt: |
+  You are a functional reviewer. Verify the knowledge graph feature:
+
+  Files to review:
+  - artifacts/api-server/src/routes/graph.ts
+  - artifacts/api-server/src/lib/semantic-id.ts
+  - lib/db/src/schema/entities.ts
+  - lib/db/src/schema/relations.ts
+
+  Verify these behaviors:
+  - GET /graph returns all entities and relations for a workspace
+  - POST /entities creates entity with semanticId (entity::type::slug)
+  - PATCH /entities/:id updates entity fields
+  - DELETE /entities/:id removes entity and cascading relations
+  - POST /relations creates relation with semanticId (relation::type::src->tgt)
+  - PATCH /relations/:id updates relation fields
+  - DELETE /relations/:id removes relation
+  - Semantic ID: collision handling with numeric suffix
+  - Semantic ID: workspace-scoped uniqueness
+  - Cache invalidation on entity/relation mutations
+
+  Create REVIEW-func-graph.md listing each behavior as PASS/FAIL/UNCLEAR.
+  Do NOT modify source code.
+---
+title: "[Func Review] Chat SSE streaming and conversations"
+prompt: |
+  You are a functional reviewer. Verify the chat feature with SSE streaming:
+
+  Files to review:
+  - artifacts/api-server/src/routes/chat.ts
+  - lib/db/src/schema/conversations.ts
+  - lib/db/src/schema/messages.ts
+
+  Verify these behaviors:
+  - GET /conversations lists conversations in workspace
+  - POST /conversations creates new conversation
+  - GET /conversations/:id returns conversation detail with messages
+  - DELETE /conversations/:id removes conversation and messages
+  - POST /conversations/:id/messages sends message and streams SSE response
+  - SSE stream: correct Content-Type headers (text/event-stream)
+  - SSE stream: proper event formatting (data:, event:, id: fields)
+  - SSE stream: cleanup on client disconnect
+  - Empty conversation: graceful handling when no papers in workspace
+  - Pagination on conversation list
+
+  Create REVIEW-func-chat.md listing each behavior as PASS/FAIL/UNCLEAR.
+  Do NOT modify source code.
+---
+title: "[Func Review] Search — arXiv and Semantic Scholar"
+prompt: |
+  You are a functional reviewer. Verify the search feature:
+
+  Files to review:
+  - artifacts/api-server/src/routes/search.ts
+  - artifacts/api-server/src/lib/external/arxiv.ts
+  - artifacts/api-server/src/lib/external/semanticScholar.ts
+
+  Verify these behaviors:
+  - GET /search/papers?q=query returns search results from arXiv
+  - Source parameter can switch between arxiv and semanticScholar
+  - Empty query returns 400 or empty results
+  - Very long query is truncated or rejected
+  - Special characters in query do not break the search
+  - arXiv API errors are handled gracefully (timeout, rate limit, malformed response)
+  - Search results include: title, authors, abstract, year, arXiv ID
+  - Pagination of search results (if supported)
+
+  Create REVIEW-func-search.md listing each behavior as PASS/FAIL/UNCLEAR.
+  Do NOT modify source code.
+---
+title: "[Func Review] Pagination — cursor-based implementation"
+prompt: |
+  You are a functional reviewer. Verify the cursor-based pagination implementation:
+
+  Files to review:
+  - artifacts/api-server/src/lib/pagination.ts
+  - All route files that use pagination
+
+  Verify these behaviors:
+  - Cursor is opaque and cannot be forged to access other users data
+  - limit parameter has a maximum cap
+  - Default limit is reasonable (10-50)
+  - Response includes nextCursor for fetching next page
+  - nextCursor is null/undefined when no more results
+  - First page works without cursor parameter
+  - Cursor correctly encodes/decodes pagination state
+  - Works across all paginated endpoints consistently
+  - Works with filters (e.g., papers in a specific workspace)
+
+  Create REVIEW-func-pagination.md listing each behavior as PASS/FAIL/UNCLEAR.
+  Do NOT modify source code.
+---
+title: "[Func Review] Error handling — global error handler and error codes"
+prompt: |
+  You are a functional reviewer. Verify the error handling system:
+
+  Files to review:
+  - artifacts/api-server/src/lib/errors.ts
+  - artifacts/api-server/src/app.ts (error handler middleware)
+  - artifacts/api-server/src/routes/*.ts (all routes for error responses)
+
+  Verify these behaviors:
+  - All error responses follow consistent JSON format: { error, code, message }
+  - Error codes are unique and documented
+  - 400 for validation errors with field-level details
+  - 401 for unauthenticated requests
+  - 403 for forbidden access (workspace ownership)
+  - 404 for not found resources
+  - 429 for rate limiting (if implemented)
+  - 500 for internal errors without leaking stack traces
+  - Validation errors from Zod are properly formatted
+  - Async errors are caught by the global error handler
+
+  Create REVIEW-func-errors.md listing each behavior as PASS/FAIL/UNCLEAR.
+  Do NOT modify source code.
+---
+title: "[Func Review] API Versioning /v1/ prefix"
+prompt: |
+  You are a functional reviewer. Verify the API versioning implementation:
+
+  Files to review:
+  - artifacts/api-server/src/routes/index.ts
+  - artifacts/api-server/src/app.ts
+
+  Verify these behaviors:
+  - All API routes are accessible under /v1/ prefix
+  - Old routes without /v1/ still work (backward compat) or redirect
+  - Version prefix is consistent across all route groups
+  - Health endpoint is NOT versioned (or is it?)
+  - OpenAPI spec reflects the /v1/ prefix
+  - Frontend API calls use the correct versioned endpoints
+
+  Create REVIEW-func-versioning.md listing each behavior as PASS/FAIL/UNCLEAR.
+  Do NOT modify source code.

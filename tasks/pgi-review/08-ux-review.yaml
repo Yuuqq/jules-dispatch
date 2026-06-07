@@ -1,0 +1,90 @@
+---
+title: "[UX Review] Accessibility (a11y) audit"
+prompt: |
+  You are an accessibility reviewer. Audit the frontend for WCAG 2.1 AA compliance:
+
+  Files to review:
+  - artifacts/scholarmind/src/pages/workspaces/graph/index.tsx
+  - artifacts/scholarmind/src/pages/workspaces/graph/EntityNode.tsx
+  - artifacts/scholarmind/src/pages/workspaces/chat/index.tsx
+  - artifacts/scholarmind/src/pages/workspaces/papers/index.tsx
+  - artifacts/scholarmind/src/pages/workspaces/dashboard.tsx
+  - artifacts/scholarmind/src/components/workspace-layout.tsx
+  - artifacts/scholarmind/src/App.tsx
+
+  Check for:
+  - ARIA labels on interactive elements (buttons, links, inputs)
+  - Keyboard navigation: can all features be used without a mouse?
+  - Color contrast: are text colors readable against backgrounds?
+  - Screen reader: do dynamic updates (SSE chat, graph loading) announce?
+  - Focus management: is focus moved correctly after navigation?
+  - Alt text on images and icons
+  - Form labels: are all inputs associated with labels?
+  - Error messages: are they associated with form fields?
+
+  Create REVIEW-ux-a11y.md with findings. Include file:line. Do NOT modify source code.
+---
+title: "[UX Review] Internationalization (i18n) completeness"
+prompt: |
+  You are an i18n reviewer. Audit the internationalization:
+
+  Files to review:
+  - artifacts/scholarmind/src/lib/i18n.tsx
+  - All page components in artifacts/scholarmind/src/pages/
+  - artifacts/scholarmind/src/components/workspace-layout.tsx
+
+  Check for:
+  - Are all user-facing strings extracted to i18n keys?
+  - Are there hardcoded English strings in components?
+  - Are date/number formats locale-aware?
+  - Is the language toggle functional?
+  - Are there missing translations for any language?
+  - Does the graph (entity names, relation labels) support i18n?
+  - Are error messages translated?
+
+  Create REVIEW-ux-i18n.md with findings. Include file:line. Do NOT modify source code.
+---
+title: "[UX Review] Component quality — shadcn/ui patterns"
+prompt: |
+  You are a frontend quality reviewer. Audit component patterns:
+
+  Files to review:
+  - artifacts/scholarmind/src/components/workspace-layout.tsx
+  - artifacts/scholarmind/src/components/ui/*.tsx (sample 5-10 components)
+  - artifacts/scholarmind/src/pages/workspaces/graph/EntityNode.tsx
+  - artifacts/scholarmind/src/pages/workspaces/graph/KnowledgeEdge.tsx
+
+  Check for:
+  - Are shadcn/ui components used consistently?
+  - Are custom components following shadcn/ui patterns (cva, variants)?
+  - Is Tailwind CSS used correctly (consistent spacing, color tokens)?
+  - Are there inline styles that should be Tailwind classes?
+  - Are components accessible by default?
+  - Is the workspace layout responsive (mobile, tablet, desktop)?
+  - Are there consistent loading states (skeleton, spinner)?
+
+  Create REVIEW-ux-components.md with findings. Include file:line. Do NOT modify source code.
+---
+title: "[UX Review] Graph visualization UX — interactions, responsiveness"
+prompt: |
+  You are a UX reviewer. Audit the graph visualization:
+
+  Files to review:
+  - artifacts/scholarmind/src/pages/workspaces/graph/index.tsx
+  - artifacts/scholarmind/src/pages/workspaces/graph/EntityNode.tsx
+  - artifacts/scholarmind/src/pages/workspaces/graph/KnowledgeEdge.tsx
+  - artifacts/scholarmind/src/pages/workspaces/graph/useLayoutWorker.ts
+  - artifacts/scholarmind/src/workers/layout-worker.ts
+
+  Check for:
+  - Loading state: is there a spinner during layout computation?
+  - Error state: what happens if layout fails?
+  - Empty state: is there a message when no entities exist?
+  - Interactions: can users pan, zoom, select nodes/edges?
+  - Node selection: does it show entity details?
+  - Edge labels: are they readable (not overlapping)?
+  - Layout direction: can users switch between TB/LR?
+  - Large graphs (200+ nodes): is performance acceptable?
+  - Responsive: does the graph adapt to container size?
+
+  Create REVIEW-ux-graph.md with findings. Include file:line. Do NOT modify source code.

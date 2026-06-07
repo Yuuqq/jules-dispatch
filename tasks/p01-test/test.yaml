@@ -1,0 +1,29 @@
+---
+title: "[P1-T001] Create policy document JSON Schema"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Create `schema/policy_document.json` — a JSON Schema (Draft 2020-12) for policy documents.
+
+  Required fields (15+):
+  - doc_id (string, pattern: "^[A-Z]{2,4}-CN-\d{4}-\d{4}$")
+  - title (string, minLength: 2)
+  - full_text (string, minLength: 50)
+  - source (string, enum: ["国家法律法规数据库", "中国政府网", "北大法宝", "网信办", "生态环境部", "住建部", "自然资源部", "市场监管总局", "Exa搜索", "其他"])
+  - source_url (string, format: uri)
+  - doc_type (string, enum: ["法律", "行政法规", "部门规章", "司法解释", "规范性文件", "其他"])
+  - issuing_body (string)
+  - document_number (string)
+  - publish_date (string, format: date)
+  - effective_date (string, format: date)
+  - status (string, enum: ["现行有效", "尚未施行", "已废止", "已被修改", "部分失效"])
+  - hierarchy (string, enum: ["宪法", "法律", "行政法规", "部门规章", "地方政府规章", "规范性文件", "司法解释"])
+  - domain (array of strings)
+  - keywords (array of strings, maxItems: 20)
+  - collection_date (string, format: date)
+  - collection_method (string, enum: ["flk_scraper", "govcn_scraper", "exa_search", "manual", "ministry_scraper"])
+
+  Optional: related_docs, amendment_history, text_length, summary
+
+  Create the file and commit. Do NOT modify any existing files.

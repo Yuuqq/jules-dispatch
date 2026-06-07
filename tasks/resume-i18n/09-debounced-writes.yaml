@@ -1,0 +1,82 @@
+# Deferred: Debounced _save_usage() — batch writes every 5s
+title: "Debounced _save_usage() — Batch API Usage Writes Every 5s"
+source: "sources/github/Yuuqq/smart-resume-builder"
+branch: "master"
+autoMode: "AUTO_CREATE_PR"
+
+prompt: |
+  ## Context
+  Streamlit + Python resume builder. The AI Guard module (`core/ai_guard.py`) currently writes usage data to disk on every API call via `_save_usage()`. This creates excessive I/O. Add debouncing to batch writes every 5 seconds.
+
+  ## Task
+
+  ### 1. Read `core/ai_guard.py` to understand current `_save_usage()` implementation
+
+  Find the `_save_usage()` method and how it's called. It likely:
+  - Saves usage stats to a JSON file after every API call
+  - Is called from `slot()` context manager or recording methods
+
+  ### 2. Implement debounced writes
+
+  Add a debounce mechanism:
+  ```python
+  import time
+  import threading
+
+  class AIGuard:
+      def __init__(self, ...):
+          ...
+          self._usage_dirty = False
+          self._last_usage_save = 0.0
+          self._usage_save_interval = 5.0  # seconds
+          self._usage_lock = threading.Lock()
+
+      def _mark_usage_dirty(self):
+          """Mark usage data as needing save."""
+          with self._usage_lock:
+              self._usage_dirty = True
+
+      def _maybe_save_usage(self):
+          """Save usage data only if dirty and interval has elapsed."""
+          with self._usage_lock:
+              now = time.time()
+              if self._usage_dirty and (now - self._last_usage_save >= self._usage_save_interval):
+                  self._save_usage()  # existing save method
+                  self._usage_dirty = False
+                  self._last_usage_save = now
+
+      def _flush_usage(self):
+          """Force-save usage data (call on shutdown/critical moments)."""
+          with self._usage_lock:
+              if self._usage_dirty:
+                  self._save_usage()
+                  self._usage_dirty = False
+                  self._last_usage_save = time.time()
+  ```
+
+  ### 3. Replace direct `_save_usage()` calls
+
+  Everywhere `_save_usage()` is called directly (after recording tokens, errors, etc.):
+  - Replace with `self._mark_usage_dirty()` + `self._maybe_save_usage()`
+
+  ### 4. Ensure flush on critical paths
+
+  On app shutdown or before reading usage stats for admin dashboard, call `self._flush_usage()` to ensure data is saved.
+
+  ### 5. Add unit tests
+
+  In `tests/test_ai_guard.py`, add:
+  - `test_debounce_does_not_save_immediately` — dirty flag set but no save until interval
+  - `test_debounce_saves_after_interval` — save happens after 5s
+  - `test_flush_saves_immediately` — flush bypasses debounce
+  - `test_concurrent_debounce_safe` — thread safety check
+
+  ## Important
+  - ONLY modify `core/ai_guard.py` and `tests/test_ai_guard.py`
+  - Keep the existing `_save_usage()` method intact (it does the actual file I/O)
+  - The debounce layer wraps around it
+  - Use `time.time()` for timing, not datetime
+  - Thread-safe via `threading.Lock`
+
+  ## Commit
+  Message: `perf: debounce AI guard usage writes — batch every 5s instead of per-call`

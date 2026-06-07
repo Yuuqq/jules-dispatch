@@ -1,0 +1,97 @@
+# Phase 3: Ministry Scrapers — 5 tasks
+---
+title: "[P3-T026] CAC (网信办) ministry scraper"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Create two files for 网信办 (CAC) data collection:
+
+  1. `scrapers/ministry_cac.py` — scraper for www.cac.gov.cn
+     - class `CACScraper` with methods:
+       - `list_regulations(keyword: str, page: int = 1) -> list[dict]` — search CAC site
+       - `get_detail(url: str) -> dict | None` — parse regulation detail page
+     - Extract: title, full_text, publish_date, document_number
+     - Rate limiting (≥ 2s), retry on failure
+     - Output matches schema/policy_document.json
+     - Set source="网信办", doc_type based on content
+
+  2. `scripts/collect_cac.py` — runner script
+     - Keywords: 数据安全, 算法推荐, 生成式人工智能, 深度合成, 网络安全审查, 数据出境, 个人信息保护
+     - Output to `data/ministry/cac/`
+     - Checkpoint support
+     - Print progress and summary
+
+  Create the files and commit.
+---
+title: "[P3-T027] MEE (生态环境部) ministry scraper"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Create two files for 生态环境部 (MEE) data collection:
+
+  1. `scrapers/ministry_mee.py` — scraper for www.mee.gov.cn (or mEE-related pages)
+     - class `MEEScraper` with methods:
+       - `list_regulations(keyword: str) -> list[dict]`
+       - `get_detail(url: str) -> dict | None`
+     - Extract: title, full_text, publish_date, document_number
+     - Rate limiting, retry, schema-compliant output
+     - Set source="生态环境部"
+
+  2. `scripts/collect_mee.py` — runner script
+     - Keywords: 排污许可, 碳交易, 环保督察, 污染防治, 生态补偿
+     - Output to `data/ministry/mee/`
+
+  Create the files and commit.
+---
+title: "[P3-T028] MOHURD (住建部) ministry scraper"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Create two files for 住建部 (MOHURD) data collection:
+
+  1. `scrapers/ministry_mohurd.py` — scraper for www.mohurd.gov.cn
+     - class `MOHURDScraper` with list/get_detail methods
+     - Schema-compliant output, source="住建部"
+
+  2. `scripts/collect_mohurd.py` — runner script
+     - Keywords: 城市更新, 物业管理, 保障性住房, 老旧小区改造, 建筑节能
+     - Output to `data/ministry/mohurd/`
+
+  Create the files and commit.
+---
+title: "[P3-T029] MNR (自然资源部) ministry scraper"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Create two files for 自然资源部 (MNR) data collection:
+
+  1. `scrapers/ministry_mnr.py` — scraper for www.mnr.gov.cn
+     - class `MNRScraper` with list/get_detail methods
+     - Schema-compliant output, source="自然资源部"
+
+  2. `scripts/collect_mnr.py` — runner script
+     - Keywords: 土地管理, 国土空间规划, 矿产资源, 自然资源确权, 耕地保护
+     - Output to `data/ministry/mnr/`
+
+  Create the files and commit.
+---
+title: "[P3-T030] SAMR (市场监管总局) ministry scraper"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Create two files for 市场监管总局 (SAMR) data collection:
+
+  1. `scrapers/ministry_samr.py` — scraper for www.samr.gov.cn
+     - class `SAMRScraper` with list/get_detail methods
+     - Schema-compliant output, source="市场监管总局"
+
+  2. `scripts/collect_samr.py` — runner script
+     - Keywords: 平台经济, 反垄断, 反不正当竞争, 消费者保护, 价格监管, 网络交易
+     - Output to `data/ministry/samr/`
+
+  Create the files and commit.

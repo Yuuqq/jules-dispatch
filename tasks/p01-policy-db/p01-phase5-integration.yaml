@@ -1,0 +1,172 @@
+# Phase 5: Integration & Docs — 6 tasks
+---
+title: "[P5-T039] Master collection orchestrator"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Create `scripts/run_all.py` — master orchestrator that runs the entire pipeline sequentially.
+
+  Pipeline steps:
+  1. Phase 1: Run all domain FLK collection scripts (5 scripts)
+  2. Phase 2: Run all domain GOV.CN collection scripts (5 scripts)
+  3. Phase 3: Run all ministry collection scripts (5 scripts)
+  4. Phase 4a: Deduplicate → clean → enrich → tag → link → quality check
+  5. Phase 4b: Generate statistics
+  6. Final: Merge into `data/final/policy_database.json`
+
+  Requirements:
+  - Each step prints progress: "[Step 3/11] Deduplicating... found 1200 docs"
+  - Any step failure is logged but doesn't stop the pipeline
+  - Generate `reports/run_report.json` with:
+    ```json
+    {
+      "started_at": "...",
+      "completed_at": "...",
+      "steps": [
+        {"name": "flk_data_security", "status": "success", "docs": 45, "duration_s": 120},
+        ...
+      ],
+      "final_count": 800,
+      "errors": []
+    }
+    ```
+  - CLI: `python scripts/run_all.py [--skip-collect] [--skip-clean]`
+  - `--skip-collect` skips Phase 1-3 (for re-running pipeline on existing data)
+
+  Create the file and commit.
+---
+title: "[P5-T040] Delta update mechanism"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Create `scripts/run_delta.py` — incremental update that only collects new documents.
+
+  Implement:
+  1. Load existing `data/final/policy_database.json` (if exists)
+  2. Load all checkpoint files from `data/**/checkpoint.json`
+  3. Determine last collection date per source
+  4. Run collection scripts with date filter (only since last collection)
+  5. Merge new documents into existing database (no deletions)
+  6. Re-run dedup + clean + enrich + tag on new documents only
+  7. Output delta report: `reports/delta_report.json`
+     ```json
+     {
+       "previous_count": 800,
+       "new_collected": 15,
+       "after_dedup": 12,
+       "final_count": 812,
+       "new_sources": ["flk_data_security: 5", "govcn_environmental: 7"]
+     }
+     ```
+  8. CLI: `python scripts/run_delta.py`
+
+  Create the file and commit.
+---
+title: "[P5-T041] Update structure_data.py for new schema"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  The project has a shared file at `projects/structure_data.py` (relative to repo root, it's at the same level).
+  Instead, create a new `tools/structure_data.py` within the css-lab-policy-db repo itself.
+
+  Implement:
+  1. `structure_data(input_file: str, output_file: str) -> dict`
+  2. Support new schema fields: hierarchy, issuing_body, document_number, effective_date, status, amendment_history, related_docs, unresolved_citations
+  3. Backward compatible: auto-map old format (no hierarchy → guess from doc_type)
+  4. Generate same output format as the shared structure_data.py:
+     - records with normalized fields
+     - statistics (by_source_type, by_language, tag_frequency, etc.)
+  5. Add new statistics: by_hierarchy, by_status, by_issuing_body (top 20), date_distribution
+  6. CLI: `python tools/structure_data.py --input data/final/policy_database.json --output data/structured/`
+  7. Output: `data/structured/all_structured.json` + `data/structured/summary.json`
+
+  Create the file and commit.
+---
+title: "[P5-T042] End-to-end pipeline test"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Create `tests/test_pipeline.py` — end-to-end test for the full data pipeline.
+
+  Test flow using fixture data:
+  1. Load test fixtures from tests/fixtures/*.json
+  2. Run schema validation → assert all valid fixtures pass, invalid ones fail
+  3. Run text cleaning → assert HTML removed, whitespace normalized
+  4. Run deduplication → assert duplicates removed
+  5. Run metadata extraction → assert issuing_body extracted
+  6. Run auto-tagging → assert domain assigned
+  7. Run quality check → assert score > 0
+  8. Run statistics generation → assert all dimensions present
+
+  Use pytest. Each test function tests one pipeline step.
+  Use `tests/fixtures/` data, not real HTTP requests.
+  All tests must pass with `pytest tests/test_pipeline.py -v`.
+
+  Create the file and commit.
+---
+title: "[P5-T043] Update README with new capabilities"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Rewrite `README.md` completely to reflect the new comprehensive policy database system.
+
+  Must include:
+  1. Title + one-line description
+  2. Link back to main repo: [← 返回总览](https://github.com/Yuuqq/css-lab)
+  3. "数据概况" section with table (5 domains, expected counts)
+  4. "目录结构" section showing complete file tree:
+     - schema/, configs/, scrapers/, scripts/, tools/, tests/, data/, reports/
+  5. "Quick Start" section (3 steps max to run):
+     ```bash
+     pip install -r requirements.txt
+     python scripts/run_all.py
+     ```
+  6. "数据 Schema" section with field table (field, type, required, description)
+  7. "数据源" section listing all sources with coverage
+  8. "工具" section listing all tools (validate, deduplicate, clean, etc.)
+  9. "相关项目" links to other CSS Lab repos
+  10. "采集约束" section (robots.txt, rate limiting, academic use only)
+
+  Create the file and commit.
+---
+title: "[P5-T044] Create COLLECTION_GUIDE.md"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Create `COLLECTION_GUIDE.md` — detailed step-by-step usage guide.
+
+  Sections:
+  1. "环境准备" — Python 3.12+, pip install -r requirements.txt
+  2. "配置文件" — configs/*.yaml format explanation with examples
+  3. "Phase 1: 基础采集"
+     - FLK采集: python scripts/collect_data_security_flk.py
+     - GOV.CN采集: python scripts/collect_data_security_govcn.py
+     - 预期输出: data/flk/*, data/govcn/*
+  4. "Phase 2: 部委采集"
+     - 各部委脚本使用方法
+  5. "Phase 3: 数据处理"
+     - 去重: python tools/deduplicate.py
+     - 清洗: python tools/clean_text.py
+     - 富化: python tools/extract_metadata.py
+     - 标注: python tools/auto_tagger.py
+     - 关联: python tools/link_related.py
+  6. "Phase 4: 质量检查与导出"
+     - python tools/quality_check.py
+     - python tools/export_data.py --format csv
+  7. "一键运行"
+     - python scripts/run_all.py (完整流程)
+     - python scripts/run_delta.py (增量更新)
+  8. "常见问题"
+     - 编码错误: 使用 --encoding utf-8
+     - 反爬限制: 降低 rate_limit 参数
+     - 超时: 增加请求超时时间
+  9. "输出文件说明"
+     - 每个输出目录和文件的内容说明
+
+  Create the file and commit.

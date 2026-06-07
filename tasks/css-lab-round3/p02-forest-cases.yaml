@@ -1,0 +1,17 @@
+title: "P02: Digitize forest commons cases (Ostrom SES)"
+source: "sources/github/Yuuqq/css-lab-commons-db"
+branch: "main"
+prompt: |
+  Expand `data/commons_forest.json` with at least 10 real-world forest commons cases using Ostrom's SES framework.
+
+  For each case, fill these SES variables:
+  - `case_name`, `country`, `region`, `resource_type` ("forest")
+  - `biophysical`: { `forest_area_hectares`, `forest_type`, `biodiversity_index`, `deforestation_trend` }
+  - `governance`: { `tenure_type`, `harvesting_rules`, `reforestation_requirements`, `monitoring_system` }
+  - `actors`: { `community_size`, `user_rights`, `management_body`, `external_support` }
+  - `outcomes`: { `forest_health` (1-5), `carbon_sequestration`, `livelihood_impact` (1-5), `fire_incidents` }
+  - `references`, `iad_analysis`
+
+  Real cases: Nepal community forestry, Indian joint forest management, Swiss alpine forests, Japanese village forests, Mexican ejido forests, Cameroon community forests, etc.
+
+  Commit with message: "feat: add 10+ forest commons cases with SES framework"

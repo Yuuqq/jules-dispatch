@@ -1,0 +1,85 @@
+# UI Polish: Admin dashboard metric cards and chart containers
+title: "UI Polish — Admin Dashboard Cards + Chart Containers"
+source: "sources/github/Yuuqq/smart-resume-builder"
+branch: "master"
+autoMode: "AUTO_CREATE_PR"
+
+prompt: |
+  ## Context
+  Streamlit resume builder. Light CSS polish for admin dashboard. Only add CSS, no logic changes.
+
+  ## Task: Polish `views/admin_dashboard.py`
+
+  Add CSS injections via `st.markdown("<style>...</style>", unsafe_allow_html=True)` at the top of `render_admin_dashboard()`.
+
+  ### 1. Metric cards — add colored background blocks
+  ```css
+  /* Admin metric cards — more visual weight */
+  div[data-testid="stMetric"] {
+      background: linear-gradient(135deg, #f5f5f7 0%, #ffffff 100%);
+      border-radius: 14px;
+      padding: 20px 16px;
+      border: 1px solid #e5e5ea;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  div[data-testid="stMetric"] [data-testid="stMetricLabel"] {
+      font-size: 0.78rem;
+      color: #86868b;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-weight: 600;
+  }
+  div[data-testid="stMetric"] [data-testid="stMetricValue"] {
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: #1d1d1f;
+  }
+  ```
+
+  ### 2. Chart containers — add border and title bar feel
+  ```css
+  /* Chart section containers */
+  .js-plotly-plot {
+      border: 1px solid #e5e5ea;
+      border-radius: 12px;
+      padding: 8px;
+      background: #fafafa;
+  }
+  ```
+
+  ### 3. Section headers — add subtle left border
+  Inject a small style for admin section headers:
+  ```css
+  /* Admin section dividers */
+  .admin-section-header {
+      padding-left: 12px;
+      border-left: 3px solid #007aff;
+      margin-bottom: 0.5rem;
+  }
+  ```
+  Then update the `st.subheader()` calls to use `st.markdown()` with this class:
+  ```python
+  # Before: st.subheader("🤖 AI 使用情况")
+  # After:
+  st.markdown('<h3 class="admin-section-header">🤖 AI 使用情况</h3>', unsafe_allow_html=True)
+  ```
+  Apply this to all section subheaders in the admin dashboard.
+
+  ### 4. Export buttons — refined style
+  ```css
+  /* Export buttons in admin */
+  section[data-testid="stSidebar"] .stButton > button,
+  .stButton > button {
+      border-radius: 8px;
+  }
+  ```
+
+  ## Important
+  - ONLY modify `views/admin_dashboard.py`
+  - Do NOT change any business logic, data queries, or function signatures
+  - Keep all existing chart configurations and data processing
+  - CSS should be page-scoped (only affects admin dashboard)
+  - Total changes: ~30-40 lines of CSS + minor HTML wrapper changes
+
+  ## Commit
+  Message: `style: polish admin dashboard metric cards, charts, and section headers`

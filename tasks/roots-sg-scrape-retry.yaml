@@ -1,0 +1,64 @@
+title: "Roots.sg Remittance Collection Pagination Scraping (retry)"
+source: "sources/github/Yuuqq/Qiaopi"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+
+prompt: |
+  ## Task: Scrape Roots.sg Remittance Collection (expand from 23 to 100-200 records)
+
+  ### Context
+  Roots.sg (Singapore National Library) has a search API for their collections. We already have 23 remittance docs captured and need to expand to 100-200 records.
+
+  ### API Specification
+  - **Endpoint:** `POST https://www.roots.gov.sg/kendra-get-search-results`
+  - **Content-Type:** `application/json`
+  - **Request body template:**
+    ```json
+    {
+      "topicsQuery": {
+        "must": [{ "field": "source", "value": "roots_collections" }],
+        "not": [{ "field": "source", "value": "CSV" }]
+      },
+      "query": "remittance letter",
+      "searchMode": "NEW",
+      "pageNumber": 1,
+      "size": 20
+    }
+    ```
+  - **Pagination:** `size=20` per page, `pageNumber=1,2,3...` up to 10 pages.
+
+  ### Implementation Strategy (try in order)
+
+  **Approach 1: Direct Node.js fetch**
+  Write a Node.js script using native `fetch` (Node 22 has it built-in). Try the POST request directly. If it works (returns JSON with results), great — paginate through all pages.
+
+  **Approach 2: With browser-like headers**
+  If Approach 1 fails (404 or 403), add full browser-like headers: User-Agent, Accept, Referer (set to https://www.roots.gov.sg/), Origin (https://www.roots.gov.sg), and Cookie header if needed.
+
+  **Approach 3: Use Playwright**
+  If both fail, install Playwright (`npm install playwright && npx playwright install chromium`) and use `page.evaluate(() => fetch(...))` from within a real browser session. Navigate to `https://www.roots.gov.sg/` first to establish cookies.
+
+  ### Script Requirements
+
+  Write `qiaopi_data/scrape_roots_sg.js` that:
+  1. Tries Approach 1 first, falls back to 2, then 3
+  2. Paginates through pages 1-10 (20 results per page = 200 max)
+  3. Adds 2-second delays between requests
+  4. Saves each page response to `qiaopi_data/roots_sg_remittance_search_page_{N}.json`
+  5. Extracts records and writes to `qiaopi_data/roots_sg_remittance_expanded.csv` with columns: id, title, description, thumbnail_url, detail_url, page_number
+  6. Deduplicates by id against existing `qiaopi_data/roots_sg_koh_remittance_docs.csv` (23 existing records)
+  7. Generates `qiaopi_data/roots_sg_remittance_expanded_summary.md`
+  8. Run the script: `node qiaopi_data/scrape_roots_sg.js`
+  9. If the script succeeds, commit all new files
+  10. If ALL approaches fail, create `qiaopi_data/roots_sg_scrape_attempt.md` documenting exactly what was tried and what errors occurred. Commit that file.
+
+  ### Reference Files (already in repo)
+  - `qiaopi_data/roots_sg_koh_followup_summary.md` — technical discovery report
+  - `qiaopi_data/roots_sg_koh_captured_apis.json` — original API intercept data (check response structure)
+  - `qiaopi_data/roots_sg_koh_remittance_docs.csv` — 23 existing records for dedup
+
+  ### Success Criteria
+  - At minimum: a script that was run, with either successful data or documented failure
+  - Ideally: 100-200 unique remittance records in CSV format
+  - Summary report created
+  - All files committed

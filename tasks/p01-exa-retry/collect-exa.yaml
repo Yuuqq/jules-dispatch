@@ -1,0 +1,124 @@
+# P01 Exa API 分布式采集 — 替代被 403/DNS 拦截的直接爬取
+# 6 个任务并行，每个用 Exa API 搜索一个政策域
+---
+title: "[EXA-01] Collect environmental governance policies via Exa"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Use Exa API to collect Chinese environmental governance policy documents.
+
+  Steps:
+  1. Ensure the repo is up to date: `git pull origin main`
+  2. Install dependency: `pip install exa-py>=2.0.0`
+  3. Run the collection script with Exa API key:
+     ```
+     export EXA_API_KEY=<EXA_API_KEY>
+     python tasks/collect_exa_environmental.py
+     ```
+  4. Verify output: `data/exa/environmental_governance_exa.json` should exist and have >0 records
+  5. If the script fails due to API errors, check `exa_client.py` and fix any SDK compatibility issues (e.g., parameter names like `use_autoprompt` vs `use_autoprompt_correct`)
+  6. Commit the output file with message including the record count
+  7. If no data collected after retries, commit `data/exa/environmental_FAILED.md` explaining the issue
+
+  IMPORTANT: The collected data file MUST be committed.
+---
+title: "[EXA-02] Collect data security & AI governance policies via Exa"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Use Exa API to collect Chinese data security and AI governance policy documents.
+
+  Steps:
+  1. Ensure the repo is up to date: `git pull origin main`
+  2. Install dependency: `pip install exa-py>=2.0.0`
+  3. Run the collection script with Exa API key:
+     ```
+     export EXA_API_KEY=<EXA_API_KEY>
+     python tasks/collect_exa_data_security.py
+     ```
+  4. Verify output: `data/exa/data_security_exa.json` should exist and have >0 records
+  5. If the script fails, fix `exa_client.py` for SDK compatibility and retry
+  6. Commit the output file with record count in message
+  7. If failed after retries, commit `data/exa/data_security_FAILED.md`
+---
+title: "[EXA-03] Collect urban governance policies via Exa"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Use Exa API to collect Chinese urban governance and community management policy documents.
+
+  Steps:
+  1. Ensure the repo is up to date: `git pull origin main`
+  2. Install dependency: `pip install exa-py>=2.0.0`
+  3. Run the collection script with Exa API key:
+     ```
+     export EXA_API_KEY=<EXA_API_KEY>
+     python tasks/collect_exa_urban.py
+     ```
+  4. Verify output: `data/exa/urban_governance_exa.json` should exist and have >0 records
+  5. If the script fails, fix `exa_client.py` for SDK compatibility and retry
+  6. Commit the output file with record count in message
+  7. If failed after retries, commit `data/exa/urban_FAILED.md`
+---
+title: "[EXA-04] Collect commons resource policies via Exa"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Use Exa API to collect Chinese commons resource governance policy documents.
+
+  Steps:
+  1. Ensure the repo is up to date: `git pull origin main`
+  2. Install dependency: `pip install exa-py>=2.0.0`
+  3. Run the collection script with Exa API key:
+     ```
+     export EXA_API_KEY=<EXA_API_KEY>
+     python tasks/collect_exa_commons.py
+     ```
+  4. Verify output: `data/exa/commons_resource_exa.json` should exist and have >0 records
+  5. If the script fails, fix `exa_client.py` for SDK compatibility and retry
+  6. Commit the output file with record count in message
+  7. If failed after retries, commit `data/exa/commons_FAILED.md`
+---
+title: "[EXA-05] Collect platform economy policies via Exa"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Use Exa API to collect Chinese platform economy and AI governance policy documents.
+
+  Steps:
+  1. Ensure the repo is up to date: `git pull origin main`
+  2. Install dependency: `pip install exa-py>=2.0.0`
+  3. Run the collection script with Exa API key:
+     ```
+     export EXA_API_KEY=<EXA_API_KEY>
+     python tasks/collect_exa_platform.py
+     ```
+  4. Verify output: `data/exa/platform_governance_exa.json` should exist and have >0 records
+  5. If the script fails, fix `exa_client.py` for SDK compatibility and retry
+  6. Commit the output file with record count in message
+  7. If failed after retries, commit `data/exa/platform_FAILED.md`
+---
+title: "[EXA-06] Collect ministry regulations & international comparison via Exa"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Use Exa API to collect Chinese ministry regulations and international comparison data.
+
+  Steps:
+  1. Ensure the repo is up to date: `git pull origin main`
+  2. Install dependency: `pip install exa-py>=2.0.0`
+  3. Run the collection script with Exa API key:
+     ```
+     export EXA_API_KEY=<EXA_API_KEY>
+     python tasks/collect_exa_ministries.py
+     ```
+  4. Verify output: `data/exa/ministries_exa.json` should exist and have >0 records
+  5. If the script fails, fix `exa_client.py` for SDK compatibility and retry
+  6. Commit the output file with record count in message
+  7. If failed after retries, commit `data/exa/ministries_FAILED.md"

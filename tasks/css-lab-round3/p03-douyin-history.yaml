@@ -1,0 +1,16 @@
+title: "P03: Douyin governance policy history (2018-2026)"
+source: "sources/github/Yuuqq/css-lab-platform-governance"
+branch: "main"
+prompt: |
+  Expand `data/抖音_policies.json` with a policy timeline of Douyin (抖音) governance rules from 2018 to 2026.
+
+  Collect at least 5 policy versions/updates including:
+  1. Douyin community guidelines (社区公约) - all major versions
+  2. Douyin live streaming rules (直播行为规范)
+  3. Douyin e-commerce rules (电商管理规范)
+  4. Douyin content recommendation rules (内容推荐规则)
+  5. Douyin creator monetization policies (创作者变现规范)
+
+  For each: `policy_name`, `platform`: "抖音", `version`, `effective_date`, `policy_type`, `content_summary`, `key_changes_from_previous`, `source_url`, `collection_date`
+
+  Search the web. Commit: "feat: Douyin governance policy timeline 2018-2026"

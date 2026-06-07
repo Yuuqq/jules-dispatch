@@ -1,0 +1,373 @@
+# Phase: 补充缺失部委 + 历史年份数据
+# 目标：覆盖 7 个缺失部委 + 2015-2019 历史数据
+---
+title: "[FILL-01] Missing ministries: MOHURD, MNR, SAMR via Exa"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Collect policy documents from 3 missing ministry sources using Exa API.
+
+  These ministries have ZERO coverage in our current database. We need to fill this gap.
+
+  Steps:
+  1. `git pull origin main`
+  2. `pip install exa-py>=2.0.0`
+  3. Create and run a Python script:
+
+  ```python
+  import os, json, time
+  from exa_py import Exa
+  from pathlib import Path
+  from datetime import datetime
+
+  client = Exa(os.environ["EXA_API_KEY"])
+
+  ministries = {
+      "mohurd": {
+          "label": "住房和城乡建设部",
+          "queries": [
+              "住房和城乡建设部 城市更新 办法 site:gov.cn",
+              "住房和城乡建设部 物业管理 条例 site:gov.cn",
+              "住房和城乡建设部 保障性住房 管理 site:gov.cn",
+              "住房和城乡建设部 老旧小区改造 site:gov.cn",
+              "住房和城乡建设部 建筑节能 标准 site:gov.cn",
+              "住建部 房地产 管理 规定 site:gov.cn",
+          ]
+      },
+      "mnr": {
+          "label": "自然资源部",
+          "queries": [
+              "自然资源部 不动产登记 办法 site:gov.cn",
+              "自然资源部 国土空间规划 规定 site:gov.cn",
+              "自然资源部 土地管理 实施 条例 site:gov.cn",
+              "自然资源部 矿产资源 管理 办法 site:gov.cn",
+              "自然资源部 自然资源确权 site:gov.cn",
+              "自然资源部 耕地保护 site:gov.cn",
+          ]
+      },
+      "samr": {
+          "label": "国家市场监督管理总局",
+          "queries": [
+              "市场监管总局 反垄断 规定 site:gov.cn",
+              "市场监管总局 平台经济 管理 办法 site:gov.cn",
+              "市场监管总局 消费者权益保护 site:gov.cn",
+              "市场监管总局 数据安全 管理 site:gov.cn",
+              "市场监管总局 互联网广告 管理 办法 site:gov.cn",
+              "市场监管总局 食品安全 site:gov.cn",
+          ]
+      }
+  }
+
+  out_dir = Path("data/by_source/A_authoritative")
+  out_dir.mkdir(parents=True, exist_ok=True)
+  all_results = {}
+  total = 0
+
+  for key, cfg in ministries.items():
+      results = []
+      seen = set()
+      for q in cfg["queries"]:
+          try:
+              resp = client.search(q, num_results=10, type="auto",
+                  include_domains=["gov.cn"],
+                  contents={"text": {"max_characters": 10000, "include_html_tags": False},
+                            "highlights": {"query": q, "max_characters": 200}})
+              for r in resp.results:
+                  url = getattr(r, "url", "")
+                  if url and url not in seen:
+                      seen.add(url)
+                      results.append({
+                          "title": getattr(r, "title", ""),
+                          "url": url,
+                          "text": getattr(r, "text", ""),
+                          "published_date": str(getattr(r, "published_date", "")),
+                          "ministry": key,
+                          "ministry_label": cfg["label"],
+                          "collected_at": datetime.now().isoformat(),
+                      })
+              time.sleep(0.5)
+          except Exception as e:
+              print(f"  Error: {e}")
+      all_results[key] = results
+      total += len(results)
+      print(f"  {cfg['label']}: {len(results)} records")
+
+      with open(out_dir / f"{key}_govcn.json", "w", encoding="utf-8") as f:
+          json.dump({"metadata": {"ministry": key, "label": cfg["label"], "count": len(results)},
+                     "results": results}, f, ensure_ascii=False, indent=2)
+
+  print(f"\nTotal: {total} records from 3 missing ministries")
+  ```
+
+  Run with: `EXA_API_KEY=<EXA_API_KEY> python <script>.py`
+  Commit all output files.
+---
+title: "[FILL-02] Missing ministries: MIIT, MOST, MARA, Court via Exa"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Collect policy documents from 4 more missing ministry sources using Exa API.
+
+  Steps:
+  1. `git pull origin main`
+  2. `pip install exa-py>=2.0.0`
+  3. Create and run a Python script:
+
+  ```python
+  import os, json, time
+  from exa_py import Exa
+  from pathlib import Path
+  from datetime import datetime
+
+  client = Exa(os.environ["EXA_API_KEY"])
+
+  ministries = {
+      "miit": {
+          "label": "工业和信息化部",
+          "queries": [
+              "工业和信息化部 数据安全 管理 办法 site:gov.cn",
+              "工业和信息化部 人工智能 产业 政策 site:gov.cn",
+              "工业和信息化部 互联网 管理 规定 site:gov.cn",
+              "工业和信息化部 新能源汽车 site:gov.cn",
+              "工信部 网络安全 行业 管理 site:gov.cn",
+          ]
+      },
+      "most": {
+          "label": "科学技术部",
+          "queries": [
+              "科学技术部 人工智能 科技 政策 site:gov.cn",
+              "科学技术部 科技伦理 管理 办法 site:gov.cn",
+              "科学技术部 科研诚信 规定 site:gov.cn",
+              "科技部 基础研究 政策 site:gov.cn",
+          ]
+      },
+      "mara": {
+          "label": "农业农村部",
+          "queries": [
+              "农业农村部 农产品质量安全 管理 办法 site:gov.cn",
+              "农业农村部 农村土地承包 管理 site:gov.cn",
+              "农业农村部 乡村振兴 政策 site:gov.cn",
+              "农业农村部 农业转基因 管理 site:gov.cn",
+          ]
+      },
+      "court": {
+          "label": "最高人民法院",
+          "queries": [
+              "最高人民法院 司法解释 数据安全 site:gov.cn",
+              "最高人民法院 环境公益诉讼 司法解释 site:gov.cn",
+              "最高人民法院 知识产权 司法解释 site:gov.cn",
+              "最高人民法院 消费者权益 司法解释 site:gov.cn",
+          ]
+      }
+  }
+
+  out_dir = Path("data/by_source/A_authoritative")
+  out_dir.mkdir(parents=True, exist_ok=True)
+  total = 0
+
+  for key, cfg in ministries.items():
+      results, seen = [], set()
+      for q in cfg["queries"]:
+          try:
+              resp = client.search(q, num_results=10, type="auto",
+                  include_domains=["gov.cn"],
+                  contents={"text": {"max_characters": 10000, "include_html_tags": False},
+                            "highlights": {"query": q, "max_characters": 200}})
+              for r in resp.results:
+                  url = getattr(r, "url", "")
+                  if url and url not in seen:
+                      seen.add(url)
+                      results.append({
+                          "title": getattr(r, "title", ""), "url": url,
+                          "text": getattr(r, "text", ""),
+                          "published_date": str(getattr(r, "published_date", "")),
+                          "ministry": key, "ministry_label": cfg["label"],
+                          "collected_at": datetime.now().isoformat(),
+                      })
+              time.sleep(0.5)
+          except Exception as e:
+              print(f"  Error: {e}")
+      total += len(results)
+      print(f"  {cfg['label']}: {len(results)} records")
+      with open(out_dir / f"{key}_govcn.json", "w", encoding="utf-8") as f:
+          json.dump({"metadata": {"ministry": key, "label": cfg["label"], "count": len(results)},
+                     "results": results}, f, ensure_ascii=False, indent=2)
+
+  print(f"\nTotal: {total} records from 4 missing ministries")
+  ```
+
+  Run with: `EXA_API_KEY=<EXA_API_KEY> python <script>.py`
+  Commit all output files.
+---
+title: "[FILL-03] Historical policies 2015-2019 via Exa"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Collect historical policy documents from 2015-2019 to fill year coverage gap.
+
+  Our database has ZERO records before 2020. Key laws and policies were enacted during 2015-2019 that are still in effect.
+
+  Steps:
+  1. `git pull origin main`
+  2. `pip install exa-py>=2.0.0`
+  3. Create and run a Python script:
+
+  ```python
+  import os, json, time
+  from exa_py import Exa
+  from pathlib import Path
+  from datetime import datetime
+
+  client = Exa(os.environ["EXA_API_KEY"])
+
+  queries = [
+      # 2015-2016 landmark laws
+      "中华人民共和国国家安全法 2015 site:gov.cn",
+      "中华人民共和国反恐怖主义法 2016 site:gov.cn",
+      "中华人民共和国网络安全法 2016 site:gov.cn",
+      "中华人民共和国慈善法 2016 site:gov.cn",
+      "中华人民共和国境外非政府组织管理法 2016 site:gov.cn",
+      # 2017-2018
+      "中华人民共和国国家情报法 2017 site:gov.cn",
+      "中华人民共和国环境保护税法 2016 2018 site:gov.cn",
+      "国务院机构改革方案 2018 site:gov.cn",
+      "电子商务法 2018 site:gov.cn",
+      "土壤污染防治法 2018 site:gov.cn",
+      "环境保护条例 2015 2016 2017 2018 2019 site:gov.cn",
+      # 2019
+      "中华人民共和国外商投资法 2019 site:gov.cn",
+      "中华人民共和国疫苗管理法 2019 site:gov.cn",
+      "中华人民共和国密码法 2019 site:gov.cn",
+      "土地管理法 修正 2019 site:gov.cn",
+      "城市房地产管理法 修正 2019 site:gov.cn",
+      # Broad historical queries
+      "国务院 法规 2015 site:gov.cn",
+      "国务院 法规 2016 site:gov.cn",
+      "国务院 法规 2017 site:gov.cn",
+      "国务院 法规 2018 site:gov.cn",
+      "国务院 法规 2019 site:gov.cn",
+  ]
+
+  out_dir = Path("data/by_source/A_authoritative")
+  out_dir.mkdir(parents=True, exist_ok=True)
+  results, seen = [], set()
+
+  for q in queries:
+      try:
+          resp = client.search(q, num_results=10, type="auto",
+              include_domains=["gov.cn"],
+              start_published_date="2015-01-01",
+              end_published_date="2019-12-31",
+              contents={"text": {"max_characters": 10000, "include_html_tags": False},
+                        "highlights": {"query": q, "max_characters": 200}})
+          for r in resp.results:
+              url = getattr(r, "url", "")
+              if url and url not in seen:
+                  seen.add(url)
+                  results.append({
+                      "title": getattr(r, "title", ""), "url": url,
+                      "text": getattr(r, "text", ""),
+                      "published_date": str(getattr(r, "published_date", "")),
+                      "collected_at": datetime.now().isoformat(),
+                      "collection_type": "exa_govcn_historical",
+                  })
+          time.sleep(0.5)
+      except Exception as e:
+          print(f"  Error: {e}")
+
+  with open(out_dir / "historical_2015_2019_govcn.json", "w", encoding="utf-8") as f:
+      json.dump({"metadata": {"period": "2015-2019", "count": len(results),
+                                "collected_at": datetime.now().isoformat()},
+                 "results": results}, f, ensure_ascii=False, indent=2)
+
+  print(f"Collected {len(results)} historical records (2015-2019)")
+  ```
+
+  Run with: `EXA_API_KEY=<EXA_API_KEY> python <script>.py`
+  Commit all output files.
+---
+title: "[FILL-04] NPC laws database — core legislation full texts"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Collect full texts of core Chinese legislation from NPC laws database and authoritative sources.
+
+  Our "法律" category has 272 records but many are partial excerpts. This task targets the most important laws with full text retrieval.
+
+  Steps:
+  1. `git pull origin main`
+  2. `pip install exa-py>=2.0.0`
+  3. Create and run a Python script:
+
+  ```python
+  import os, json, time
+  from exa_py import Exa
+  from pathlib import Path
+  from datetime import datetime
+
+  client = Exa(os.environ["EXA_API_KEY"])
+
+  # Core laws that MUST have full text in the database
+  laws = [
+      "中华人民共和国环境保护法 全文",
+      "中华人民共和国环境影响评价法 全文",
+      "中华人民共和国大气污染防治法 全文",
+      "中华人民共和国水污染防治法 全文",
+      "中华人民共和国土壤污染防治法 全文",
+      "中华人民共和国固体废物污染环境防治法 全文",
+      "中华人民共和国噪声污染防治法 全文",
+      "中华人民共和国长江保护法 全文",
+      "中华人民共和国黄河保护法 全文",
+      "中华人民共和国数据安全法 全文",
+      "中华人民共和国个人信息保护法 全文",
+      "中华人民共和国网络安全法 全文",
+      "中华人民共和国电子商务法 全文",
+      "中华人民共和国城乡规划法 全文",
+      "中华人民共和国水法 全文",
+      "中华人民共和国森林法 全文",
+      "中华人民共和国土地管理法 全文",
+      "中华人民共和国矿产资源法 全文",
+      "中华人民共和国反垄断法 全文",
+      "中华人民共和国外商投资法 全文",
+  ]
+
+  out_dir = Path("data/by_source/A_authoritative")
+  out_dir.mkdir(parents=True, exist_ok=True)
+  results, seen = [], set()
+
+  for q in laws:
+      try:
+          # Use larger max_characters for full text
+          resp = client.search(q, num_results=5, type="auto",
+              include_domains=["gov.cn", "npc.gov.cn"],
+              contents={"text": {"max_characters": 30000, "include_html_tags": False},
+                        "highlights": {"query": q, "max_characters": 500}})
+          for r in resp.results:
+              url = getattr(r, "url", "")
+              if url and url not in seen:
+                  seen.add(url)
+                  results.append({
+                      "title": getattr(r, "title", ""), "url": url,
+                      "text": getattr(r, "text", ""),
+                      "published_date": str(getattr(r, "published_date", "")),
+                      "collected_at": datetime.now().isoformat(),
+                      "collection_type": "exa_npc_fulltext",
+                  })
+          time.sleep(0.5)
+      except Exception as e:
+          print(f"  Error: {e}")
+
+  with open(out_dir / "npc_core_laws_fulltext.json", "w", encoding="utf-8") as f:
+      json.dump({"metadata": {"source": "npc_gov_cn", "count": len(results),
+                                "collected_at": datetime.now().isoformat()},
+                 "results": results}, f, ensure_ascii=False, indent=2)
+
+  print(f"Collected {len(results)} core law full texts")
+  ```
+
+  Run with: `EXA_API_KEY=<EXA_API_KEY> python <script>.py`
+  Commit all output files. Include count in commit message.

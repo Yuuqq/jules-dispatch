@@ -1,0 +1,48 @@
+# P01 Config Enhancement: Complete missing/incomplete YAML configs
+---
+title: "[TOOL-07] Complete configs for environmental, urban, and platform governance"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Review and complete the YAML configuration files in `configs/`.
+
+  ## Current state (check each file):
+
+  Some configs are very incomplete (only 5-6 keywords). Each config needs:
+  - `domain`: human-readable Chinese name
+  - `domain_id`: snake_case identifier
+  - `keywords_zh`: 30+ Chinese keywords (comprehensive coverage)
+  - `keywords_en`: 20+ English keywords
+  - `flk_categories`: ["法律", "行政法规", "部门规章"] (or subset)
+  - `expected_count`: approximate expected document counts
+
+  ## Files to review/fix:
+
+  1. **`configs/environmental.yaml`** — likely very short
+     - Should have 30+ keywords: 环境保护, 碳排放, 碳达峰, 碳中和, 环境影响评价, 污染防治, 大气污染防治, 水污染防治, 土壤污染防治, 固体废物, 噪声污染防治, 海洋环境保护, 清洁生产, 循环经济, 节约能源, 可再生能源, 生态保护, 生态补偿, 自然保护区, 野生动物保护, 生物多样性, 森林法, 草原法, 湿地保护, 长江保护, 黄河保护, 排污许可, 环保督察, 环境公益诉讼, 气候变化, 温室气体, 垃圾分类, 绿色建筑, 环保产业
+     - keywords_en: environmental protection, carbon emission, carbon neutrality, environmental impact assessment, pollution prevention, clean air, water pollution, soil pollution, solid waste, marine protection, clean production, circular economy, energy conservation, renewable energy, ecological protection, nature reserve, wildlife protection, biodiversity, wetland protection, climate change, greenhouse gas
+
+  2. **`configs/urban_governance.yaml`** — likely very short
+     - Should have 30+ keywords: 城市规划, 城市更新, 智慧城市, 社区治理, 物业管理, 住房保障, 廉租房, 公租房, 房地产管理, 建筑法, 拆迁, 征收补偿, 市政公用, 城市道路, 城市供水, 城市排水, 垃圾处理, 城市绿化, 城市交通, 轨道交通, 停车管理, 老旧小区改造, 数字化城市管理, 城管执法, 街道管理, 社区服务, 居民委员会, 业主委员会, 房屋租赁, 房地产开发, 土地管理, 户籍制度, 居住证, 城市设计, 海绵城市, 地下管网
+     - keywords_en: urban planning, urban renewal, smart city, community governance, property management, housing security, real estate, municipal services, urban transport, digital governance, community service, neighborhood committee, land management, household registration, sponge city
+
+  3. **`configs/platform_governance.yaml`** — likely only 5 keywords
+     - Should have 30+ keywords: 互联网信息服务, 电子商务, 平台经济, 反垄断, 反不正当竞争, 消费者权益保护, 广告法, 网络安全审查, 算法备案, 算法推荐, 生成式人工智能, 深度合成, 互联网直播, 网络表演, 网络游戏, 未成年人网络保护, 个人信息保护, 数据出境, 网络安全等级保护, 关键信息基础设施, 互联网新闻信息服务, 网络信息内容生态治理, 数据安全审查, 平台责任, 数字经济, 新就业形态, 外卖骑手, 网约车, 共享经济, 信用评价, 网络安全漏洞, 数据要素, 数字治理
+     - keywords_en: internet information service, e-commerce, platform economy, antitrust, anti-monopoly, consumer protection, algorithm regulation, generative AI, content moderation, platform responsibility, digital economy, gig economy, data protection, digital governance
+
+  4. **`configs/data_security.yaml`** — check if complete
+  5. **`configs/commons_resource.yaml`** — check if complete
+
+  ## Requirements:
+
+  - Use standard YAML format (not inline arrays)
+  - Each keyword on its own line with `- ` prefix
+  - Maintain consistent structure across all files
+  - Do NOT break existing code that reads these configs
+  - Ensure all files have the same top-level keys: domain, domain_id, keywords_zh, keywords_en, flk_categories, expected_count
+
+  Review each file. If a file is already complete and well-formatted, leave it as-is.
+  If incomplete, replace/extend it.
+
+  Commit all changes.

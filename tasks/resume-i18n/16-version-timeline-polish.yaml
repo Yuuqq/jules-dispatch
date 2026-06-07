@@ -1,0 +1,118 @@
+# UI Polish: Version manager timeline + comparison highlights
+title: "UI Polish — Version Timeline + Comparison Highlights"
+source: "sources/github/Yuuqq/smart-resume-builder"
+branch: "master"
+autoMode: "AUTO_CREATE_PR"
+
+prompt: |
+  ## Context
+  Streamlit resume builder. Light CSS polish for version manager. Only add CSS/HTML, no logic changes.
+
+  ## Task: Polish `views/version_manager.py`
+
+  Add CSS injections at the top of the render function. Add timeline styling to version list.
+
+  ### 1. Version list — timeline vertical line
+  Add a visual timeline to the version selection area:
+  ```css
+  .version-timeline {
+      position: relative;
+      padding-left: 24px;
+      margin: 0;
+  }
+  .version-timeline::before {
+      content: '';
+      position: absolute;
+      left: 8px;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: #d2d2d7;
+      border-radius: 1px;
+  }
+  .version-item {
+      position: relative;
+      padding: 8px 0;
+      border-bottom: 1px solid #f0f0f0;
+  }
+  .version-item:last-child {
+      border-bottom: none;
+  }
+  .version-item::before {
+      content: '';
+      position: absolute;
+      left: -20px;
+      top: 14px;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #d2d2d7;
+      border: 2px solid #ffffff;
+      box-shadow: 0 0 0 2px #d2d2d7;
+  }
+  .version-item.active::before {
+      background: #007aff;
+      box-shadow: 0 0 0 2px #007aff;
+  }
+  ```
+
+  ### 2. Version type badge — colored pill
+  Add colored badges for version types:
+  ```css
+  .version-badge {
+      display: inline-block;
+      font-size: 0.7rem;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-weight: 500;
+      margin-left: 6px;
+  }
+  .version-badge.initial { background: #e8f5e9; color: #2e7d32; }
+  .version-badge.polish-general { background: #e3f2fd; color: #1565c0; }
+  .version-badge.polish-targeted { background: #fff3e0; color: #e65100; }
+  .version-badge.manual { background: #f3e5f5; color: #7b1fa2; }
+  ```
+
+  Apply these badges in the version option rendering. READ the file to find where version type labels are constructed, then wrap them with the badge class.
+
+  ### 3. Comparison result — diff highlights
+  Style the version comparison diff output:
+  ```css
+  .diff-added {
+      background: #dcfce7;
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: #166534;
+      font-size: 0.85rem;
+  }
+  .diff-removed {
+      background: #fee2e2;
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: #991b1b;
+      text-decoration: line-through;
+      font-size: 0.85rem;
+  }
+  ```
+
+  Find where diff/comparison results are displayed and apply these classes to added/removed content.
+
+  ### 4. Action buttons — consistent styling
+  ```css
+  /* Version action buttons */
+  .version-actions .stButton > button {
+      border-radius: 8px;
+      font-size: 0.85rem;
+      padding: 4px 12px;
+  }
+  ```
+
+  ## Important
+  - ONLY modify `views/version_manager.py`
+  - Do NOT change version management logic, data loading, comparison logic, or function signatures
+  - READ the file first to understand the actual HTML structure before adding wrappers
+  - Adapt the CSS classes to match existing code patterns
+  - Total changes: ~30-40 lines of CSS + minor HTML additions
+
+  ## Commit
+  Message: `style: polish version manager with timeline, badges, and diff highlights`

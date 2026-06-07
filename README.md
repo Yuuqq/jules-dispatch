@@ -197,6 +197,18 @@ args = ["--project", "/path/to/your/project", "mcp"]
 env = { JULES_API_KEY = "your-api-key-here", JULES_DEFAULT_SOURCE = "sources/github/owner/repo" }
 ```
 
+### Install as an Agent Skill
+
+This repository also ships a lightweight skill wrapper at `skills/jules-dispatch/`. The skill teaches Claude Code, Codex, or any Agent Skills-compatible host when and how to use the `jules-dispatch` MCP tools.
+
+For Codex, copy or install the folder as `jules-dispatch` in your Codex skills directory, then restart Codex:
+
+```bash
+cp -R skills/jules-dispatch "${CODEX_HOME:-$HOME/.codex}/skills/jules-dispatch"
+```
+
+For Agent Skills-compatible hosts that use a shared skills directory, copy the same folder into that host's skills directory. The skill is only the instruction layer; you still need the MCP server configured with `jules-dispatch mcp` and a valid `JULES_API_KEY`.
+
 ### MCP Tools Exposed
 
 #### Consolidated tools (recommended)

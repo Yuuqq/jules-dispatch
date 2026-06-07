@@ -1,0 +1,56 @@
+# P01 Tools Batch 2: Metadata extraction + Collection statistics
+---
+title: "[TOOL-03] Implement metadata extraction and collection statistics tools"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Implement two CLI tools for the policy database project.
+
+  ## Tool 1: `tools/extract_metadata.py`
+
+  Replace the placeholder with a full implementation:
+
+  ```python
+  """Extract metadata from policy document full_text using regex."""
+  ```
+
+  Requirements:
+  1. CLI: `python tools/extract_metadata.py --input <file> --output <file>`
+  2. For each document, extract these fields from `full_text` if missing:
+     - `issuing_body`: match patterns like "中华人民共和国XX部", "国务院", "全国人民代表大会常务委员会", "最高人民法院"
+     - `document_number`: match patterns like "主席令第X号", "国发〔2021〕X号", "部令 第X号"
+     - `effective_date`: match "本法自(\d{4})年(\d{1,2})月(\d{1,2})日起施行" or similar
+     - `status`: determine from text — "现行有效" if no amendment mentioned, "已被修改" if "根据...修正", "已废止" if "废止"
+     - `amendment_history`: extract all "根据20XX年X月X日...修正" patterns into array of {version, date, change}
+  3. Add `metadata_confidence` field (0-1) indicating how many fields were successfully extracted
+  4. Only fill missing fields — don't overwrite existing values
+  5. Print: records processed, fields extracted per type, avg confidence
+  6. Support directory input
+
+  ## Tool 2: `tools/collection_stats.py`
+
+  Replace the placeholder:
+
+  ```python
+  """Generate collection statistics and reports."""
+  ```
+
+  Requirements:
+  1. CLI: `python tools/collection_stats.py --input <file_or_dir> --output-dir reports/`
+  2. Read all policy documents from JSON file(s)
+  3. Generate statistics by these dimensions:
+     - By domain: count per domain
+     - By hierarchy: 法律, 行政法规, 部门规章, etc.
+     - By year: count per publish year
+     - By source: 国家法律法规数据库, 中国政府网, etc.
+     - By status: 现行有效, 已废止, etc.
+     - By doc_type: 法律, 行政法规, etc.
+  4. Output TWO files:
+     - `reports/stats.json` — machine-readable JSON
+     - `reports/stats.md` — Markdown tables for human reading (can paste into papers)
+  5. Also print terminal summary
+  6. Include overall metrics: total docs, avg text length, date range, coverage by domain
+
+  Create both files, update requirements.txt if needed, and commit.
+  Include docstrings and type hints.

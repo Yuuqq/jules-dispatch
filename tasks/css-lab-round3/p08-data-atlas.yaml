@@ -1,0 +1,34 @@
+title: "P08: Expand data resource atlas for CSS domains"
+source: "sources/github/Yuuqq/css-lab-data-atlas"
+branch: "main"
+prompt: |
+  Expand `data/data_resource_atlas.json` with a comprehensive catalog of open data resources for Computational Social Science research.
+
+  Add at least 30 resources across these categories:
+
+  **Public Administration (公共管理):**
+  - Chinese Government Open Data platforms (data.gov.cn, Shanghai Open Data, etc.)
+  - Policy text databases (PKULaw, Chinalawinfo)
+  - Government performance assessment databases
+
+  **Commons Governance (公地治理):**
+  - ICSD (International Common-pool Resources) database
+  - FAO forestry/fishery databases
+  - Global Water System Database
+  - Ostrom Workshop data archive
+
+  **Computational Communication (计算传播学):**
+  - Twitter/X API / Academic track
+  - Weibo API / CrowdTangle alternatives
+  - Media Cloud, GDELT
+  - Chinese social media datasets
+
+  **Social Media Research:**
+  - CreECO dataset
+  - Webtext/Reddit datasets
+  - Misinformation datasets
+  - Platform transparency report archives
+
+  For each resource: `id`, `name`, `url`, `domain`, `data_type`, `access_method`, `language`, `description`, `coverage_period`, `license`
+
+  Search the web. Commit: "feat: expand CSS data resource atlas to 30+ resources"

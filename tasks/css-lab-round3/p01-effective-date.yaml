@@ -1,0 +1,21 @@
+title: "P01: effective_date extraction improvement"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+prompt: |
+  In `data/processed/normalized_all_policies.json`, ~77% of documents have empty `effective_date` field.
+
+  For ALL documents with empty `effective_date`:
+  1. Read `full_text` (first 5000 chars)
+  2. Extract effective date using patterns:
+     - "自XXXX年XX月XX日起施行/生效"
+     - "自公布之日起施行" → use publish_date
+     - "本法自...起施行"
+     - "本办法自...起施行"
+     - "本规定自...起施行"
+     - "本条例自...起施行"
+     - Date in format "XXXX年XX月XX日" near keywords like "施行", "生效"
+  3. Format as YYYY-MM-DD
+  4. Update `effective_date` field
+  5. Save
+
+  Commit with message: "fix: extract effective_date for all empty records"

@@ -1,0 +1,117 @@
+# P01 Tools Batch 1: Validation + Quality + Cleaning + Deduplication
+---
+title: "[TOOL-01] Implement schema validation and quality check tools"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Implement two CLI tools for the policy database project.
+
+  ## Tool 1: `tools/validate.py`
+
+  Replace the placeholder with a full implementation:
+
+  ```python
+  """Validate JSON data files against the policy document schema."""
+  ```
+
+  Requirements:
+  1. Load schema from `schema/policy_document.json` using `jsonschema`
+  2. CLI: `python tools/validate.py <file_or_directory>`
+  3. For each record, validate against schema
+  4. Print: total records, passed, failed
+  5. For failed records: print index, field, error message
+  6. Exit code: 0 if all pass, 1 if any fail
+  7. Support both single JSON file and directory (recursively find *.json)
+  8. Handle encoding: try UTF-8 first, fallback to GBK
+  9. If schema file doesn't exist, print error and exit
+
+  Add `jsonschema>=4.20.0` to requirements.txt if not present.
+
+  ## Tool 2: `tools/quality_check.py`
+
+  Replace the placeholder:
+
+  ```python
+  """Check data quality of collected policy documents."""
+  ```
+
+  Requirements:
+  1. CLI: `python tools/quality_check.py <data_file.json>`
+  2. Check each record for:
+     - All 15 required fields present (list them)
+     - full_text length >= 100 characters
+     - publish_date format: YYYY-MM-DD (regex validate)
+     - effective_date format: YYYY-MM-DD if present
+     - doc_type in allowed enum values
+     - status in allowed enum values
+     - URL format valid if present
+  3. Output: `reports/quality_report.json` with:
+     - total_records
+     - field_missing_rates: {field: percentage}
+     - invalid_date_count
+     - short_text_count (< 100 chars)
+     - invalid_enum_count
+     - overall_quality_score (0-1)
+  4. Also print a terminal summary table
+  5. Support directory input (aggregate across all JSON files)
+
+  Create both files, update requirements.txt if needed, and commit.
+  Include brief docstrings and type hints.
+---
+title: "[TOOL-02] Implement text cleaning and deduplication pipeline"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Implement two CLI tools for the policy database project.
+
+  ## Tool 1: `tools/clean_text.py`
+
+  Replace the placeholder with a full implementation:
+
+  ```python
+  """Clean and normalize policy text content."""
+  ```
+
+  Requirements:
+  1. CLI: `python tools/clean_text.py --input <file> --output <file>`
+  2. For each document, clean the `full_text` field:
+     - Remove HTML tags (`<p>`, `</div>`, etc.) using regex or BeautifulSoup
+     - Normalize whitespace: multiple spaces/newlines → single
+     - Normalize Chinese punctuation: ensure fullwidth consistency
+     - Preserve legal clause numbering: 第X条第X款第X项 (don't break these)
+     - Remove common web artifacts: navigation text, breadcrumbs, "打印本页", "收藏", etc.
+     - Strip leading/trailing whitespace
+  3. Update `text_length` field after cleaning
+  4. Print: records processed, avg text length before/after
+  5. Support both single JSON file (array of docs) and merged JSON
+
+  Add `beautifulsoup4>=4.12.0` to requirements.txt if not present.
+
+  ## Tool 2: `tools/deduplicate.py`
+
+  Replace the placeholder:
+
+  ```python
+  """Deduplicate policy documents by URL and title similarity."""
+  ```
+
+  Requirements:
+  1. CLI: `python tools/deduplicate.py --input <file_or_dir> --output <file>`
+  2. Two-level deduplication:
+     - Level 1 (exact): by URL — keep first occurrence
+     - Level 2 (fuzzy): by title similarity using simhash
+       - Compute simhash for each title
+       - If hamming distance <= 3 (approx 0.9 similarity), consider duplicate
+       - Keep the one with longer full_text
+  3. Input: can be a single JSON file or directory with multiple JSON files
+  4. Output: merged deduplicated JSON array
+  5. Print: before count, after count, exact duplicates removed, fuzzy duplicates removed
+  6. Preserve `source` field to track origin
+  7. Add `deduplication_info` field to kept records listing removed duplicates
+
+  Add `simhash>=2.1.2` to requirements.txt if not present.
+
+  Create both files, update requirements.txt, and commit.
+  Include docstrings and type hints.

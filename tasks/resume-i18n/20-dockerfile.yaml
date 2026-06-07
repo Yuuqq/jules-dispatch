@@ -1,0 +1,137 @@
+# Docker: Optimize Dockerfile for Cloud Run deployment
+title: "Optimize Dockerfile — Multi-stage Build + Smaller Image"
+source: "sources/github/Yuuqq/smart-resume-builder"
+branch: "master"
+autoMode: "AUTO_CREATE_PR"
+
+prompt: |
+  ## Context
+  Streamlit resume builder deployed on Google Cloud Run. Current Dockerfile may be suboptimal. Create/optimize the Dockerfile for smaller image, faster builds, and Cloud Run best practices.
+
+  ## Task
+
+  ### 1. Check if Dockerfile exists
+
+  Read existing `Dockerfile` if it exists. If not, create one from scratch.
+
+  Also check for:
+  - `.dockerignore` — should exclude unnecessary files
+  - `requirements.txt` or `pyproject.toml` — dependency list
+
+  ### 2. Create/optimize Dockerfile
+
+  Use multi-stage build pattern:
+  ```dockerfile
+  # Stage 1: Install dependencies
+  FROM python:3.11-slim AS builder
+
+  WORKDIR /app
+
+  # Install build dependencies
+  COPY requirements.txt .
+  RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
+
+  # Stage 2: Runtime image
+  FROM python:3.11-slim
+
+  WORKDIR /app
+
+  # Copy installed packages from builder
+  COPY --from=builder /install /usr/local
+
+  # Copy application code
+  COPY . .
+
+  # Set environment variables for Cloud Run
+  ENV PORT=8080
+  ENV PYTHONUNBUFFERED=1
+  ENV PYTHONDONTWRITEBYTECODE=1
+
+  # Streamlit config for Cloud Run
+  ENV STREAMLIT_SERVER_PORT=8080
+  ENV STREAMLIT_SERVER_ADDRESS=0.0.0.0
+  ENV STREAMLIT_SERVER_HEADLESS=true
+  ENV STREAMLIT_SERVER_ENABLE_CORS=false
+  ENV STREAMLIT_SERVER_ENABLE_XSRF_PROTECTION=true
+
+  # Health check
+  HEALTHCHECK --interval=30s --timeout=5s --start-period=10s \
+      CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8080/_stcore/health')" || exit 1
+
+  EXPOSE 8080
+
+  # Run as non-root user
+  RUN useradd -m -u 1000 appuser
+  USER appuser
+
+  ENTRYPOINT ["streamlit", "run", "app.py", "--server.port=8080", "--server.address=0.0.0.0"]
+  ```
+
+  ### 3. Create/update `.dockerignore`
+
+  ```
+  .git
+  .gitignore
+  .planning
+  .claude
+  __pycache__
+  *.pyc
+  *.pyo
+  .env
+  .venv
+  venv
+  node_modules
+  tests
+  *.md
+  docs
+  .dispatch-logs
+  tasks
+  .tmp-*
+  data/
+  assets/corpus/*.pdf
+  ```
+
+  ### 4. Create/update `requirements.txt`
+
+  If no `requirements.txt` exists or it's incomplete, analyze all imports in the codebase and generate a complete one:
+  ```txt
+  streamlit>=1.28.0
+  requests>=2.31.0
+  jinja2>=3.1.0
+  plotly>=5.15.0
+  pandas>=2.0.0
+  bcrypt>=4.0.0
+  nh3>=0.2.0
+  ```
+
+  Check actual imports in the code to get the complete list.
+
+  ### 5. Create `cloudbuild.yaml` (if not exists)
+
+  Basic Cloud Build config for deploying to Cloud Run:
+  ```yaml
+  steps:
+    - name: 'gcr.io/cloud-builders/docker'
+      args: ['build', '-t', 'gcr.io/$PROJECT_ID/resume-builder', '.']
+    - name: 'gcr.io/cloud-builders/docker'
+      args: ['push', 'gcr.io/$PROJECT_ID/resume-builder']
+    - name: 'gcr.io/cloud-builders/gcloud'
+      args: ['run', 'deploy', 'resume-builder', '--image', 'gcr.io/$PROJECT_ID/resume-builder', '--region', 'asia-east1', '--platform', 'managed', '--allow-unauthenticated']
+  ```
+
+  ## Important
+  - Only create/modify: `Dockerfile`, `.dockerignore`, `requirements.txt`, `cloudbuild.yaml`
+  - Do NOT modify any Python source code
+  - Use Python 3.11 slim as base (lighter than full Python image)
+  - Target image size should be < 500MB
+  - Follow Cloud Run best practices (non-root user, health check, proper port)
+
+  ## Verification
+  ```bash
+  docker build -t resume-builder .
+  docker run -p 8080:8080 resume-builder
+  curl http://localhost:8080/_stcore/health
+  ```
+
+  ## Commit
+  Message: `infra: optimize Dockerfile with multi-stage build, .dockerignore, and Cloud Run config`

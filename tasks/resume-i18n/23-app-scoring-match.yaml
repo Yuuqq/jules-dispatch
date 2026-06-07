@@ -1,0 +1,85 @@
+# Fix: Add i18n to app.py, scoring.py, job_match.py (missing from failed Jules tasks)
+title: "Fix — Add i18n to app.py + scoring.py + job_match.py"
+source: "sources/github/Yuuqq/smart-resume-builder"
+branch: "master"
+autoMode: "AUTO_CREATE_PR"
+
+prompt: |
+  ## Context
+  Streamlit resume builder with i18n infrastructure (`core/i18n.py` + `core/i18n_data/`). Three files are missing i18n translation — their Jules tasks failed. Your job: create string data files and translate all Chinese UI strings.
+
+  ## What already exists
+
+  - `core/i18n.py` — has `t(key, **kwargs)`, `get_locale()`, `render_locale_toggle()` etc.
+  - `core/i18n_data/__init__.py` — auto-discovers all `_*.py` modules
+  - String files exist for: _admin, _builder, _common, _copilot, _editor, _fonts, _generation, _polish, _preview, _templates, _version
+  - Missing: `_app.py`, `_scoring.py`, `_match.py`
+
+  Other views already use `from core.i18n import t` — follow their pattern.
+
+  ## Task
+
+  ### 1. Create `core/i18n_data/_app.py`
+
+  READ `app.py` completely. Extract ALL Chinese UI strings (not comments, not CSS, not user data). Include:
+  - Landing page: title, subtitle, feature card titles/descriptions
+  - Auth forms: labels, placeholders, error messages, buttons
+  - Sidebar: version labels, user info, logout button
+  - Admin stats: labels
+  - Footer text
+  - Error handler messages
+  - Guest mode strings
+
+  ```python
+  UI_STRINGS = {
+      "zh": {
+          "app.title": "职点AI简历工坊",
+          "app.subtitle": "AI 驱动的简历生成工具 — 专为新闻传播学院打造",
+          # ... ALL strings
+      },
+      "en": {
+          "app.title": "CareerPoint AI Resume Builder",
+          "app.subtitle": "AI-Powered Resume Builder — Built for Journalism School",
+          # ... ALL translations
+      },
+  }
+  ```
+
+  ### 2. Create `core/i18n_data/_scoring.py`
+
+  READ `views/scoring.py` completely. Extract ALL Chinese UI strings. Include:
+  - Version selection labels
+  - Score dimension names, labels, descriptions
+  - Diagnosis section labels
+  - Button labels, metric labels
+  - Improvement suggestion labels
+  - Growth twin labels
+
+  ### 3. Create `core/i18n_data/_match.py`
+
+  READ `views/job_match.py` completely. Extract ALL Chinese UI strings. Include:
+  - Match analysis labels
+  - Preset JD names
+  - Result display labels (match score, skill gaps)
+  - Button labels
+  - Polish section labels
+  - WARNING: Preset JD description TEXT (工作要求 blocks) is DATA, not UI — leave as-is
+
+  ### 4. Update the three files
+
+  For each file (`app.py`, `views/scoring.py`, `views/job_match.py`):
+  1. Add `from core.i18n import t` at top (alongside existing imports)
+  2. Replace EVERY Chinese UI string with `t("prefix.key")` call
+  3. For f-strings with Chinese: `f"匹配度：{score}分"` → `t("match.score_label", score=score)`
+  4. For st.markdown with HTML + Chinese: replace only the Chinese text portions
+  5. Keep all logic unchanged
+
+  ## Verification
+  ```bash
+  python -c "from core.i18n_data import get_ui_strings; s=get_ui_strings(); print('zh=%d en=%d' % (len(s.get('zh',{})), len(s.get('en',{}))))"
+  grep -c "from core.i18n import t" app.py views/scoring.py views/job_match.py
+  python -m pytest tests/ -q
+  ```
+
+  ## Commit
+  Message: `feat(i18n): translate app.py, scoring.py, job_match.py UI strings — fix failed Jules tasks`

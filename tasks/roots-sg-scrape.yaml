@@ -1,0 +1,64 @@
+title: "Roots.sg Remittance Collection Pagination Scraping"
+source: "sources/github/Yuuqq/Qiaopi"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+
+prompt: |
+  ## Task: Scrape Roots.sg Remittance Collection (expand from 23 to 100-200 records)
+
+  ### Context
+  Roots.sg (Singapore National Library) restructured their site. The old `/item/{id}` URLs are dead. A new API was discovered via browser interception. We already have 23 Koh Seow Chuan remittance docs captured, and need to expand to 100-200 records.
+
+  ### API Specification
+  - **Endpoint:** `POST https://www.roots.gov.sg/kendra-get-search-results`
+  - **Content-Type:** `application/json`
+  - **Request body:**
+    ```json
+    {
+      "topicsQuery": {
+        "must": [{ "field": "source", "value": "roots_collections" }],
+        "not": [{ "field": "source", "value": "CSV" }]
+      },
+      "query": "remittance letter",
+      "searchMode": "NEW",
+      "pageNumber": 1,
+      "size": 20
+    }
+    ```
+  - **Pagination:** `size=20` per page, `pageNumber=1,2,3...` up to 10 pages for 200 records.
+  - **CRITICAL:** This POST API requires browser session context. Direct fetch/curl returns 404. You MUST use Playwright or Puppeteer with a real browser session.
+
+  ### Steps
+  1. Install Playwright if needed: `npm install playwright` then `npx playwright install chromium`
+  2. Write a Node.js script that:
+     a. Launches Playwright Chromium
+     b. Navigates to `https://www.roots.gov.sg/` to establish session cookies
+     c. Executes POST requests to `/kendra-get-search-results` via `page.evaluate()` or `page.request` with pagination (pages 1 through 10)
+     d. Adds 2-second delays between requests
+     e. Saves each page response to `qiaopi_data/roots_sg_remittance_search_page_{N}.json`
+     f. Extracts structured records and writes to `qiaopi_data/roots_sg_remittance_expanded.csv` with columns: id, title, description, thumbnail_url, detail_url, page_number
+     g. Deduplicates by id field against existing `qiaopi_data/roots_sg_koh_remittance_docs.csv` (23 existing records)
+     h. Generates summary file `qiaopi_data/roots_sg_remittance_expanded_summary.md`
+  3. Run the script and verify output
+  4. If the POST API fails even with Playwright, try an alternative approach:
+     - Use `page.goto('https://www.roots.gov.sg/')` then `page.evaluate(() => fetch('/kendra-get-search-results', {...}))` to make the request from within the browser page context
+  5. Commit all new files
+
+  ### Reference Files (already in repo)
+  - `qiaopi_data/roots_sg_koh_followup_summary.md` — technical discovery report with API details
+  - `qiaopi_data/roots_sg_koh_captured_apis.json` — original API intercept data (response structure)
+  - `qiaopi_data/roots_sg_koh_remittance_docs.csv` — 23 existing records (for deduplication)
+  - `qiaopi_data/roots_sg_koh_doc_*.html` — example detail page HTMLs
+
+  ### Success Criteria
+  - 100-200 unique remittance records captured
+  - Search result JSONs saved per page
+  - Consolidated CSV generated with columns: id, title, description, thumbnail_url, detail_url, page_number
+  - Summary report created
+  - No duplicate IDs in final CSV (deduped against existing 23 records)
+  - All files committed
+
+  ### Error Handling
+  - If a page returns 0 results or an error, stop pagination and record the last successful page number
+  - If Playwright POST fails, try `page.evaluate()` approach as fallback
+  - If all API approaches fail, document what was tried and what errors occurred

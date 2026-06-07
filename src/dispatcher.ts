@@ -6,6 +6,7 @@ import { JulesClient } from './client.js';
 import { loadTask, loadTasksFromDir } from './config.js';
 import { isJson, emit, info } from './output.js';
 import { translateError } from './errors.js';
+import { validateBatchSize } from './batch.js';
 
 export async function dispatchTask(
   client: JulesClient,
@@ -103,9 +104,7 @@ export async function dispatchBatch(
   info(chalk.bold(`Dispatching ${allTasks.length} task(s) from ${taskFiles.length} file(s)...\n`));
 
   const parallel = options.parallel ?? 10;
-  if (!Number.isInteger(parallel) || parallel < 1 || parallel > 50) {
-    throw new Error('Invalid parallel value. Expected an integer from 1 to 50.');
-  }
+  validateBatchSize(parallel);
   const results: DispatchResult[] = [];
 
   for (let i = 0; i < allTasks.length; i += parallel) {

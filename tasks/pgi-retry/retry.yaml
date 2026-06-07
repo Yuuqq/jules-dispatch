@@ -1,0 +1,412 @@
+---
+title: "[Code Review] External API Clients — arxiv, semanticScholar"
+prompt: |
+  You are a senior code reviewer. Review ONLY the following files for code quality:
+  - artifacts/api-server/src/lib/external/arxiv.ts
+  - artifacts/api-server/src/lib/external/semanticScholar.ts
+
+  Check for:
+  - HTTP error handling: timeout, retry, rate limiting
+  - Input sanitization: are arXiv IDs validated before use in URLs?
+  - Response parsing: robust against malformed XML/JSON from external APIs
+  - Memory leaks: large response handling, stream cleanup
+  - Rate limiting: are there guards against hammering external APIs?
+  - Error messages: do they leak internal details?
+  - Any any type, console.log, or hardcoded URLs
+
+  Create REVIEW-code-external-apis.md. Include file:line. Do NOT modify source code.
+---
+title: "[Security Review] Input validation — all routes"
+prompt: |
+  You are a security reviewer. Audit input validation across all API routes:
+
+  Files to review:
+  - artifacts/api-server/src/lib/validate.ts
+  - artifacts/api-server/src/routes/workspaces.ts
+  - artifacts/api-server/src/routes/papers.ts
+  - artifacts/api-server/src/routes/graph.ts
+  - artifacts/api-server/src/routes/chat.ts
+  - artifacts/api-server/src/routes/search.ts
+  - artifacts/api-server/src/routes/demo.ts
+  - lib/api-zod/src/generated/api.ts (Zod schemas)
+
+  Check for:
+  - Missing validation on POST/PATCH request bodies
+  - Path parameter injection (can :id be non-numeric or SQL?)
+  - Query parameter injection (can source, q, cursor be manipulated?)
+  - Unbounded string inputs (no maxLength)
+  - Prototype pollution via JSON body
+  - File upload: size limits, type validation (if applicable)
+  - Do Zod schemas cover all edge cases (empty strings, null, arrays)?
+
+  Create REVIEW-security-input.md. Include file:line. Do NOT modify source code.
+---
+title: "[Security Review] XSS prevention and frontend security"
+prompt: |
+  You are a security reviewer. Audit the React frontend for XSS and client-side security:
+
+  Files to review:
+  - artifacts/scholarmind/src/pages/workspaces/graph/index.tsx
+  - artifacts/scholarmind/src/pages/workspaces/graph/EntityNode.tsx
+  - artifacts/scholarmind/src/pages/workspaces/chat/index.tsx
+  - artifacts/scholarmind/src/pages/workspaces/papers/index.tsx
+  - artifacts/scholarmind/src/pages/workspaces/papers/detail.tsx
+  - artifacts/scholarmind/src/App.tsx
+  - artifacts/scholarmind/src/main.tsx
+
+  Check for:
+  - dangerouslySetInnerHTML usage
+  - Unescaped user input in JSX
+  - SSE response: is chat content sanitized before rendering?
+  - Can external paper titles/descriptions contain script injection?
+  - localStorage/sessionStorage: is sensitive data stored client-side?
+  - CORS: are API responses safe against cross-origin attacks?
+
+  Create REVIEW-security-xss.md. Include file:line. Do NOT modify source code.
+---
+title: "[Security Review] SSE streaming and resource exhaustion"
+prompt: |
+  You are a security reviewer. Audit SSE streaming and resource limits:
+
+  Files to review:
+  - artifacts/api-server/src/routes/chat.ts
+  - artifacts/api-server/src/lib/extraction.ts
+
+  Check for:
+  - Can a client open unlimited SSE connections? (connection limit)
+  - Can a client keep a connection open forever? (timeout)
+  - Can a client send extremely large chat messages? (body size limit)
+  - Can extraction pipeline be triggered repeatedly for the same paper? (idempotency)
+  - Does the SSE stream properly clean up on client disconnect?
+  - Can malformed SSE data confuse the client?
+
+  Create REVIEW-security-sse.md. Include file:line. Do NOT modify source code.
+---
+title: "[Security Review] Rate limiting and abuse prevention"
+prompt: |
+  You are a security reviewer. Audit rate limiting and abuse prevention:
+
+  Files to review:
+  - artifacts/api-server/src/app.ts
+  - artifacts/api-server/src/routes/*.ts (all route files)
+  - artifacts/api-server/src/lib/external/arxiv.ts
+  - artifacts/api-server/src/lib/external/semanticScholar.ts
+  - artifacts/api-server/src/lib/extraction.ts
+
+  Check for:
+  - Is there any rate limiting on API endpoints?
+  - Can a user create unlimited workspaces/papers/entities?
+  - Can a user trigger unlimited extractions?
+  - Are external API calls rate-limited (arXiv, Semantic Scholar)?
+  - Can the demo seed endpoint be called repeatedly?
+  - Is there any protection against brute force auth attempts?
+
+  Create REVIEW-security-ratelimit.md. Include file:line. Do NOT modify source code.
+---
+title: "[Func Review] Paper import and extraction pipeline"
+prompt: |
+  You are a functional reviewer. Verify the paper import and extraction pipeline:
+
+  Files to review:
+  - artifacts/api-server/src/routes/papers.ts
+  - artifacts/api-server/src/lib/extraction.ts
+  - artifacts/api-server/src/lib/recovery.ts
+  - artifacts/api-server/src/lib/retry.ts
+  - lib/db/src/schema/papers.ts
+
+  Verify:
+  - POST /papers (arXiv search): search returns results, import creates paper with pending status
+  - POST /papers/upload: file upload creates paper with correct workspaceId
+  - GET /papers: lists papers in workspace with pagination
+  - DELETE /papers/:id: removes paper and cascades
+  - Extraction: pending -> analyzing -> ready/failed transitions
+  - Retry: transient errors retry up to 3 times with backoff
+  - Recovery: stuck papers detected without throwing
+
+  Create REVIEW-func-papers.md as PASS/FAIL/UNCLEAR per behavior. Do NOT modify source code.
+---
+title: "[Func Review] Chat SSE streaming and conversations"
+prompt: |
+  You are a functional reviewer. Verify the chat feature with SSE streaming:
+
+  Files to review:
+  - artifacts/api-server/src/routes/chat.ts
+  - lib/db/src/schema/conversations.ts
+  - lib/db/src/schema/messages.ts
+
+  Verify:
+  - GET/POST/DELETE conversations
+  - POST messages sends message and streams SSE response
+  - SSE stream: correct headers (text/event-stream), event formatting
+  - SSE stream: cleanup on client disconnect
+  - Empty conversation handling
+  - Pagination on conversation list
+
+  Create REVIEW-func-chat.md as PASS/FAIL/UNCLEAR. Do NOT modify source code.
+---
+title: "[Func Review] Pagination — cursor-based implementation"
+prompt: |
+  You are a functional reviewer. Verify cursor-based pagination:
+
+  Files to review:
+  - artifacts/api-server/src/lib/pagination.ts
+  - All route files that use pagination
+
+  Verify:
+  - Cursor is opaque and cannot be forged
+  - limit parameter has maximum cap
+  - Response includes nextCursor
+  - nextCursor is null when no more results
+  - First page works without cursor
+  - Works across all paginated endpoints consistently
+
+  Create REVIEW-func-pagination.md as PASS/FAIL/UNCLEAR. Do NOT modify source code.
+---
+title: "[Func Review] Error handling — global error handler"
+prompt: |
+  You are a functional reviewer. Verify error handling:
+
+  Files to review:
+  - artifacts/api-server/src/lib/errors.ts
+  - artifacts/api-server/src/app.ts
+  - artifacts/api-server/src/routes/*.ts
+
+  Verify:
+  - Consistent JSON error format
+  - Error codes are unique
+  - 400/401/403/404/500 responses
+  - Zod validation errors formatted correctly
+  - Async errors caught by global handler
+  - No stack trace leaks
+
+  Create REVIEW-func-errors.md as PASS/FAIL/UNCLEAR. Do NOT modify source code.
+---
+title: "[Func Review] API Versioning /v1/ prefix"
+prompt: |
+  You are a functional reviewer. Verify API versioning:
+
+  Files to review:
+  - artifacts/api-server/src/routes/index.ts
+  - artifacts/api-server/src/app.ts
+
+  Verify:
+  - All API routes accessible under /v1/ prefix
+  - Version prefix consistent across all route groups
+  - Health endpoint versioning
+  - OpenAPI spec reflects /v1/ prefix
+
+  Create REVIEW-func-versioning.md as PASS/FAIL/UNCLEAR. Do NOT modify source code.
+---
+title: "[Perf Review] DB query patterns — N+1, indexing"
+prompt: |
+  You are a performance reviewer. Audit database query patterns:
+
+  Files to review:
+  - artifacts/api-server/src/routes/workspaces.ts (stats)
+  - artifacts/api-server/src/routes/papers.ts
+  - artifacts/api-server/src/routes/graph.ts
+  - artifacts/api-server/src/routes/chat.ts
+  - lib/db/src/schema/*.ts (indexes)
+
+  Check for:
+  - N+1 queries in loops
+  - Missing indexes on WHERE/JOIN columns
+  - Over-fetching (SELECT *)
+  - Stats endpoint: 6+ queries merged?
+  - Graph: parallel entity+relation fetches?
+  - Unbounded queries
+
+  Create REVIEW-perf-db.md. Include file:line. Do NOT modify source code.
+---
+title: "[Perf Review] Retry utility and backoff strategy"
+prompt: |
+  You are a performance reviewer. Audit the retry utility:
+
+  Files: artifacts/api-server/src/lib/retry.ts
+
+  Check for:
+  - Backoff timing appropriateness (1s/2s/4s)
+  - Error classification correctness (429/500/503)
+  - Can retry cause duplicate work?
+  - Is retry scoped correctly (OpenAI only, not DB)?
+  - Max attempts appropriateness
+
+  Create REVIEW-perf-retry.md. Include file:line. Do NOT modify source code.
+---
+title: "[Perf Review] Pipeline Dispatcher overhead"
+prompt: |
+  You are a performance reviewer. Audit pipeline dispatcher:
+
+  Files:
+  - artifacts/api-server/src/lib/pipeline-dispatcher.ts
+  - artifacts/api-server/src/lib/pipeline-events.ts
+  - artifacts/api-server/src/lib/pipeline-consumers.ts
+
+  Check for:
+  - Memory: unbounded handler map?
+  - Concurrency: simultaneous dispatch safety
+  - Promise.allSettled overhead
+  - Event listener leak risk
+  - Error boundary correctness
+
+  Create REVIEW-perf-dispatcher.md. Include file:line. Do NOT modify source code.
+---
+title: "[Test Review] Frontend component tests — mock quality"
+prompt: |
+  You are a test quality reviewer. Audit frontend tests:
+
+  Files:
+  - artifacts/scholarmind/src/__tests__/*.test.tsx
+  - artifacts/scholarmind/src/mocks/
+
+  Check for:
+  - MSW handlers vs vi.mock usage
+  - Loading/error state tests
+  - Worker layout tests
+  - User interaction tests
+  - Hook tests
+  - Mock data realism
+
+  Create REVIEW-test-frontend.md. Include file:line. Do NOT modify source code.
+---
+title: "[Test Review] MSW contract tests — schema parity"
+prompt: |
+  You are a test quality reviewer. Audit MSW contract tests:
+
+  Files:
+  - artifacts/scholarmind/src/mocks/__tests__/schema-contract.test.ts
+  - artifacts/scholarmind/src/mocks/handlers/*.ts
+  - lib/api-zod/src/generated/api.ts
+
+  Check for:
+  - Every handler passes Zod .parse()
+  - All scenarios tested
+  - CI-blocking
+  - Circular dependency risk
+  - Route-contract tests against real Express
+
+  Create REVIEW-test-msw-contract.md. Include file:line. Do NOT modify source code.
+---
+title: "[Test Review] Test fixtures and helper quality"
+prompt: |
+  You are a test quality reviewer. Audit test fixtures:
+
+  Files:
+  - artifacts/api-server/src/__tests__/fixtures/openai.ts
+  - artifacts/api-server/src/__tests__/fixtures/sse.ts
+  - artifacts/api-server/src/test-app.ts
+
+  Check for:
+  - Fixture reusability
+  - Realistic data
+  - SSE parser edge cases
+  - OpenAI fixture coverage
+  - test-app auth simulation
+
+  Create REVIEW-test-fixtures.md. Include file:line. Do NOT modify source code.
+---
+title: "[Arch Review] Monorepo structure and package boundaries"
+prompt: |
+  You are an architecture reviewer. Audit monorepo structure:
+
+  Review all package.json files and dependency relationships.
+  Check for circular dependencies, proper lib vs artifact separation, shared types.
+
+  Create REVIEW-arch-monorepo.md. Include file:line. Do NOT modify source code.
+---
+title: "[Arch Review] Pipeline Dispatcher design"
+prompt: |
+  You are an architecture reviewer. Audit PipelineDispatcher:
+
+  Files:
+  - artifacts/api-server/src/lib/pipeline-dispatcher.ts
+  - artifacts/api-server/src/lib/pipeline-events.ts
+  - artifacts/api-server/src/lib/pipeline-consumers.ts
+
+  Check for: event-driven appropriateness, payload typing, lifecycle correctness, testability.
+
+  Create REVIEW-arch-pipeline.md. Include file:line. Do NOT modify source code.
+---
+title: "[Arch Review] Frontend state management"
+prompt: |
+  You are an architecture reviewer. Audit frontend state:
+
+  Files:
+  - artifacts/scholarmind/src/pages/workspaces/graph/index.tsx
+  - artifacts/scholarmind/src/pages/workspaces/chat/index.tsx
+  - artifacts/scholarmind/src/pages/workspaces/papers/index.tsx
+
+  Check for: state lifting, prop drilling, API call placement, loading patterns.
+
+  Create REVIEW-arch-state.md. Include file:line. Do NOT modify source code.
+---
+title: "[Arch Review] Error handling architecture"
+prompt: |
+  You are an architecture reviewer. Audit error architecture:
+
+  Files:
+  - artifacts/api-server/src/lib/errors.ts
+  - artifacts/api-server/src/app.ts
+
+  Check for: error hierarchy, global handler coverage, async propagation, traceability.
+
+  Create REVIEW-arch-errors.md. Include file:line. Do NOT modify source code.
+---
+title: "[Arch Review] ConvertContext middleware chain"
+prompt: |
+  You are an architecture reviewer. Audit ConvertContext:
+
+  Files: artifacts/api-server/src/lib/convert-context.ts
+
+  Check for: middleware chain appropriateness, next() control flow, error propagation, immutability.
+
+  Create REVIEW-arch-context.md. Include file:line. Do NOT modify source code.
+---
+title: "[API Review] Error response format and error codes"
+prompt: |
+  You are an API design reviewer. Audit error responses:
+
+  Files:
+  - artifacts/api-server/src/lib/errors.ts
+  - artifacts/api-server/src/lib/validate.ts
+
+  Check for: consistent format, machine-readable codes, validation detail, naming convention.
+
+  Create REVIEW-api-errors.md. Include file:line. Do NOT modify source code.
+---
+title: "[API Review] Response format and data contracts"
+prompt: |
+  You are an API design reviewer. Audit response formats:
+
+  Files: All route files, lib/api-zod/src/generated/api.ts
+
+  Check for: response envelope, pagination format, timestamp format, ID typing, null handling.
+
+  Create REVIEW-api-format.md. Include file:line. Do NOT modify source code.
+---
+title: "[UX Review] Component quality — shadcn/ui patterns"
+prompt: |
+  You are a frontend quality reviewer. Audit component patterns:
+
+  Files:
+  - artifacts/scholarmind/src/components/workspace-layout.tsx
+  - artifacts/scholarmind/src/components/ui/*.tsx (sample 5-10)
+  - artifacts/scholarmind/src/pages/workspaces/graph/EntityNode.tsx
+
+  Check for: shadcn/ui consistency, Tailwind usage, inline styles, responsiveness, loading states.
+
+  Create REVIEW-ux-components.md. Include file:line. Do NOT modify source code.
+---
+title: "[UX Review] Graph visualization UX"
+prompt: |
+  You are a UX reviewer. Audit graph visualization:
+
+  Files:
+  - artifacts/scholarmind/src/pages/workspaces/graph/index.tsx
+  - artifacts/scholarmind/src/pages/workspaces/graph/EntityNode.tsx
+  - artifacts/scholarmind/src/pages/workspaces/graph/KnowledgeEdge.tsx
+  - artifacts/scholarmind/src/pages/workspaces/graph/useLayoutWorker.ts
+
+  Check for: loading/error/empty states, pan/zoom, node selection, edge readability, layout direction, performance, responsiveness.
+
+  Create REVIEW-ux-graph.md. Include file:line. Do NOT modify source code.

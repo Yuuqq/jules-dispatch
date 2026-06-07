@@ -1,0 +1,17 @@
+title: "P02: Digitize pasture/rangeland commons cases (Ostrom SES)"
+source: "sources/github/Yuuqq/css-lab-commons-db"
+branch: "main"
+prompt: |
+  Expand `data/commons_pasture_rangeland.json` with at least 10 real-world pasture/rangeland commons cases using Ostrom's SES framework.
+
+  For each case:
+  - `case_name`, `country`, `region`, `resource_type` ("pasture_rangeland")
+  - `biophysical`: { `rangeland_area_km2`, `vegetation_type`, `carrying_capacity`, `degradation_status` }
+  - `governance`: { `grazing_rights`, `rotation_system`, `rest_period_rules`, `enclosure_history` }
+  - `actors`: { `pastoralist_groups`, `herd_size`, `settlement_pattern`, `government_programs` }
+  - `outcomes`: { `grassland_health` (1-5), `livestock_productivity`, `conflict_frequency`, `desertification_trend` }
+  - `references`, `iad_analysis`
+
+  Real cases: Mongolian pastoral systems, Swiss alpine meadows, African Sahel grazing, Kenyan Maasai rangelands, Tibetan Plateau pastoralism, Inner Mongolia grassland management, Spanish dehesa, etc.
+
+  Commit with message: "feat: add 10+ pasture/rangeland commons cases with SES framework"

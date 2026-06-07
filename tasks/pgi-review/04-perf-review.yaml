@@ -1,0 +1,141 @@
+---
+title: "[Perf Review] Cache implementation and invalidation matrix"
+prompt: |
+  You are a performance reviewer. Audit the cache system:
+
+  Files to review:
+  - artifacts/api-server/src/lib/cache.ts
+  - artifacts/api-server/src/lib/pipeline-consumers.ts
+  - All route files that use cacheGet/cacheInvalidate
+
+  Check for:
+  - Is the invalidation matrix complete? Every GET cache key must have corresponding mutation invalidation
+  - Are cache keys properly scoped (userId, workspaceId) to prevent cross-user leakage?
+  - TTL values: are they appropriate? (too short = wasted, too long = stale data)
+  - Cache stampede: can concurrent misses cause duplicate DB queries?
+  - Memory usage: what is max memory with 500 entries of typical graph data?
+  - Multi-instance: is the CacheProvider interface truly swappable?
+  - Does extraction completion properly invalidate graph/stats/papers caches?
+
+  Create REVIEW-perf-cache.md with findings. Include file:line. Do NOT modify source code.
+---
+title: "[Perf Review] Dagre Web Worker — cancellation, stale guard, fallback"
+prompt: |
+  You are a performance reviewer. Audit the Web Worker layout system:
+
+  Files to review:
+  - artifacts/scholarmind/src/workers/layout-worker.ts
+  - artifacts/scholarmind/src/pages/workspaces/graph/useLayoutWorker.ts
+
+  Check for:
+  - Stale response guard: does the requestId mechanism work correctly?
+  - Worker termination: is the worker cleaned up on component unmount?
+  - Memory: does the worker hold references to large objects after posting results?
+  - Rapid layout changes: if computeLayout is called 10 times quickly, does only the last result apply?
+  - Error handling: what happens if dagre.layout() throws inside the worker?
+  - Fallback: if worker fails, does the UI show a fallback or just hang?
+  - Transfer: does the worker use transferable objects for large data?
+
+  Create REVIEW-perf-worker.md with findings. Include file:line. Do NOT modify source code.
+---
+title: "[Perf Review] ReactFlow virtualization and memoization"
+prompt: |
+  You are a performance reviewer. Audit the graph rendering:
+
+  Files to review:
+  - artifacts/scholarmind/src/pages/workspaces/graph/index.tsx
+  - artifacts/scholarmind/src/pages/workspaces/graph/EntityNode.tsx
+  - artifacts/scholarmind/src/pages/workspaces/graph/KnowledgeEdge.tsx
+
+  Check for:
+  - Is onlyRenderVisibleElements actually set and effective?
+  - Are nodeTypes and edgeTypes defined outside render (stable references)?
+  - EntityNode: is React.memo effective? Does it have a custom comparator?
+  - KnowledgeEdge: is React.memo effective for edges?
+  - Are there any inline object/function creations in render that break memoization?
+  - Node/edge creation: is useMemo used correctly for nodes/edges arrays?
+  - For 200+ nodes: will the current approach maintain 60fps?
+  - Does setNodes/setEdges cause unnecessary re-renders?
+
+  Create REVIEW-perf-graph.md with findings. Include file:line. Do NOT modify source code.
+---
+title: "[Perf Review] Bundle size, lazy loading, code splitting"
+prompt: |
+  You are a performance reviewer. Audit the frontend bundle:
+
+  Files to review:
+  - artifacts/scholarmind/vite.config.ts
+  - artifacts/scholarmind/src/App.tsx
+  - artifacts/scholarmind/src/main.tsx
+  - artifacts/scholarmind/package.json
+  - package.json (root)
+
+  Check for:
+  - Are route components lazy-loaded (React.lazy + Suspense)?
+  - Is the dagre library code-split (only loaded when graph page is visited)?
+  - Is the OpenAI/integration code excluded from the frontend bundle?
+  - Are there any large dependencies imported eagerly that should be dynamic?
+  - Is tree-shaking effective (check for barrel imports that may prevent it)?
+  - Are there duplicate dependencies (same lib in multiple bundles)?
+  - What is the estimated total bundle size (JS + CSS)?
+
+  Create REVIEW-perf-bundle.md with findings. Include file:line. Do NOT modify source code.
+---
+title: "[Perf Review] DB query patterns — N+1, indexing, joins"
+prompt: |
+  You are a performance reviewer. Audit database query patterns:
+
+  Files to review:
+  - artifacts/api-server/src/routes/workspaces.ts (stats endpoint)
+  - artifacts/api-server/src/routes/papers.ts
+  - artifacts/api-server/src/routes/graph.ts
+  - artifacts/api-server/src/routes/chat.ts
+  - lib/db/src/schema/*.ts (all schema files for indexes)
+
+  Check for:
+  - N+1 queries: any loops that make individual DB queries per item?
+  - Missing indexes: columns used in WHERE/JOIN that lack indexes
+  - Over-fetching: SELECT * when only a few columns are needed
+  - Stats endpoint: are 6+ separate queries merged into efficient queries?
+  - Graph endpoint: are entity+relation fetches using parallel queries?
+  - Pagination: does cursor-based pagination use indexed columns?
+  - Large result sets: are there unbounded queries that could return millions of rows?
+
+  Create REVIEW-perf-db.md with findings. Include file:line. Do NOT modify source code.
+---
+title: "[Perf Review] Retry utility and backoff strategy"
+prompt: |
+  You are a performance reviewer. Audit the retry utility:
+
+  Files to review:
+  - artifacts/api-server/src/lib/retry.ts
+
+  Check for:
+  - Backoff timing: is 1s/2s/4s appropriate for OpenAI API calls?
+  - Error classification: are 429/500/503 correctly identified as retryable?
+  - Can retry cause duplicate work? (e.g., double entity creation after partial success)
+  - Is retry scoped correctly? (only around the OpenAI call, not DB writes)
+  - Max attempts: is 3 appropriate? What happens on the 4th attempt?
+  - Custom isRetryable: can it be overridden safely?
+  - Timer precision: is fake timer testing reliable?
+
+  Create REVIEW-perf-retry.md with findings. Include file:line. Do NOT modify source code.
+---
+title: "[Perf Review] Pipeline Dispatcher overhead and concurrency"
+prompt: |
+  You are a performance reviewer. Audit the pipeline dispatcher:
+
+  Files to review:
+  - artifacts/api-server/src/lib/pipeline-dispatcher.ts
+  - artifacts/api-server/src/lib/pipeline-events.ts
+  - artifacts/api-server/src/lib/pipeline-consumers.ts
+
+  Check for:
+  - Memory: does the Map of handlers grow unbounded? Can old handlers be cleaned up?
+  - Concurrency: what happens if dispatch is called while a previous dispatch is still running?
+  - Promise.allSettled: is the overhead acceptable for synchronous handlers?
+  - Event listener leak: does on() without matching off() leak memory?
+  - Singleton: is the pipeline instance safe across multiple requests?
+  - Error boundary: does one handler failure properly log without affecting others?
+
+  Create REVIEW-perf-dispatcher.md with findings. Include file:line. Do NOT modify source code.

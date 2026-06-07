@@ -1,0 +1,214 @@
+# Phase 8: resume_builder + cv_editor + cv_preview UI i18n (fully independent)
+title: "UI i18n — resume_builder + cv_editor + cv_preview"
+source: "sources/github/Yuuqq/smart-resume-builder"
+branch: "master"
+autoMode: "AUTO_CREATE_PR"
+
+prompt: |
+  ## Context
+  Streamlit + Python resume builder. Adding bilingual support.
+  Your job: create i18n stubs + translate ALL Chinese in 3 view files.
+
+  ## Step 1: Create shared i18n infrastructure (identical to other parallel tasks)
+
+  Create `core/i18n_data/__init__.py`:
+  ```python
+  """i18n string data — auto-discovers all _*.py modules."""
+  from pathlib import Path
+  from typing import Dict
+  import importlib
+  import pkgutil
+
+  _ui_strings: Dict[str, Dict[str, str]] = {"zh": {}, "en": {}}
+  _loaded = False
+
+  def _load():
+      global _loaded, _ui_strings
+      if _loaded:
+          return
+      for module_info in pkgutil.iter_modules([str(Path(__file__).parent)]):
+          if module_info.name.startswith("_"):
+              try:
+                  mod = importlib.import_module(f"core.i18n_data.{module_info.name}")
+                  if hasattr(mod, "UI_STRINGS"):
+                      for locale, strings in mod.UI_STRINGS.items():
+                          _ui_strings.setdefault(locale, {}).update(strings)
+              except Exception:
+                  pass
+      _loaded = True
+
+  def get_ui_strings() -> Dict[str, Dict[str, str]]:
+      _load()
+      return _ui_strings
+  ```
+
+  Create `core/i18n.py`:
+  ```python
+  """Bilingual i18n module."""
+  import logging
+  from typing import Dict
+  import streamlit as st
+
+  logger = logging.getLogger(__name__)
+  LOCALE_ZH = "zh"
+  LOCALE_EN = "en"
+  DEFAULT_LOCALE = LOCALE_ZH
+
+  def get_locale() -> str:
+      return st.session_state.get("locale", DEFAULT_LOCALE)
+
+  def set_locale(locale: str) -> None:
+      st.session_state["locale"] = locale
+      try:
+          from core.user_manager import get_user_manager
+          user_session = st.session_state.get("user_session")
+          if user_session and user_session.user.role not in ("guest",):
+              mgr = get_user_manager()
+              mgr.update_locale(user_session.user.user_id, locale)
+      except Exception as e:
+          logger.warning("Failed to persist locale: %s", e)
+
+  def t(key: str, **kwargs) -> str:
+      from core.i18n_data import get_ui_strings
+      strings = get_ui_strings()
+      locale = get_locale()
+      text = strings.get(locale, {}).get(key, key)
+      if kwargs:
+          try:
+              return text.format(**kwargs)
+          except (KeyError, IndexError):
+              return text
+      return text
+
+  def render_locale_toggle(location: str = "sidebar") -> None:
+      current = get_locale()
+      options = {"中文": LOCALE_ZH, "English": LOCALE_EN}
+      display = list(options.keys())
+      idx = 0 if current == LOCALE_ZH else 1
+      key = f"_locale_{location}"
+      if location == "sidebar":
+          selected = st.selectbox("🌐 Language", display, index=idx, key=key)
+      else:
+          selected = st.selectbox("🌐 Language", display, index=idx, key=key, label_visibility="collapsed")
+      new_locale = options[selected]
+      if new_locale != current:
+          set_locale(new_locale)
+          st.rerun()
+  ```
+
+  ## Step 2: Create `core/i18n_data/_builder.py`
+
+  READ `views/resume_builder.py` completely. Extract ALL Chinese strings. Example structure:
+  ```python
+  UI_STRINGS = {
+      "zh": {
+          "builder.panel_title": "简历编辑",
+          # ... every Chinese string
+      },
+      "en": {
+          "builder.panel_title": "Resume Editor",
+          # ... English translations
+      },
+  }
+  ```
+  Be exhaustive — every button label, caption, markdown text, toast message, error message.
+
+  ## Step 3: Create `core/i18n_data/_editor.py`
+
+  READ `views/cv_editor.py` completely. Extract ALL Chinese strings.
+  Key areas: field labels (姓名, 专业, 教育经历, etc.), section headers, text_area labels/placeholders, button labels, save messages.
+  ```python
+  UI_STRINGS = {
+      "zh": {
+          "editor.name": "姓名",
+          "editor.name_ph": "请输入姓名",
+          "editor.title": "职位/头衔",
+          "editor.education": "教育经历",
+          "editor.experience": "工作经历",
+          "editor.skills_pro": "专业技能",
+          "editor.skills_sw": "软件工具",
+          "editor.skills_lang": "语言能力",
+          "editor.awards": "获奖情况",
+          "editor.projects": "项目经验",
+          "editor.summary": "自我评价",
+          "editor.interests": "兴趣爱好",
+          "editor.portfolio": "作品集",
+          # ... ALL strings
+      },
+      "en": {
+          "editor.name": "Name",
+          "editor.name_ph": "Enter your name",
+          "editor.title": "Title / Position",
+          "editor.education": "Education",
+          "editor.experience": "Experience",
+          "editor.skills_pro": "Professional Skills",
+          "editor.skills_sw": "Software & Tools",
+          "editor.skills_lang": "Languages",
+          "editor.awards": "Awards",
+          "editor.projects": "Projects",
+          "editor.summary": "Summary",
+          "editor.interests": "Interests",
+          "editor.portfolio": "Portfolio",
+          # ... ALL translations
+      },
+  }
+  ```
+
+  ## Step 4: Create `core/i18n_data/_preview.py`
+
+  READ `views/cv_preview.py` completely. Extract ALL Chinese strings.
+  Key areas: template gallery (titles, descriptions), style config labels, button labels.
+  ```python
+  UI_STRINGS = {
+      "zh": {
+          "preview.gallery_title": "模板画廊",
+          "preview.gallery_hint": "点击即可预览/切换模板（右侧预览会同步更新）",
+          "preview.more_templates": "更多模板",
+          "preview.major_preset": "专业预设",
+          "preview.layout": "布局",
+          "preview.theme": "配色",
+          "preview.font": "字体",
+          "preview.export_pdf": "导出 PDF",
+          # template descriptions
+          "preview.tpl_modern_desc": "通用场景",
+          "preview.tpl_classic_desc": "传统正式",
+          "preview.tpl_visual_desc": "新媒体/创意",
+          "preview.tpl_agency_desc": "广告/公关",
+          "preview.template_switched": "已切换模板：{layout}",
+          # ... ALL strings
+      },
+      "en": {
+          "preview.gallery_title": "Template Gallery",
+          "preview.gallery_hint": "Click to preview/switch templates (updates preview on the right)",
+          "preview.more_templates": "More Templates",
+          "preview.major_preset": "Major Preset",
+          "preview.layout": "Layout",
+          "preview.theme": "Theme",
+          "preview.font": "Font",
+          "preview.export_pdf": "Export PDF",
+          "preview.tpl_modern_desc": "General Purpose",
+          "preview.tpl_classic_desc": "Traditional Formal",
+          "preview.tpl_visual_desc": "New Media / Creative",
+          "preview.tpl_agency_desc": "Advertising / PR",
+          "preview.template_switched": "Switched to: {layout}",
+          # ... ALL translations
+      },
+  }
+  ```
+
+  ## Step 5: Update the 3 view files
+
+  For each file (`views/resume_builder.py`, `views/cv_editor.py`, `views/cv_preview.py`):
+  1. Add `from core.i18n import t` at top
+  2. Replace EVERY Chinese string with t() call
+  3. For f-strings: `f"已保存 {count} 个版本"` → `t("builder.saved_count", count=count)`
+  4. Keep logic unchanged
+
+  In `views/resume_builder.py` sidebar: add `from core.i18n import render_locale_toggle; render_locale_toggle(location="sidebar")`
+
+  ## Verification
+  - `grep -c "[一-鿿]" views/resume_builder.py views/cv_editor.py views/cv_preview.py` — remaining Chinese should only be in comments or CSS/HTML structural text
+  - All st.button/st.text_area/st.selectbox label parameters use t()
+
+  ## Commit
+  Message: `feat(i18n): translate resume_builder, cv_editor, cv_preview UI strings`

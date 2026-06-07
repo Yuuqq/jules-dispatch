@@ -197,6 +197,18 @@ args = ["--project", "/path/to/your/project", "mcp"]
 env = { JULES_API_KEY = "your-api-key-here", JULES_DEFAULT_SOURCE = "sources/github/owner/repo" }
 ```
 
+### 作为 Agent Skill 安装
+
+本仓库也内置了一个轻量技能包装层：`skills/jules-dispatch/`。这个 skill 会告诉 Claude Code、Codex 或兼容 Agent Skills 的宿主在什么场景下使用 `jules-dispatch`，以及优先调用哪些 MCP 工具。
+
+Codex 可以把该目录复制或安装为 `jules-dispatch` skill，然后重启 Codex：
+
+```bash
+cp -R skills/jules-dispatch "${CODEX_HOME:-$HOME/.codex}/skills/jules-dispatch"
+```
+
+对于使用共享 skills 目录的 Agent Skills 兼容宿主，把同一个目录复制到对应 skills 目录即可。注意：skill 只是指令层；实际执行仍需要配置 `jules-dispatch mcp` MCP 服务器，并提供有效的 `JULES_API_KEY`。
+
 ### 暴露的 MCP 工具
 
 | 工具 | 功能 |

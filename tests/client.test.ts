@@ -16,6 +16,10 @@ function jsonResponse(body: unknown, status = 200, headers?: HeadersInit): Respo
   return new Response(JSON.stringify(body), { status, headers });
 }
 
+function textResponse(body: string, status = 200, headers?: HeadersInit): Response {
+  return new Response(body, { status, headers });
+}
+
 function mockFetch() {
   const fetchMock = vi.fn();
   vi.stubGlobal('fetch', fetchMock);
@@ -39,6 +43,23 @@ describe('HTTP retry logic', () => {
 
     const resultPromise = client.listSources();
     await vi.advanceTimersByTimeAsync(1000);
+    const result = await resultPromise;
+
+    expect(result).toEqual({ sources: [] });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('supports HTTP-date Retry-After values', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-01-01T00:00:00Z'));
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    const fetchMock = mockFetch()
+      .mockResolvedValueOnce(jsonResponse({}, 429, { 'retry-after': 'Thu, 01 Jan 2026 00:00:02 GMT' }))
+      .mockResolvedValueOnce(jsonResponse({ sources: [], nextPageToken: undefined }));
+    const client = new JulesClient({ apiKey: 'test-key' });
+
+    const resultPromise = client.listSources();
+    await vi.advanceTimersByTimeAsync(2000);
     const result = await resultPromise;
 
     expect(result).toEqual({ sources: [] });
@@ -91,6 +112,15 @@ describe('HTTP retry logic', () => {
     const client = new JulesClient({ apiKey: 'test-key' });
 
     await expect(client.listSources()).resolves.toEqual({ sources: [] });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('throws a contextual error when a successful response is not JSON', async () => {
+    vi.useFakeTimers();
+    const fetchMock = mockFetch().mockResolvedValue(textResponse('not json'));
+    const client = new JulesClient({ apiKey: 'test-key' });
+
+    await expect(client.listSources()).rejects.toThrow('Jules API returned invalid JSON at /sources');
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });

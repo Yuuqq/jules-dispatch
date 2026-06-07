@@ -1,0 +1,16 @@
+title: "P03: Bilibili governance policy history (2018-2026)"
+source: "sources/github/Yuuqq/css-lab-platform-governance"
+branch: "main"
+prompt: |
+  Expand `data/B站_policies.json` with a policy timeline of Bilibili (B站) governance rules from 2018 to 2026.
+
+  Collect at least 5 policy updates:
+  1. Bilibili community rules (社区规则)
+  2. Bilibili content review guidelines (内容审核标准)
+  3. Bilibili creator incentive rules (创作者激励计划)
+  4. Bilibili danmaku (弹幕) rules
+  5. Bilibili live streaming rules (直播规范)
+
+  For each: `policy_name`, `platform`: "B站", `version`, `effective_date`, `policy_type`, `content_summary`, `key_changes_from_previous`, `source_url`, `collection_date`
+
+  Search the web. Commit: "feat: Bilibili governance policy timeline 2018-2026"

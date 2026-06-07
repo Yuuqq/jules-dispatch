@@ -1,0 +1,60 @@
+# P01 Tools Batch 3: End-to-end pipeline test + auto_tagger enhancement
+---
+title: "[TOOL-04] Enhance auto_tagger and implement end-to-end pipeline test"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Implement/enhance two files for the policy database project.
+
+  ## File 1: `tools/auto_tagger.py` (enhance existing)
+
+  Check the existing `tools/auto_tagger.py`. It should already exist. If it does:
+  - Review its implementation
+  - Ensure it works correctly with the configs/*.yaml keyword lists
+  - Fix any bugs or missing functionality
+  - Add CLI interface if missing: `python tools/auto_tagger.py --input <file> --output <file> --config-dir configs/`
+  - Ensure it produces domain + keywords fields matching the schema
+
+  If the file is missing or essentially empty, implement from scratch:
+
+  ```python
+  """Auto-tag policy documents with domain labels and keywords."""
+  ```
+
+  Requirements:
+  1. `load_configs(config_dir: str) -> dict[str, list[str]]` — load all configs/*.yaml, extract keywords_zh lists
+  2. `tag_document(doc: dict, configs: dict) -> tuple[list[str], list[str]]` — returns (domains, keywords)
+     - Domain matching: if text contains >= 3 keywords from a domain config → assign that domain
+  3. `extract_keywords(text: str, config_keywords: list[str]) -> list[str]` — use jieba to segment text, then match against config keywords, return top 10 by frequency
+  4. CLI: `python tools/auto_tagger.py --input <file> --output <file>`
+  5. Print: domain distribution histogram, top keywords per domain
+
+  ## File 2: `tests/test_pipeline.py` (enhance existing)
+
+  Check the existing `tests/test_pipeline.py`. Review and enhance:
+
+  Requirements:
+  1. Use pytest fixtures from `tests/fixtures/` (create sample fixtures if missing)
+  2. Test the full pipeline:
+     - Schema validation (tools/validate.py)
+     - Text cleaning (tools/clean_text.py)
+     - Deduplication (tools/deduplicate.py)
+     - Metadata extraction (tools/extract_metadata.py)
+     - Auto-tagging (tools/auto_tagger.py)
+     - Quality check (tools/quality_check.py)
+     - Statistics (tools/collection_stats.py)
+  3. Each step should have assertions verifying:
+     - Output file exists
+     - Output has expected structure
+     - No exceptions thrown
+  4. Use temporary directories for test outputs (pytest tmpdir fixture)
+  5. Mock external dependencies (no actual HTTP calls)
+  6. Run `pytest tests/test_pipeline.py -v` should pass
+
+  Also create missing test fixtures in `tests/fixtures/`:
+  - `sample_policy.json` — 3 sample policy documents with realistic data
+  - `sample_html.txt` — sample HTML content for clean_text testing
+
+  Update requirements.txt with pytest if needed.
+  Commit all changes.

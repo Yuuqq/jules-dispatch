@@ -1,0 +1,30 @@
+title: "P06: Sentiment statistical analysis and trend report"
+source: "sources/github/Yuuqq/css-lab-sentiment-analysis"
+branch: "main"
+prompt: |
+  Perform statistical analysis on all sentiment data.
+
+  Read all JSON files in `data/`: ai_regulation_debate.json, cross_border_data_debate.json, platform_antitrust_debate.json, platform_worker_rights_debate.json, data_privacy_debate_*.json, all_sentiment_data.json.
+
+  Produce `analysis/sentiment_statistics.json` with:
+
+  1. **Per-topic breakdown**:
+     - Record count, sentiment distribution (positive/neutral/negative %)
+     - Top stakeholder types
+     - Key arguments frequency
+     - Time period distribution
+
+  2. **Cross-topic comparison**:
+     - Which topics have most negative sentiment?
+     - Which stakeholder voices dominate each topic?
+     - Topic correlation (shared arguments between topics)
+
+  3. **Trend analysis**:
+     - Sentiment shift across time periods per topic
+     - Emerging vs declining arguments
+
+  4. **Key findings** — Top 10 insights with evidence
+
+  Also generate `analysis/sentiment_report.md` — readable Markdown report with tables.
+
+  Commit: "feat: sentiment statistical analysis and trend report"

@@ -1,0 +1,31 @@
+title: "P03: Cross-platform governance comparison matrix"
+source: "sources/github/Yuuqq/css-lab-platform-governance"
+branch: "main"
+prompt: |
+  Build a cross-platform governance comparison from all platform policy data.
+
+  Read all JSON files in `data/` (微博, 微信, 抖音, B站, 小红书, Twitter_X, YouTube, TikTok, Meta_Facebook_Instagram, Reddit — both base and 补充 files).
+
+  Produce `analysis/cross_platform_comparison.json` with:
+
+  1. **Comparison matrix** — For each platform:
+     - Content moderation approach (proactive/reactive/hybrid)
+     - Transparency level (high/medium/low)
+     - User appeal mechanism (yes/no/partial)
+     - Government regulation exposure (strong/medium/weak)
+     - Policy update frequency (per year)
+     - Minor protection strength (scored 1-5)
+     - AI content policy (yes/no, details)
+
+  2. **Governance model clustering** — Group platforms by governance style:
+     - Authoritarian model (strong govt influence)
+     - Liberal model (self-regulation)
+     - Hybrid model
+
+  3. **Timeline analysis** — Policy density by year across all platforms
+
+  4. **China vs International comparison** — Key differences in governance approach
+
+  Also generate `analysis/platform_comparison.md` — readable Markdown report.
+
+  Commit: "feat: cross-platform governance comparison matrix and analysis"

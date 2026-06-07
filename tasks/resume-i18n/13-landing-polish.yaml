@@ -1,0 +1,106 @@
+# UI Polish: Landing page micro-improvements
+title: "UI Polish — Landing Page Cards + Auth Form + Footer"
+source: "sources/github/Yuuqq/smart-resume-builder"
+branch: "master"
+autoMode: "AUTO_CREATE_PR"
+
+prompt: |
+  ## Context
+  Streamlit resume builder. Light CSS polish — no major restructuring. Only add/refine CSS in `app.py`.
+
+  ## Task: Polish the landing page in `app.py`
+
+  ONLY modify `app.py`. Add CSS enhancements to the existing `_render_landing_page()` style block and HTML. Keep all existing structure.
+
+  ### 1. Feature cards — add depth on hover
+  Enhance the existing `.feature-card` styles:
+  ```css
+  .feature-card {
+      /* existing styles stay */
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .feature-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+      border-color: #d2d2d7;
+  }
+  ```
+
+  ### 2. Auth form — add container styling
+  Wrap the auth area with a subtle card feel by adding to the landing page style block:
+  ```css
+  /* Auth form container — the centered column */
+  div[data-testid="stForm"] {
+      border: 1px solid #e5e5ea;
+      border-radius: 12px;
+      padding: 1.5rem;
+      background: #fafafa;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+  }
+  div[data-testid="stForm"] .stTextInput > div > div > input {
+      border-radius: 8px;
+      border: 1px solid #d2d2d7;
+      padding: 0.5rem 0.75rem;
+  }
+  div[data-testid="stForm"] .stTextInput > div > div > input:focus {
+      border-color: #007aff;
+      box-shadow: 0 0 0 3px rgba(0,122,255,0.12);
+  }
+  ```
+
+  ### 3. Landing page buttons — rounded + refined
+  Add to style block:
+  ```css
+  /* Landing page buttons */
+  .stButton > button[kind="primary"] {
+      border-radius: 10px;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+  }
+  .stButton > button[kind="secondary"] {
+      border-radius: 10px;
+      border: 1px solid #d2d2d7;
+      color: #1d1d1f;
+  }
+  ```
+
+  ### 4. Footer — add subtle separator and refinement
+  Update the `.footer-block` style:
+  ```css
+  .footer-block {
+      text-align: center;
+      color: #86868b;
+      font-size: 0.78em;
+      padding: 1.5rem 0 0.5rem;
+      border-top: 1px solid #e5e5ea;
+      margin-top: 1rem;
+  }
+  .footer-block strong { color: #6e6e73; }
+  ```
+
+  ### 5. Landing header — add subtle text gradient or weight
+  ```css
+  .landing-header h1 {
+      font-size: 2.4rem;
+      font-weight: 700;
+      color: #1d1d1f;
+      margin-bottom: 0.3rem;
+      letter-spacing: -0.02em;
+  }
+  .landing-header p {
+      color: #86868b;
+      font-size: 1.05rem;
+      font-weight: 400;
+  }
+  ```
+
+  ## Important
+  - ONLY modify the CSS style blocks and HTML in `app.py` `_render_landing_page()` and `init_app()`
+  - Do NOT change any Python logic, function signatures, or imports
+  - Keep all existing class names and structure
+  - Changes should be additive only (add new CSS properties, don't remove existing ones unless they conflict)
+  - Total CSS additions should be ~30 lines
+
+  ## Commit
+  Message: `style: polish landing page cards, auth form, and footer`

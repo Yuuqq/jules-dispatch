@@ -1,0 +1,125 @@
+# Phase 8: scoring + job_match UI i18n (fully independent)
+title: "UI i18n — scoring + job_match"
+source: "sources/github/Yuuqq/smart-resume-builder"
+branch: "master"
+autoMode: "AUTO_CREATE_PR"
+
+prompt: |
+  ## Context
+  Streamlit + Python resume builder. Adding bilingual support.
+  Your job: create i18n stubs + translate ALL Chinese in scoring and job_match views.
+
+  ## Step 1: Create shared i18n infrastructure
+
+  Create `core/i18n_data/__init__.py`:
+  ```python
+  """i18n string data — auto-discovers all _*.py modules."""
+  from pathlib import Path
+  from typing import Dict
+  import importlib
+  import pkgutil
+
+  _ui_strings: Dict[str, Dict[str, str]] = {"zh": {}, "en": {}}
+  _loaded = False
+
+  def _load():
+      global _loaded, _ui_strings
+      if _loaded:
+          return
+      for module_info in pkgutil.iter_modules([str(Path(__file__).parent)]):
+          if module_info.name.startswith("_"):
+              try:
+                  mod = importlib.import_module(f"core.i18n_data.{module_info.name}")
+                  if hasattr(mod, "UI_STRINGS"):
+                      for locale, strings in mod.UI_STRINGS.items():
+                          _ui_strings.setdefault(locale, {}).update(strings)
+              except Exception:
+                  pass
+      _loaded = True
+
+  def get_ui_strings() -> Dict[str, Dict[str, str]]:
+      _load()
+      return _ui_strings
+  ```
+
+  Create `core/i18n.py`:
+  ```python
+  """Bilingual i18n module."""
+  import logging
+  from typing import Dict
+  import streamlit as st
+
+  logger = logging.getLogger(__name__)
+  LOCALE_ZH = "zh"
+  LOCALE_EN = "en"
+  DEFAULT_LOCALE = LOCALE_ZH
+
+  def get_locale() -> str:
+      return st.session_state.get("locale", DEFAULT_LOCALE)
+
+  def set_locale(locale: str) -> None:
+      st.session_state["locale"] = locale
+      try:
+          from core.user_manager import get_user_manager
+          user_session = st.session_state.get("user_session")
+          if user_session and user_session.user.role not in ("guest",):
+              mgr = get_user_manager()
+              mgr.update_locale(user_session.user.user_id, locale)
+      except Exception as e:
+          logger.warning("Failed to persist locale: %s", e)
+
+  def t(key: str, **kwargs) -> str:
+      from core.i18n_data import get_ui_strings
+      strings = get_ui_strings()
+      locale = get_locale()
+      text = strings.get(locale, {}).get(key, key)
+      if kwargs:
+          try:
+              return text.format(**kwargs)
+          except (KeyError, IndexError):
+              return text
+      return text
+  ```
+
+  ## Step 2: Create `core/i18n_data/_scoring.py`
+
+  READ `views/scoring.py` completely. Extract ALL Chinese strings. Key areas:
+  - Score dimension names and descriptions
+  - Radar chart labels, titles
+  - Growth digital twin labels
+  - Score improvement suggestions
+  - Version comparison labels
+  - Button labels, status messages
+  ```python
+  UI_STRINGS = {
+      "zh": { "scoring.title": "...", ... },
+      "en": { "scoring.title": "...", ... },
+  }
+  ```
+
+  ## Step 3: Create `core/i18n_data/_match.py`
+
+  READ `views/job_match.py` completely. Extract ALL Chinese UI strings.
+  NOTE: Preset JD job descriptions (工作要求 text blocks) are reference DATA, not UI — leave them as-is. Only translate the UI chrome (labels, buttons, headers, result labels).
+
+  Key areas:
+  - Preset JD names (12 job position titles)
+  - Analysis result labels
+  - Match percentage, skill gap labels
+  - Button text, status messages
+  - Log output labels
+
+  ## Step 4: Update the 2 view files
+
+  For each file (`views/scoring.py`, `views/job_match.py`):
+  1. Add `from core.i18n import t` at top
+  2. Replace EVERY Chinese UI string with t() call
+  3. Leave chart data values unchanged — only translate axis labels, legends, titles
+  4. Leave preset JD text content in Chinese (it's data)
+  5. For f-strings: `f"匹配度：{score}%"` → `t("match.score_label", score=score)`
+
+  ## Verification
+  - `grep -c "[一-鿿]" views/scoring.py views/job_match.py` — Chinese should only remain in comments and JD data content
+
+  ## Commit
+  Message: `feat(i18n): translate scoring and job_match UI strings`

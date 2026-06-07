@@ -1,0 +1,29 @@
+title: "P01: Export CSV and statistical report for policy database"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+prompt: |
+  Create user-friendly data exports from the policy database.
+
+  Read `data/processed/normalized_all_policies.json`.
+
+  Generate these files in `exports/`:
+
+  1. `policy_database.csv` — Flatten to tabular format:
+     Columns: doc_id, title, doc_type, hierarchy, issuing_body, publish_date, effective_date, status, domain (joined by ;), source_tier, text_length, collection_method
+
+  2. `domain_summary.csv` — One row per domain:
+     Columns: domain, count, avg_text_length, doc_types (json), top_issuing_bodies (json), year_range
+
+  3. `institution_directory.csv` — One row per issuing body:
+     Columns: issuing_body, total_docs, domains_covered, doc_type_breakdown (json), first_date, last_date
+
+  4. `quality_report.md` — Markdown report:
+     - Total records, date range, domain coverage
+     - Completeness rates per field
+     - Top 20 institutions by document count
+     - Year distribution table
+     - Source tier distribution
+
+  Use Python csv module. UTF-8 with BOM for Excel compatibility.
+
+  Commit: "feat: add CSV exports and quality report"

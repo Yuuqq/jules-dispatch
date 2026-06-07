@@ -1,0 +1,17 @@
+title: "P03: Reddit governance policy history (2018-2026)"
+source: "sources/github/Yuuqq/css-lab-platform-governance"
+branch: "main"
+prompt: |
+  Expand `data/Reddit_policies.json` with a policy timeline from 2018 to 2026.
+
+  Collect major governance changes:
+  1. Content Policy updates (hate speech, harassment)
+  2. API pricing change and third-party app impact
+  3. Moderator governance and community autonomy
+  4. Advertising and sponsored content rules
+  5. NSFW content policy evolution
+  6. Reddit Data API terms changes
+
+  For each: `policy_name`, `platform`: "Reddit", `version`, `effective_date`, `policy_type`, `content_summary`, `key_changes_from_previous`, `source_url`, `collection_date`
+
+  Search the web. Commit: "feat: Reddit governance policy timeline 2018-2026"

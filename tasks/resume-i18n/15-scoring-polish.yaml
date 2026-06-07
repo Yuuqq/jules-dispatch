@@ -1,0 +1,119 @@
+# UI Polish: Scoring radar chart container + diagnosis result cards
+title: "UI Polish — Scoring Radar + Diagnosis Result Cards"
+source: "sources/github/Yuuqq/smart-resume-builder"
+branch: "master"
+autoMode: "AUTO_CREATE_PR"
+
+prompt: |
+  ## Context
+  Streamlit resume builder. Light CSS polish for scoring page. Only add CSS/HTML wrappers, no logic changes.
+
+  ## Task: Polish `views/scoring.py`
+
+  Add CSS injections at the top of the scoring render function. Wrap key sections with styled containers.
+
+  ### 1. Radar chart — card container wrapper
+  Find where the Plotly radar chart is rendered (likely `st.plotly_chart(fig, ...)`). Wrap it:
+  ```python
+  st.markdown('<div class="scoring-chart-card">', unsafe_allow_html=True)
+  # ... existing plotly_chart call ...
+  st.markdown('</div>', unsafe_allow_html=True)
+  ```
+
+  CSS:
+  ```css
+  .scoring-chart-card {
+      background: #ffffff;
+      border: 1px solid #e5e5ea;
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+      margin-bottom: 1rem;
+  }
+  ```
+
+  ### 2. Score display — large number highlight
+  Where the overall score is displayed, wrap it:
+  ```python
+  st.markdown(f'''
+  <div class="score-display">
+      <div class="score-value">{score}</div>
+      <div class="score-label">/ 100</div>
+      <div class="score-level">{level}</div>
+  </div>
+  ''', unsafe_allow_html=True)
+  ```
+  (Adapt to match the actual existing score display code — check how score/level are currently shown)
+
+  CSS:
+  ```css
+  .score-display {
+      text-align: center;
+      padding: 1.5rem 0;
+  }
+  .score-value {
+      font-size: 3.5rem;
+      font-weight: 800;
+      color: #1d1d1f;
+      line-height: 1;
+  }
+  .score-label {
+      font-size: 1rem;
+      color: #86868b;
+      margin-top: -0.3rem;
+  }
+  .score-level {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #007aff;
+      margin-top: 0.3rem;
+  }
+  ```
+
+  ### 3. Diagnosis suggestions — left color bar
+  Where diagnosis suggestions/weaknesses are displayed, add left-border cards:
+  ```css
+  .diagnosis-card {
+      background: #fafafa;
+      border-left: 4px solid #007aff;
+      border-radius: 0 10px 10px 0;
+      padding: 12px 16px;
+      margin-bottom: 8px;
+  }
+  .diagnosis-card.warning {
+      border-left-color: #ff9500;
+  }
+  .diagnosis-card.success {
+      border-left-color: #34c759;
+  }
+  ```
+  Wrap existing suggestion items with these classes where appropriate.
+
+  ### 4. Dimension scores — compact horizontal bars
+  Where individual dimension scores are shown, add a progress-bar style:
+  ```css
+  .dim-score-bar {
+      height: 6px;
+      border-radius: 3px;
+      background: #e5e5ea;
+      margin: 4px 0 12px;
+      overflow: hidden;
+  }
+  .dim-score-fill {
+      height: 100%;
+      border-radius: 3px;
+      background: linear-gradient(90deg, #007aff, #5ac8fa);
+      transition: width 0.3s ease;
+  }
+  ```
+  Use alongside the existing dimension display.
+
+  ## Important
+  - ONLY modify `views/scoring.py`
+  - Do NOT change scoring logic, AI calls, data processing, or function signatures
+  - Adapt the HTML wrappers to match the actual existing code structure — READ the file first
+  - Keep all Plotly chart configurations unchanged
+  - Total changes: ~30-40 lines of CSS + minor HTML wrapper additions
+
+  ## Commit
+  Message: `style: polish scoring page with chart cards, score display, and diagnosis cards`

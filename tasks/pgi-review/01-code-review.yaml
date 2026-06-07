@@ -1,0 +1,217 @@
+---
+title: "[Code Review] API Routes — workspaces, papers, graph"
+prompt: |
+  You are a senior code reviewer. Review ONLY the following files for code quality issues:
+  - artifacts/api-server/src/routes/workspaces.ts
+  - artifacts/api-server/src/routes/papers.ts
+  - artifacts/api-server/src/routes/graph.ts
+
+  Check for:
+  - Mutation of parameters or state (should use immutable patterns)
+  - Functions longer than 50 lines or nesting deeper than 3 levels
+  - Hardcoded values that should be constants
+  - console.log statements left in production code
+  - Error handling gaps (missing try/catch, unhandled promise rejections)
+  - Inconsistent naming conventions
+  - Missing or incorrect TypeScript types (any usage)
+
+  Create a file REVIEW-code-routes.md with your findings organized as:
+  ## CRITICAL (must fix before merge)
+  ## HIGH (should fix)
+  ## MEDIUM (nice to fix)
+  ## LOW (optional improvement)
+
+  For each finding, include the file path with line number and a clear explanation.
+  If no issues found in a severity level, write "None found."
+  Do NOT modify any source code — only create the review markdown file.
+---
+title: "[Code Review] API Routes — chat, search, demo, health"
+prompt: |
+  You are a senior code reviewer. Review ONLY the following files for code quality issues:
+  - artifacts/api-server/src/routes/chat.ts
+  - artifacts/api-server/src/routes/search.ts
+  - artifacts/api-server/src/routes/demo.ts
+  - artifacts/api-server/src/routes/health.ts
+
+  Check for:
+  - Mutation of parameters or state (should use immutable patterns)
+  - Functions longer than 50 lines or nesting deeper than 3 levels
+  - Hardcoded values that should be constants
+  - console.log statements left in production code
+  - Error handling gaps (missing try/catch, unhandled promise rejections)
+  - Inconsistent naming conventions
+  - Missing or incorrect TypeScript types (any usage)
+  - SSE streaming: proper cleanup, error propagation, backpressure
+
+  Create a file REVIEW-code-routes-2.md with your findings organized as:
+  ## CRITICAL / HIGH / MEDIUM / LOW
+  For each finding, include file path with line number. Do NOT modify source code.
+---
+title: "[Code Review] API Lib — cache, retry, extraction, recovery"
+prompt: |
+  You are a senior code reviewer. Review ONLY the following files for code quality:
+  - artifacts/api-server/src/lib/cache.ts
+  - artifacts/api-server/src/lib/retry.ts
+  - artifacts/api-server/src/lib/extraction.ts
+  - artifacts/api-server/src/lib/recovery.ts
+
+  Check for:
+  - Mutation of parameters or state (should use immutable patterns)
+  - Race conditions in async code (concurrent cache access, recovery duplicate guard)
+  - Functions longer than 50 lines or nesting deeper than 3 levels
+  - Error handling: does recovery truly never throw? Does retry correctly classify errors?
+  - Cache: is the CacheProvider interface properly abstracted? Can it swap to Redis?
+  - Extraction: is the OpenAI response parsing robust against all malformed inputs?
+  - Any use of any type
+
+  Create REVIEW-code-lib-core.md. Include file:line for each finding. Do NOT modify source code.
+---
+title: "[Code Review] API Lib — pipeline, semantic-id, validate, errors, pagination"
+prompt: |
+  You are a senior code reviewer. Review ONLY the following files for code quality:
+  - artifacts/api-server/src/lib/pipeline-dispatcher.ts
+  - artifacts/api-server/src/lib/pipeline-events.ts
+  - artifacts/api-server/src/lib/pipeline-consumers.ts
+  - artifacts/api-server/src/lib/semantic-id.ts
+  - artifacts/api-server/src/lib/validate.ts
+  - artifacts/api-server/src/lib/errors.ts
+  - artifacts/api-server/src/lib/pagination.ts
+  - artifacts/api-server/src/lib/convert-context.ts
+
+  Check for:
+  - PipelineDispatcher: does dispatch() use Promise.allSettled? Is handler error isolation correct?
+  - Semantic ID: collision handling robustness, workspace scoping correctness
+  - Validate middleware: does it properly replace req.body/req.params with parsed values?
+  - Error codes: are they consistent, unique, and documented?
+  - Pagination: cursor generation — can cursors be forged to access other users data?
+  - Any mutation, deep nesting, or any type
+
+  Create REVIEW-code-lib-arch.md. Include file:line. Do NOT modify source code.
+---
+title: "[Code Review] Frontend Pages — graph, papers, chat, dashboard"
+prompt: |
+  You are a senior code reviewer. Review ONLY the following files for code quality:
+  - artifacts/scholarmind/src/pages/workspaces/graph/index.tsx
+  - artifacts/scholarmind/src/pages/workspaces/graph/EntityNode.tsx
+  - artifacts/scholarmind/src/pages/workspaces/graph/KnowledgeEdge.tsx
+  - artifacts/scholarmind/src/pages/workspaces/graph/useLayoutWorker.ts
+  - artifacts/scholarmind/src/pages/workspaces/papers/index.tsx
+  - artifacts/scholarmind/src/pages/workspaces/papers/detail.tsx
+  - artifacts/scholarmind/src/pages/workspaces/chat/index.tsx
+  - artifacts/scholarmind/src/pages/workspaces/dashboard.tsx
+
+  Check for:
+  - React anti-patterns: unnecessary re-renders, missing keys, effect cleanup
+  - useLayoutWorker: stale response guard with requestId, worker error fallback
+  - State management: are useState/useEffect used correctly? Any stale closures?
+  - Memoization: are React.memo, useMemo, useCallback used where needed?
+  - Loading/error states: are all async operations guarded?
+  - Any any type, console.log, or hardcoded values
+
+  Create REVIEW-code-frontend-pages.md. Include file:line. Do NOT modify source code.
+---
+title: "[Code Review] Frontend Mocks and MSW Handlers"
+prompt: |
+  You are a senior code reviewer. Review ONLY the following files for code quality:
+  - artifacts/scholarmind/src/mocks/handlers/workspaces.ts
+  - artifacts/scholarmind/src/mocks/handlers/papers.ts
+  - artifacts/scholarmind/src/mocks/handlers/graph.ts
+  - artifacts/scholarmind/src/mocks/handlers/chat.ts
+  - artifacts/scholarmind/src/mocks/handlers/search.ts
+  - artifacts/scholarmind/src/mocks/handlers/health.ts
+  - artifacts/scholarmind/src/mocks/handlers/demo.ts
+  - artifacts/scholarmind/src/mocks/mock-data.ts
+  - artifacts/scholarmind/src/mocks/types.ts
+
+  Check for:
+  - Do handler routes match the real API routes exactly (path, method)?
+  - Does mock data pass Zod schema validation (realistic values, not gibberish)?
+  - Are all scenarios (default, empty, error, loading) handled consistently?
+  - Is there any circular dependency between mock generation and schema validation?
+  - Any any type or hardcoded values that should be shared constants
+
+  Create REVIEW-code-mocks.md. Include file:line. Do NOT modify source code.
+---
+title: "[Code Review] DB Schema and OpenAI Integration"
+prompt: |
+  You are a senior code reviewer. Review ONLY the following files for code quality:
+  - lib/db/src/schema/workspaces.ts
+  - lib/db/src/schema/papers.ts
+  - lib/db/src/schema/entities.ts
+  - lib/db/src/schema/relations.ts
+  - lib/db/src/schema/conversations.ts
+  - lib/db/src/schema/messages.ts
+  - lib/db/src/schema/index.ts
+  - lib/db/src/index.ts
+  - lib/db/src/test-db.ts
+  - lib/integrations-openai-ai-server/src/index.ts
+  - lib/integrations-openai-ai-server/src/client.ts
+
+  Check for:
+  - Schema: missing indexes for common queries, wrong column types
+  - Relations: are FK constraints correct? Cascade deletes safe?
+  - DB singleton: is the test-db.ts factory properly isolated from production?
+  - OpenAI client: error handling, retry, streaming cleanup
+  - Any mutation of shared state, any type, or missing validation
+
+  Create REVIEW-code-db-openai.md. Include file:line. Do NOT modify source code.
+---
+title: "[Code Review] E2E Tests and Playwright Config"
+prompt: |
+  You are a senior code reviewer. Review ONLY the following files for code quality:
+  - e2e/global-setup.ts
+  - e2e/global-teardown.ts
+  - e2e/fixtures/index.ts
+  - playwright.config.ts
+  - e2e/*.spec.ts (all spec files in e2e/)
+
+  Check for:
+  - Global setup: proper Clerk auth handling, cleanup on failure
+  - Playwright config: correct webServer config, timeout values, retry strategy
+  - Test fixtures: are they reusable? Do they leak state between tests?
+  - Spec files: proper test isolation, meaningful assertions, no flaky waits
+  - Are test IDs (data-testid) stable across semantic ID migration?
+  - Missing error scenarios or edge cases
+
+  Create REVIEW-code-e2e.md. Include file:line. Do NOT modify source code.
+---
+title: "[Code Review] Frontend Workers, Layout, App Entry"
+prompt: |
+  You are a senior code reviewer. Review ONLY the following files for code quality:
+  - artifacts/scholarmind/src/workers/layout-worker.ts
+  - artifacts/scholarmind/src/App.tsx
+  - artifacts/scholarmind/src/main.tsx
+  - artifacts/scholarmind/src/components/workspace-layout.tsx
+  - artifacts/scholarmind/src/pages/workspaces/index.tsx
+  - artifacts/scholarmind/src/pages/home.tsx
+  - artifacts/scholarmind/src/pages/not-found.tsx
+  - artifacts/scholarmind/src/pages/workspaces/journals/index.tsx
+  - artifacts/scholarmind/src/lib/i18n.tsx
+  - artifacts/scholarmind/src/lib/journals.ts
+
+  Check for:
+  - Worker: message protocol correctness, error handling, requestId echo
+  - App entry: MSW worker start conditional (test mode), Clerk provider setup
+  - Router: lazy loading for route components, proper error boundaries
+  - Layout: workspace context, sidebar state, responsive behavior
+  - i18n: are all user-facing strings covered? Missing translations?
+  - Any console.log, hardcoded strings, or any type
+
+  Create REVIEW-code-frontend-core.md. Include file:line. Do NOT modify source code.
+---
+title: "[Code Review] External API Clients — arxiv, semanticScholar"
+prompt: |
+  You are a senior code reviewer. Review ONLY the following files for code quality:
+  - artifacts/api-server/src/lib/external/arxiv.ts
+  - artifacts/api-server/src/lib/external/semanticScholar.ts
+
+  Check for:
+  - HTTP error handling: timeout, retry, rate limiting
+  - Input sanitization: are arXiv IDs validated before use in URLs?
+  - Response parsing: robust against malformed XML/JSON from external APIs
+  - Memory leaks: large response handling, stream cleanup
+  - Rate limiting: are there guards against hammering external APIs?
+  - Error messages: do they leak internal details?
+  - Any any type, console.log, or hardcoded URLs
+
+  Create REVIEW-code-external-apis.md. Include file:line. Do NOT modify source code.

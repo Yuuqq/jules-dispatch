@@ -1,0 +1,35 @@
+title: "P07: Build policy database visualization data exports"
+source: "sources/github/Yuuqq/css-lab-visualization"
+branch: "main"
+prompt: |
+  Create visualization-ready data exports from the policy database for `all_structured.json`.
+
+  Generate these files in `data/`:
+
+  1. `domain_distribution.json` - Pie chart data:
+     ```json
+     [{"domain": "环境治理", "count": 230, "percentage": 11.2}, ...]
+     ```
+
+  2. `timeline.json` - Line chart data (policies by year):
+     ```json
+     [{"year": "2015", "count": 18}, {"year": "2016", "count": 39}, ...]
+     ```
+
+  3. `hierarchy_distribution.json` - Bar chart data:
+     ```json
+     [{"type": "法律", "count": 372}, {"type": "行政法规", "count": 172}, ...]
+     ```
+
+  4. `institution_heatmap.json` - Heatmap data (institution x domain):
+     ```json
+     [{"institution": "国务院", "domain": "环境治理", "count": 15}, ...]
+     ```
+
+  5. `source_tier_pie.json` - Source quality distribution:
+     ```json
+     [{"tier": "A (权威)", "count": 1487}, {"tier": "B (参考)", "count": 97}, ...]
+     ```
+
+  Read from `all_structured.json` or the normalized policy data. Compute real statistics.
+  Commit: "feat: add visualization-ready data exports"

@@ -1,0 +1,177 @@
+# Deferred: Security audit log
+title: "Security Audit Log — Auth Events + AI Guard Actions"
+source: "sources/github/Yuuqq/smart-resume-builder"
+branch: "master"
+autoMode: "AUTO_CREATE_PR"
+
+prompt: |
+  ## Context
+  Streamlit + Python resume builder. No security audit logging exists. Add structured audit logging for auth events and AI guard actions.
+
+  ## Task
+
+  ### 1. Create `core/audit_log.py`
+
+  ```python
+  """Security audit log — structured JSON log for auth and AI events."""
+  import json
+  import logging
+  import time
+  from pathlib import Path
+  from typing import Optional, Dict, Any
+
+  from core.config import get_config
+
+  logger = logging.getLogger("audit")
+
+  class AuditLogger:
+      """Append-only audit log stored as JSONL (one JSON object per line)."""
+
+      def __init__(self):
+          config = get_config()
+          self._log_dir = config.paths.data / "audit"
+          self._log_dir.mkdir(parents=True, exist_ok=True)
+
+      def _write(self, event: str, details: Dict[str, Any]) -> None:
+          entry = {
+              "ts": time.time(),
+              "event": event,
+              **details,
+          }
+          date_str = time.strftime("%Y-%m-%d")
+          log_file = self._log_dir / f"audit-{date_str}.jsonl"
+          try:
+              with open(log_file, "a", encoding="utf-8") as f:
+                  f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+          except Exception as e:
+              logger.error("Failed to write audit log: %s", e)
+
+      def log_login_success(self, user_id: str, ip: str = "unknown") -> None:
+          self._write("login_success", {"user_id": user_id, "ip": ip})
+
+      def log_login_failure(self, user_id: str, reason: str, ip: str = "unknown") -> None:
+          self._write("login_failure", {"user_id": user_id, "reason": reason, "ip": ip})
+
+      def log_account_locked(self, user_id: str, attempts: int, ip: str = "unknown") -> None:
+          self._write("account_locked", {"user_id": user_id, "attempts": attempts, "ip": ip})
+
+      def log_account_unlocked(self, user_id: str) -> None:
+          self._write("account_unlocked", {"user_id": user_id})
+
+      def log_register(self, user_id: str, ip: str = "unknown") -> None:
+          self._write("register", {"user_id": user_id, "ip": ip})
+
+      def log_rate_limit_hit(self, user_id: str, operation: str, limit_type: str) -> None:
+          self._write("rate_limit", {"user_id": user_id, "operation": operation, "limit_type": limit_type})
+
+      def log_ai_cost_cap_hit(self, user_id: str, cap_type: str, current: float, cap: float) -> None:
+          self._write("cost_cap", {"user_id": user_id, "cap_type": cap_type, "current": current, "cap": cap})
+
+      def log_circuit_breaker(self, state: str, consecutive_failures: int) -> None:
+          self._write("circuit_breaker", {"state": state, "consecutive_failures": consecutive_failures})
+
+      def log_password_change(self, user_id: str) -> None:
+          self._write("password_change", {"user_id": user_id})
+
+      def log_session_restore(self, user_id: str, ip: str = "unknown") -> None:
+          self._write("session_restore", {"user_id": user_id, "ip": ip})
+
+  _audit: Optional[AuditLogger] = None
+
+  def get_audit_logger() -> AuditLogger:
+      global _audit
+      if _audit is None:
+          _audit = AuditLogger()
+      return _audit
+  ```
+
+  ### 2. Wire audit logging into `core/user_manager.py`
+
+  In the `login()` method:
+  - After successful login: `get_audit_logger().log_login_success(user_id, ip=client_ip)`
+  - After failed login (wrong password): `get_audit_logger().log_login_failure(user_id, reason=msg)`
+  - After account lockout: `get_audit_logger().log_account_locked(user_id, attempts=5)`
+
+  In the `register()` method:
+  - After successful registration: `get_audit_logger().log_register(user_id, ip=client_ip)`
+
+  In `login()` when unlocking after cooldown:
+  - `get_audit_logger().log_account_unlocked(user_id)`
+
+  ### 3. Wire audit logging into `core/ai_guard.py`
+
+  When rate limit is hit (request/token/global cap):
+  - `get_audit_logger().log_rate_limit_hit(user_id, operation, limit_type)`
+
+  When cost cap is hit:
+  - `get_audit_logger().log_ai_cost_cap_hit(user_id, cap_type, current, cap)`
+
+  When circuit breaker changes state:
+  - `get_audit_logger().log_circuit_breaker(new_state, consecutive_failures)`
+
+  ### 4. Wire audit logging into `app.py`
+
+  In cookie session restore:
+  - `get_audit_logger().log_session_restore(user_id)`
+
+  ### 5. Add tests in `tests/test_audit_log.py`
+
+  ```python
+  import pytest
+  import json
+  from pathlib import Path
+  from core.audit_log import AuditLogger
+
+  @pytest.fixture
+  def audit_logger(tmp_path):
+      logger = AuditLogger()
+      logger._log_dir = tmp_path / "audit"
+      logger._log_dir.mkdir()
+      return logger
+
+  def test_log_login_success(audit_logger, tmp_path):
+      audit_logger.log_login_success("user123", ip="1.2.3.4")
+      log_file = list((tmp_path / "audit").glob("audit-*.jsonl"))[0]
+      lines = log_file.read_text().strip().split("\n")
+      assert len(lines) == 1
+      entry = json.loads(lines[0])
+      assert entry["event"] == "login_success"
+      assert entry["user_id"] == "user123"
+      assert entry["ip"] == "1.2.3.4"
+
+  def test_log_entries_are_jsonl(audit_logger, tmp_path):
+      audit_logger.log_login_success("user1")
+      audit_logger.log_login_failure("user2", reason="wrong_password")
+      audit_logger.log_register("user3")
+      log_file = list((tmp_path / "audit").glob("audit-*.jsonl"))[0]
+      lines = log_file.read_text().strip().split("\n")
+      assert len(lines) == 3
+      for line in lines:
+          json.loads(line)  # each line is valid JSON
+
+  def test_append_only(tmp_path):
+      logger1 = AuditLogger()
+      logger1._log_dir = tmp_path / "audit"
+      logger1._log_dir.mkdir()
+      logger1.log_login_success("user1")
+      logger2 = AuditLogger()
+      logger2._log_dir = tmp_path / "audit"
+      logger2.log_login_success("user2")
+      log_file = list((tmp_path / "audit").glob("audit-*.jsonl"))[0]
+      lines = log_file.read_text().strip().split("\n")
+      assert len(lines) == 2
+  ```
+
+  ### 6. Add `.gitignore` entry
+
+  Add `data/audit/` to `.gitignore` to prevent audit logs from being committed.
+
+  ## Important
+  - ONLY create/modify: `core/audit_log.py`, `tests/test_audit_log.py`, `core/user_manager.py`, `core/ai_guard.py`, `app.py`, `.gitignore`
+  - Audit logs should NOT block or slow down the main flow — use best-effort writes
+  - No sensitive data in logs (no passwords, no session tokens)
+  - Each log entry is one JSON line (JSONL format) for easy parsing
+  - Daily rotation via filename: `audit-YYYY-MM-DD.jsonl`
+
+  ## Commit
+  Message: `feat(security): add structured audit logging for auth events and AI guard actions`

@@ -1,0 +1,15 @@
+title: "P01: amendment history linking"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+prompt: |
+  In `data/processed/normalized_all_policies.json`, the `amendment_history` and `related_docs` fields are all empty arrays.
+
+  Task: Build cross-document relationships:
+  1. For each law (doc_type="法律"), find its amendments by searching for titles containing the law name + "修正" or "修订"
+  2. For each "行政法规" or "部门规章", find its parent law by matching title keywords
+  3. For each "司法解释", find the related law by matching the law name in the title
+  4. Fill `amendment_history` with doc_ids of amendment records (sorted by date)
+  5. Fill `related_docs` with doc_ids of related implementing regulations/rules
+  6. Save
+
+  Commit with message: "feat: link amendment history and related documents"

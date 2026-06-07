@@ -1,0 +1,245 @@
+# Phase 1: Infrastructure — 10 tasks
+# Target: https://github.com/Yuuqq/css-lab-policy-db
+---
+title: "[P1-T001] Create policy document JSON Schema"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Create `schema/policy_document.json` — a JSON Schema (Draft 2020-12) for policy documents.
+
+  Required fields (15+):
+  - doc_id (string, pattern: "^[A-Z]{2,4}-CN-\d{4}-\d{4}$")
+  - title (string, minLength: 2)
+  - full_text (string, minLength: 50)
+  - source (string, enum: ["国家法律法规数据库", "中国政府网", "北大法宝", "网信办", "生态环境部", "住建部", "自然资源部", "市场监管总局", "Exa搜索", "其他"])
+  - source_url (string, format: uri)
+  - doc_type (string, enum: ["法律", "行政法规", "部门规章", "司法解释", "规范性文件", "其他"])
+  - issuing_body (string)
+  - document_number (string, e.g. "中华人民共和国主席令第八十四号")
+  - publish_date (string, format: date)
+  - effective_date (string, format: date, nullable)
+  - status (string, enum: ["现行有效", "尚未施行", "已废止", "已被修改", "部分失效"])
+  - hierarchy (string, enum: ["宪法", "法律", "行政法规", "部门规章", "地方政府规章", "规范性文件", "司法解释"])
+  - domain (array of strings, items from: ["数据安全", "AI治理", "环境治理", "城市治理", "公地治理", "平台治理", "其他"])
+  - keywords (array of strings, maxItems: 20)
+  - collection_date (string, format: date)
+  - collection_method (string, enum: ["flk_scraper", "govcn_scraper", "exa_search", "manual", "ministry_scraper"])
+
+  Optional fields:
+  - related_docs (array of strings)
+  - amendment_history (array of objects with version/date/change)
+  - text_length (integer)
+  - summary (string)
+
+  Create the file and commit. Do NOT modify any existing files.
+---
+title: "[P1-T002] Create Schema validation CLI tool"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Create `tools/validate.py` — a CLI tool that validates JSON data files against the policy document schema.
+
+  Requirements:
+  1. Load schema from `schema/policy_document.json`
+  2. Accept command: `python tools/validate.py <data_file.json>` or `python tools/validate.py <directory>`
+  3. For each record in the data file, validate against schema
+  4. Print: total records, passed, failed
+  5. For failed records, print: record index, field name, error message
+  6. Exit code: 0 if all pass, 1 if any fail
+  7. Handle encoding (UTF-8/GBK auto-detect)
+
+  Also create test fixtures:
+  - `tests/fixtures/valid_law.json` — 1 valid policy doc (数据安全法)
+  - `tests/fixtures/valid_regulation.json` — 1 valid regulation (行政法规)
+  - `tests/fixtures/invalid_missing_field.json` — missing required field
+  - `tests/fixtures/invalid_wrong_type.json` — wrong type for doc_type
+  - `tests/fixtures/invalid_enum.json` — enum value not in allowed list
+
+  Add `requirements.txt` with: jsonschema>=4.0
+
+  Create the files and commit.
+---
+title: "[P1-T003] Create test fixture generator"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Create `tests/fixtures/generate_fixtures.py` — generates 8 test fixture JSON files.
+
+  Generate 5 VALID fixtures covering all doc_types:
+  1. 法律 — 中华人民共和国数据安全法 (2021)
+  2. 行政法规 — 中华人民共和国网络安全法实施条例 (fake but realistic)
+  3. 部门规章 — 互联网信息服务算法推荐管理规定 (2022)
+  4. 规范性文件 — 国务院办公厅关于加强数据安全的意见 (fake but realistic)
+  5. 司法解释 — 最高法关于审理网络安全民事纠纷的解释 (fake but realistic)
+
+  Generate 3 INVALID fixtures:
+  6. Missing required field (no full_text)
+  7. Wrong type (doc_type = 123 instead of string)
+  8. Enum out of range (status = "未知")
+
+  Each fixture is a single JSON file with one record, valid against schema/policy_document.json.
+  Run `python tests/fixtures/generate_fixtures.py` should create all 8 files in tests/fixtures/.
+
+  Create the file and commit.
+---
+title: "[P1-T004] Build FLK search API client"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Create `scrapers/flk_search.py` — search client for 国家法律法规数据库 (flk.npc.gov.cn).
+
+  Implement class `FLKSearcher`:
+  1. `__init__(self, rate_limit: float = 2.0)` — rate limit in seconds between requests
+  2. `search(self, keyword: str, category: str = None, page: int = 1) -> list[dict]`
+     - category: one of "法律", "行政法规", "地方法规", "司法解释", or None for all
+     - Returns list of dicts: {title, url, publish_date, category, source_id}
+  3. `search_all_pages(self, keyword: str, category: str = None) -> list[dict]`
+     - Auto-paginate through all results
+  4. Use `requests` or `httpx` for HTTP
+  5. Add proper User-Agent header
+  6. Rate limiting: `time.sleep(rate_limit)` between requests
+  7. Retry on 5xx errors (max 3 retries with exponential backoff)
+  8. Logging via Python logging module
+
+  Also create `scrapers/__init__.py` (empty).
+  Also create `scrapers/requirements.txt`: requests, httpx, beautifulsoup4, lxml
+
+  Create unit tests in `tests/test_flk_search.py` using unittest.mock to mock HTTP responses.
+
+  Create all files and commit.
+---
+title: "[P1-T005] Build FLK detail page parser"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Create `scrapers/flk_detail.py` — detail page parser for flk.npc.gov.cn law pages.
+
+  Implement function `parse_law_detail(url: str) -> dict | None`:
+  1. Fetch the URL
+  2. Parse HTML with BeautifulSoup
+  3. Extract: title, full_text (complete law text), issuing_body, document_number, publish_date, effective_date, status
+  4. full_text must be the COMPLETE legal text, not truncated
+  5. Handle encoding: auto-detect GBK/UTF-8
+  6. Return None if parsing fails (log the error, don't raise)
+  7. Return dict matching the schema in schema/policy_document.json
+
+  Also implement `parse_law_detail_from_html(html: str) -> dict | None` for testing without HTTP.
+
+  Create tests in `tests/test_flk_detail.py` with sample HTML fixtures.
+  Create `tests/fixtures/flk_sample_page.html` — a sample law page HTML (can be synthetic/realistic).
+
+  Create all files and commit.
+---
+title: "[P1-T006] Build FLK collection orchestrator"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Create `scrapers/flk_collector.py` — orchestrator that ties search + detail + validation together.
+
+  Implement class `FLKCollector`:
+  1. `__init__(self, output_dir: str = "data/flk/raw")`
+  2. `collect(self, keywords: list[str], category: str = None) -> dict`
+     - For each keyword: search → get detail for each result → validate against schema → save
+  3. Checkpoint mechanism: save collected URLs to `data/flk/checkpoint.json`
+  4. Resume: skip URLs already in checkpoint
+  5. Save results to `data/flk/raw/{category}_{keyword}_{timestamp}.json`
+  6. On completion, print stats: total_found, success, failed, skipped (already collected)
+  7. Return summary dict with counts
+
+  Dependencies: uses flk_search.py, flk_detail.py, validate.py (import from tools/)
+
+  Create the file and commit.
+---
+title: "[P1-T007] Build gov.cn policy list scraper"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Create `scrapers/govcn_list.py` — list page scraper for www.gov.cn/zhengce/.
+
+  Implement class `GovCNLister`:
+  1. `__init__(self, rate_limit: float = 2.0)`
+  2. `list_latest(self, page: int = 1) -> list[dict]`
+     - Returns: {title, url, date, department, document_type}
+  3. `list_by_department(self, department: str) -> list[dict]`
+     - department: "国务院", "国务院办公厅", "网信办", "生态环境部", "住建部" etc.
+  4. `list_by_date_range(self, start: str, end: str) -> list[dict]`
+  5. Auto-detect total pages and support pagination
+  6. Rate limiting (≥ 2 seconds between requests)
+  7. Retry on failures
+
+  Create tests in `tests/test_govcn_list.py` with mock HTTP.
+
+  Create all files and commit.
+---
+title: "[P1-T008] Build gov.cn policy detail parser"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Create `scrapers/govcn_detail.py` — detail page parser for gov.cn policy pages.
+
+  Implement function `parse_policy_detail(url: str) -> dict | None`:
+  1. Fetch the URL
+  2. Parse HTML with BeautifulSoup
+  3. Extract: title, full_text (complete policy text), issuing_body, document_number, publish_date, effective_date, status, department
+  4. full_text must be COMPLETE, not truncated
+  5. Handle encoding auto-detection
+  6. Return None on failure (log error)
+  7. Output matches schema/policy_document.json
+
+  Also implement `parse_policy_detail_from_html(html: str) -> dict | None` for testing.
+
+  Create tests in `tests/test_govcn_detail.py`.
+  Create sample HTML fixture.
+
+  Create all files and commit.
+---
+title: "[P1-T009] Build gov.cn collection orchestrator"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Create `scrapers/govcn_collector.py` — orchestrator for gov.cn policy collection.
+
+  Implement class `GovCNCollector`:
+  1. `__init__(self, output_dir: str = "data/govcn/raw")`
+  2. `collect(self, departments: list[str] = None, date_range: tuple = None) -> dict`
+     - List policies → get detail for each → validate → save
+  3. Department filter support
+  4. Checkpoint: `data/govcn/checkpoint.json`
+  5. Resume: skip already collected
+  6. Save to `data/govcn/raw/{dept}_{timestamp}.json`
+  7. Print stats on completion
+
+  Dependencies: uses govcn_list.py, govcn_detail.py, validate.py
+
+  Create the file and commit.
+---
+title: "[P1-T010] Build Exa supplementary collector"
+source: "sources/github/Yuuqq/css-lab-policy-db"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+prompt: |
+  Create `scrapers/exa_supplement.py` — supplementary collector using Exa API for international comparison data.
+
+  Implement class `ExaSupplementaryCollector`:
+  1. `__init__(self, api_keys: list[str] = None)` — rotate through multiple API keys
+  2. `search_international_laws(self, topic: str, num_results: int = 20) -> list[dict]`
+     - Search for international laws on a topic (GDPR, PIPL comparison, etc.)
+  3. `collect(self, topics: list[str]) -> dict`
+     - For each topic: search → extract text → normalize to schema → save
+  4. Output format matches schema/policy_document.json
+  5. Save to `data/exa_supplement/{topic}_{timestamp}.json`
+  6. Key rotation with automatic failover
+  7. Rate limiting (0.5s between requests)
+
+  Add httpx to requirements.
+
+  Create the file and commit.

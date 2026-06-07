@@ -7,6 +7,7 @@ import { JulesClient, deriveStatus } from './client.js';
 import { debug } from './log.js';
 import { isJson, emit, info } from './output.js';
 import { pollSessions, type PollResult } from './polling.js';
+import { runBatches } from './batch.js';
 
 export interface CollectStatusOptions {
   sessionIds?: string[];
@@ -26,82 +27,22 @@ export async function collectStatus(
   if (targetIds && targetIds.length > 0) {
     // Fetch each requested session directly so we don't depend on it
     // being in the first page of /sessions.
-    for (const id of targetIds) {
-      try {
-        const s = await client.getSession(id);
-        sessionsToCheck.push(s);
-      } catch (err) {
-        sessionsToCheck.push({
-          id,
-          name: `sessions/${id}`,
-          title: `<not found: ${id}>`,
-          prompt: '',
-          url: '',
-          sourceContext: { source: '', githubRepoContext: { startingBranch: '' } },
-          state: 'FAILED',
-        } as JulesSession);
-        // Surface the error in text mode for visibility.
-        if (!isJson()) console.error(chalk.red(`Failed to fetch session ${id}: ${(err as Error).message}`));
-      }
-    }
+    sessionsToCheck.push(...await runBatches(
+      targetIds,
+      10,
+      id => fetchSessionForStatus(client, id),
+    ));
   } else {
     const scanLimit = options.scanLimit ?? 100;
     const page = await client.listSessions(scanLimit);
     sessionsToCheck.push(...page.sessions);
   }
 
-  const results: CollectResult[] = [];
-
-  for (const session of sessionsToCheck) {
-    let lastActivity = '';
-    let activityCount = 0;
-    let status: CollectResult['status'] = 'running';
-
-    try {
-      const { activities } = await client.listActivities(session.id, 10);
-      activityCount = activities.length;
-
-      const failedAct = activities.find(a => a.sessionFailed);
-      const completedAct = activities.find(a => a.sessionCompleted);
-      const latestProgress = activities
-        .filter(a => a.progressUpdated)
-        .sort((a, b) => (a.createTime > b.createTime ? -1 : 1))[0];
-
-      status = deriveStatus(session, activities);
-
-      if (status === 'failed') {
-        lastActivity = failedAct?.sessionFailed?.message ?? failedAct?.sessionFailed?.reason ?? 'Failed';
-      } else if (status === 'completed') {
-        lastActivity = 'Completed';
-      } else if (status === 'awaiting_plan') {
-        lastActivity = 'Awaiting plan approval';
-      } else if (status === 'cancelled') {
-        lastActivity = 'Cancelled';
-      } else {
-        lastActivity = latestProgress?.progressUpdated?.title ?? 'In progress';
-      }
-      // Suppress unused warnings in strict mode.
-      void completedAct;
-    } catch (err) {
-      debug('activity fetch error', { sessionId: session.id, error: (err as Error).message });
-      lastActivity = 'Error fetching activities';
-      status = deriveStatus(session, []);
-    }
-
-    const pr = session.outputs?.find(o => o.pullRequest);
-
-    results.push({
-      sessionId: session.id,
-      title: session.title,
-      status,
-      prUrl: pr?.pullRequest?.url,
-      prTitle: pr?.pullRequest?.title,
-      lastActivity,
-      activities: activityCount,
-      state: session.state,
-      createTime: session.createTime,
-    });
-  }
+  const results = await runBatches(
+    sessionsToCheck,
+    10,
+    session => summarizeCollectResult(client, session),
+  );
 
   emit(
     () => printStatusText(results),
@@ -126,6 +67,72 @@ export async function collectStatus(
   }
 
   return results;
+}
+
+async function fetchSessionForStatus(client: JulesClient, id: string): Promise<JulesSession> {
+  try {
+    return await client.getSession(id);
+  } catch (err) {
+    // Surface the error in text mode for visibility.
+    if (!isJson()) console.error(chalk.red(`Failed to fetch session ${id}: ${(err as Error).message}`));
+    return {
+      id,
+      name: `sessions/${id}`,
+      title: `<not found: ${id}>`,
+      prompt: '',
+      url: '',
+      sourceContext: { source: '', githubRepoContext: { startingBranch: '' } },
+      state: 'FAILED',
+    } as JulesSession;
+  }
+}
+
+async function summarizeCollectResult(client: JulesClient, session: JulesSession): Promise<CollectResult> {
+  let lastActivity = '';
+  let activityCount = 0;
+  let status: CollectResult['status'] = 'running';
+
+  try {
+    const { activities } = await client.listActivities(session.id, 10);
+    activityCount = activities.length;
+
+    const failedAct = activities.find(a => a.sessionFailed);
+    const latestProgress = activities
+      .filter(a => a.progressUpdated)
+      .sort((a, b) => (a.createTime > b.createTime ? -1 : 1))[0];
+
+    status = deriveStatus(session, activities);
+
+    if (status === 'failed') {
+      lastActivity = failedAct?.sessionFailed?.message ?? failedAct?.sessionFailed?.reason ?? 'Failed';
+    } else if (status === 'completed') {
+      lastActivity = 'Completed';
+    } else if (status === 'awaiting_plan') {
+      lastActivity = 'Awaiting plan approval';
+    } else if (status === 'cancelled') {
+      lastActivity = 'Cancelled';
+    } else {
+      lastActivity = latestProgress?.progressUpdated?.title ?? 'In progress';
+    }
+  } catch (err) {
+    debug('activity fetch error', { sessionId: session.id, error: (err as Error).message });
+    lastActivity = 'Error fetching activities';
+    status = deriveStatus(session, []);
+  }
+
+  const pr = session.outputs?.find(o => o.pullRequest);
+
+  return {
+    sessionId: session.id,
+    title: session.title,
+    status,
+    prUrl: pr?.pullRequest?.url,
+    prTitle: pr?.pullRequest?.title,
+    lastActivity,
+    activities: activityCount,
+    state: session.state,
+    createTime: session.createTime,
+  };
 }
 
 function printStatusText(results: CollectResult[]): void {

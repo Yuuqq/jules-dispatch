@@ -1,0 +1,13 @@
+title: "Test — List qiaopi_data files and create summary"
+source: "sources/github/Yuuqq/Qiaopi"
+branch: "main"
+autoMode: "AUTO_CREATE_PR"
+
+prompt: |
+  This is a test task to verify connectivity. Do the following:
+  1. List all files in qiaopi_data/ directory
+  2. Count the total number of CSV, JSON, HTML, and PDF files
+  3. Create a file called qiaopi_data/jules-test-summary.md with the counts
+  4. Commit and create a PR
+
+  This should be a simple task - just file listing and counting, no scraping or browser automation needed.

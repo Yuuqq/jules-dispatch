@@ -1,0 +1,18 @@
+title: "P06: Sentiment - AI regulation debate collection"
+source: "sources/github/Yuuqq/css-lab-sentiment-analysis"
+branch: "main"
+prompt: |
+  Create a new sentiment dataset for "AI regulation" (AI监管) debate.
+
+  File: `data/ai_regulation_debate.json`
+
+  Collect discussions about:
+  1. DeepSeek / ChatGPT regulation debates
+  2. AI-generated content (AIGC) governance opinions
+  3. AI ethics and safety regulation discussions
+  4. Global AI governance comparison (EU AI Act vs China approach)
+
+  Structure same as existing sentiment files. At least 50 records across 3 time periods (2023, 2024, 2025-2026).
+  Include `sentiment_label`, `key_arguments`, `stakeholder_type`.
+
+  Search the web. Commit: "feat: AI regulation sentiment dataset"

@@ -1,0 +1,15 @@
+title: "P03: TikTok global governance policy comparison (2018-2026)"
+source: "sources/github/Yuuqq/css-lab-platform-governance"
+branch: "main"
+prompt: |
+  Expand `data/TikTok_policies.json` with a comparative analysis of TikTok governance across regions.
+
+  Collect policies for each region:
+  1. TikTok US: Community Guidelines, data privacy (Project Texas), content moderation
+  2. TikTok EU: DSA compliance, GDPR, transparency reports
+  3. TikTok Global: Content Advisory Council, minor safety
+  4. 抖音 (Douyin) vs TikTok: Key governance differences
+
+  For each: `policy_name`, `platform`: "TikTok", `region`, `version`, `effective_date`, `policy_type`, `content_summary`, `key_changes_from_previous`, `source_url`, `collection_date`
+
+  Search the web. Commit: "feat: TikTok global governance policy comparison 2018-2026"

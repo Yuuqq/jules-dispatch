@@ -1,0 +1,103 @@
+---
+title: "[Arch Review] Monorepo structure and package boundaries"
+prompt: |
+  You are an architecture reviewer. Audit the monorepo structure:
+
+  Review:
+  - Root package.json, pnpm-workspace.yaml
+  - lib/db/ package boundaries
+  - lib/api-zod/ package boundaries
+  - lib/api-client-react/ package boundaries
+  - lib/integrations-openai-ai-server/ package boundaries
+  - artifacts/api-server/ dependencies
+  - artifacts/scholarmind/ dependencies
+
+  Check for:
+  - Are there circular dependencies between packages?
+  - Does api-server import from scholarmind or vice versa?
+  - Does a lib package import from an artifacts package?
+  - Are shared types properly extracted into lib packages?
+  - Is the dependency graph clean (lib <- artifacts, not the reverse)?
+  - Are there duplicate type definitions across packages?
+  - Are package.json dependencies minimal (no unnecessary deps)?
+
+  Create REVIEW-arch-monorepo.md with findings. Include file:line. Do NOT modify source code.
+---
+title: "[Arch Review] Pipeline Dispatcher design and event flow"
+prompt: |
+  You are an architecture reviewer. Audit the PipelineDispatcher design:
+
+  Files to review:
+  - artifacts/api-server/src/lib/pipeline-dispatcher.ts
+  - artifacts/api-server/src/lib/pipeline-events.ts
+  - artifacts/api-server/src/lib/pipeline-consumers.ts
+  - artifacts/api-server/src/lib/extraction.ts
+
+  Check for:
+  - Is the event-driven architecture appropriate for this use case?
+  - Could the dispatcher be replaced with simple function calls?
+  - Are event payloads typed and documented?
+  - Is the lifecycle correct: started -> completed/failed?
+  - Can consumers be added/removed without modifying extraction.ts?
+  - Is the dispatcher testable in isolation?
+  - Are there hidden coupling points between dispatcher and consumers?
+
+  Create REVIEW-arch-pipeline.md with findings. Include file:line. Do NOT modify source code.
+---
+title: "[Arch Review] State management in frontend"
+prompt: |
+  You are an architecture reviewer. Audit frontend state management:
+
+  Files to review:
+  - artifacts/scholarmind/src/pages/workspaces/graph/index.tsx
+  - artifacts/scholarmind/src/pages/workspaces/chat/index.tsx
+  - artifacts/scholarmind/src/pages/workspaces/papers/index.tsx
+  - artifacts/scholarmind/src/components/workspace-layout.tsx
+
+  Check for:
+  - Is state lifted correctly (not too high, not too low)?
+  - Are there prop-drilling issues (props passed through 3+ levels)?
+  - Is there a need for context or state management library?
+  - Are API calls made at the right level (page vs component)?
+  - Loading/error states: consistent pattern across pages?
+  - Is the API client hook pattern consistent?
+  - Cache invalidation: how does frontend know when data is stale?
+
+  Create REVIEW-arch-state.md with findings. Include file:line. Do NOT modify source code.
+---
+title: "[Arch Review] Error handling architecture"
+prompt: |
+  You are an architecture reviewer. Audit the error handling architecture:
+
+  Files to review:
+  - artifacts/api-server/src/lib/errors.ts
+  - artifacts/api-server/src/app.ts
+  - All route files
+
+  Check for:
+  - Is there a consistent error hierarchy (AppError, ValidationError, AuthError)?
+  - Does the global error handler catch all error types?
+  - Are async errors in routes properly propagated to the error handler?
+  - Can errors be traced (correlation IDs, structured logging)?
+  - Is the error response format consistent across all endpoints?
+  - Do errors include enough context for debugging without leaking secrets?
+
+  Create REVIEW-arch-errors.md with findings. Include file:line. Do NOT modify source code.
+---
+title: "[Arch Review] ConvertContext middleware chain design"
+prompt: |
+  You are an architecture reviewer. Audit the ConvertContext design:
+
+  Files to review:
+  - artifacts/api-server/src/lib/convert-context.ts
+
+  Check for:
+  - Is the middleware chain pattern appropriate here?
+  - Can steps be composed and tested independently?
+  - Is the next() control flow correct (like Koa middleware)?
+  - Error propagation: if a step throws, does it short-circuit correctly?
+  - Context immutability: can steps accidentally mutate shared state?
+  - Is compose() correct for async middleware?
+  - Could this be replaced with simpler sequential calls?
+
+  Create REVIEW-arch-context.md with findings. Include file:line. Do NOT modify source code.
