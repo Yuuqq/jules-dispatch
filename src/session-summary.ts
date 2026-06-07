@@ -74,7 +74,7 @@ function getLastActivity(status: SessionStatus, activities: Awaited<ReturnType<J
     .filter(a => a.progressUpdated)
     .sort((a, b) => (a.createTime > b.createTime ? -1 : 1))[0];
 
-  if (status === 'failed') return failedAct?.sessionFailed?.message ?? 'Failed';
+  if (status === 'failed') return failedAct?.sessionFailed?.message ?? failedAct?.sessionFailed?.reason ?? 'Failed';
   if (status === 'completed') return 'Completed';
   if (status === 'awaiting_plan') return 'Awaiting plan approval';
   if (status === 'cancelled') return 'Cancelled';
