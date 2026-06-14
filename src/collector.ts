@@ -99,7 +99,7 @@ async function summarizeCollectResult(client: JulesClient, session: JulesSession
     const failedAct = activities.find(a => a.sessionFailed);
     const latestProgress = activities
       .filter(a => a.progressUpdated)
-      .sort((a, b) => (a.createTime > b.createTime ? -1 : 1))[0];
+      .sort((a, b) => (a.createTime > b.createTime ? -1 : a.createTime < b.createTime ? 1 : 0))[0];
 
     status = deriveStatus(session, activities);
 

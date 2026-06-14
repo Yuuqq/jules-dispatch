@@ -110,13 +110,6 @@ export async function dispatchBatch(
   for (let i = 0; i < allTasks.length; i += parallel) {
     const batch = allTasks.slice(i, i + parallel);
 
-    if (!isJson()) {
-      for (let j = 0; j < batch.length; j++) {
-        const idx = i + j + 1;
-        process.stdout.write(`[${idx}/${allTasks.length}] ${batch[j].task.title}... `);
-      }
-    }
-
     const batchResults = await Promise.all(
       batch.map(({ file, task }) =>
         dispatchTaskDefinition(client, config, task, file, options),
@@ -125,12 +118,16 @@ export async function dispatchBatch(
     results.push(...batchResults);
 
     if (!isJson()) {
-      for (const r of batchResults) {
-        if (r.status === 'dispatched') {
-          console.log(chalk.green('dispatched'));
-        } else {
-          console.log(chalk.red(`failed (${r.error ?? 'unknown'})`));
-        }
+      // Pair each prompt line with its own result so the per-task status
+      // aligns under its title (previously all prompts were written without
+      // newlines first, then all results were logged, scrambling alignment).
+      for (let j = 0; j < batch.length; j++) {
+        const idx = i + j + 1;
+        const r = batchResults[j];
+        const tail = r.status === 'dispatched'
+          ? chalk.green('dispatched')
+          : chalk.red(`failed (${r.error ?? 'unknown'})`);
+        console.log(`[${idx}/${allTasks.length}] ${batch[j].task.title}... ${tail}`);
       }
 
       const done = results.filter(r => r.status === 'dispatched').length;

@@ -35,7 +35,7 @@ export function translateError(err: unknown): TranslatedError {
       cause: 'API key is invalid, expired, or missing',
       fix: 'Run `jules-dispatch init` or check `JULES_API_KEY` in `.env`',
       code: 'AUTH_FAILED',
-      context: { docsUrl: 'https://github.com/nicholasgasior/jules-dispatch#authentication' },
+      context: { docsUrl: 'https://github.com/Yuuqq/jules-dispatch#authentication' },
     };
   }
 
@@ -81,7 +81,7 @@ export function translateError(err: unknown): TranslatedError {
       cause: 'No Jules API key was found',
       fix: 'Set `JULES_API_KEY` in `.env` or pass `--api-key`',
       code: 'AUTH_MISSING',
-      context: { docsUrl: 'https://github.com/nicholasgasior/jules-dispatch#setup' },
+      context: { docsUrl: 'https://github.com/Yuuqq/jules-dispatch#setup' },
     };
   }
 
@@ -97,7 +97,7 @@ export function translateError(err: unknown): TranslatedError {
   return {
     problem: message && message !== 'null' && message !== 'undefined' ? message : 'Unexpected error',
     cause: 'An unknown error occurred',
-    fix: 'Run with `--verbose` for details. If persistent, file an issue at https://github.com/nicholasgasior/jules-dispatch/issues',
+    fix: 'Run with `--verbose` for details. If persistent, file an issue at https://github.com/Yuuqq/jules-dispatch/issues',
     code: 'UNKNOWN',
   };
 }

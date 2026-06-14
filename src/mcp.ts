@@ -1,7 +1,6 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
-import { resolve } from 'node:path';
 import { loadConfig, loadTasksFromString } from './config.js';
 import { JulesClient, deriveStatus } from './client.js';
 import { pollSessions } from './polling.js';
@@ -518,5 +517,3 @@ export async function runMcpServer(options: McpServerOptions): Promise<void> {
   });
   await server.connect(new StdioServerTransport());
 }
-
-void resolve;  // keep import for potential future use

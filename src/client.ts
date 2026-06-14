@@ -168,7 +168,9 @@ export class JulesClient {
     const planActs = activities.filter(a => a.planGenerated?.plan);
     if (planActs.length === 0) return null;
     // Activities returned newest-first per Google API conventions, but be defensive.
-    const sorted = planActs.slice().sort((a, b) => (a.createTime > b.createTime ? -1 : 1));
+    const sorted = planActs.slice().sort((a, b) =>
+      a.createTime > b.createTime ? -1 : a.createTime < b.createTime ? 1 : 0,
+    );
     return sorted[0].planGenerated!.plan;
   }
 
@@ -193,13 +195,17 @@ function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-function parseRetryAfterMs(value: string | null): number | undefined {
-  if (!value) return undefined;
+export function parseRetryAfterMs(value: string | null): number | undefined {
+  // Treat blank/whitespace-only values as absent. Note that Number('') and
+  // Number('  ') both coerce to 0 (a finite number), so without trimming we
+  // would wrongly treat a blank Retry-After header as "retry immediately".
+  const trimmed = value?.trim();
+  if (!trimmed) return undefined;
 
-  const seconds = Number(value);
+  const seconds = Number(trimmed);
   if (Number.isFinite(seconds)) return Math.max(seconds * 1000, 0);
 
-  const dateMs = Date.parse(value);
+  const dateMs = Date.parse(trimmed);
   if (Number.isNaN(dateMs)) return undefined;
   return Math.max(dateMs - Date.now(), 0);
 }

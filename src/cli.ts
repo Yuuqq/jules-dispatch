@@ -14,6 +14,10 @@ import { translateError, type TranslatedError } from './errors.js';
 
 const program = new Command();
 
+// Set to true by long-lived subcommands (currently `mcp`) so the global
+// unhandledRejection handler doesn't kill the process on a stray rejection.
+let isLongRunning = false;
+
 program
   .name('jules-dispatch')
   .description('Batch-dispatch tasks to Google Jules + MCP server for Claude Code / Codex')
@@ -161,6 +165,9 @@ program
     if (opts.watch) {
       // Watch mode keeps the initial report write, but refreshes only render status.
       const interval = parseIntegerOption(opts.interval, '--interval', 100);
+      // Parse once outside the loop so a bad value fails fast instead of
+      // re-validating (and potentially process.exit-ing) on every refresh.
+      const scanLimit = parseIntegerOption(opts.scan, '--scan', 1, 200);
       const abort = new AbortController();
       const onSigint = () => { abort.abort(); };
       process.on('SIGINT', onSigint);
@@ -176,10 +183,13 @@ program
           const results = await collectStatus(client, config, {
             sessionIds: opts.ids,
             output: undefined,
-            scanLimit: parseIntegerOption(opts.scan, '--scan', 1, 200),
+            scanLimit,
           });
 
-          const allTerminal = results.every(r =>
+          // Empty results must NOT count as "all resolved" (Array.every on an
+          // empty array returns true), otherwise an API hiccup or a filtered-out
+          // scan would make watch exit prematurely.
+          const allTerminal = results.length > 0 && results.every(r =>
             r.status === 'completed' || r.status === 'failed' || r.status === 'cancelled',
           );
           if (allTerminal) {
@@ -742,6 +752,10 @@ program
   .command('mcp')
   .description('Run as an MCP (Model Context Protocol) server over stdio for Claude Code / Codex')
   .action(async () => {
+    // The MCP server is a long-lived process driven by the host (Claude Code /
+    // Codex). The global unhandledRejection handler below would otherwise
+    // tear it down on the first stray rejection, so opt out here.
+    isLongRunning = true;
     // Lazy-import: the SDK is only loaded when actually running the MCP server,
     // keeping CLI startup snappy.
     const { runMcpServer } = await import('./mcp.js');
@@ -772,15 +786,18 @@ Getting started:
   $ jules-dispatch status                 # check progress
   $ jules-dispatch doctor                 # validate your setup
 
-Docs: https://github.com/nicholasgasior/jules-dispatch
+Docs: https://github.com/Yuuqq/jules-dispatch
 `);
 
 // ---------- error wrapping ----------
 
 process.on('unhandledRejection', (err) => {
+  // Long-running subcommands (the MCP server) own their own lifecycle and must
+  // not be terminated by the global handler; they still get the structured
+  // error on stderr for visibility.
   const t = translateError(err);
   emitError(t.problem, t.code, `Cause: ${t.cause}\nFix: ${t.fix}`, t.context);
-  process.exit(ExitCode.GENERIC);
+  if (!isLongRunning) process.exit(ExitCode.GENERIC);
 });
 
 program.parseAsync(process.argv).catch((err) => {

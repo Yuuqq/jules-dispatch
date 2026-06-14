@@ -72,7 +72,7 @@ function getLastActivity(status: SessionStatus, activities: Awaited<ReturnType<J
   const failedAct = activities.find(a => a.sessionFailed);
   const latestProgress = activities
     .filter(a => a.progressUpdated)
-    .sort((a, b) => (a.createTime > b.createTime ? -1 : 1))[0];
+    .sort((a, b) => (a.createTime > b.createTime ? -1 : a.createTime < b.createTime ? 1 : 0))[0];
 
   if (status === 'failed') return failedAct?.sessionFailed?.message ?? failedAct?.sessionFailed?.reason ?? 'Failed';
   if (status === 'completed') return 'Completed';

@@ -21,8 +21,11 @@ export async function runInit(options: InitOptions): Promise<InitResult> {
   const envPath = resolve(options.projectDir, '.env');
   const existingValues = parseEnv(envPath);
   let apiKey = options.apiKey ?? '';
-  let source = options.source ?? '';
-  let branch = options.branch ?? '';
+  // Fall back to existing .env values when not explicitly provided, so a
+  // re-run of `init` in non-interactive mode does not wipe previously
+  // configured defaults.
+  let source = options.source ?? existingValues.JULES_DEFAULT_SOURCE ?? '';
+  let branch = options.branch ?? existingValues.JULES_DEFAULT_BRANCH ?? '';
 
   if (!options.interactive && !apiKey) {
     throw new Error('Non-interactive mode requires --api-key. Use --api-key and optionally --source.');
@@ -30,8 +33,8 @@ export async function runInit(options: InitOptions): Promise<InitResult> {
 
   if (options.interactive) {
     apiKey = await promptFor('Jules API key', existingValues.JULES_API_KEY ?? apiKey);
-    source = await promptFor('Default source (e.g. sources/github/owner/repo)', existingValues.JULES_DEFAULT_SOURCE ?? source);
-    branch = await promptFor('Default branch', existingValues.JULES_DEFAULT_BRANCH ?? (branch || 'main'));
+    source = await promptFor('Default source (e.g. sources/github/owner/repo)', source);
+    branch = await promptFor('Default branch', branch || 'main');
   }
 
   let backed = false;

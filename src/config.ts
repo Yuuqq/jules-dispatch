@@ -29,8 +29,10 @@ export function loadConfig(projectDir: string, options: LoadConfigOptions = {}):
     process.exit(2);
   }
 
-  // Normalise empty string autoMode to a meaningful default.
-  const rawAuto = (process.env.JULES_AUTO_MODE ?? '').trim();
+  // Normalise empty string autoMode to a meaningful default, and uppercase so
+  // users can write `JULES_AUTO_MODE=none` or `None` and still match the
+  // 'AUTO_CREATE_PR' | 'NONE' union the API expects.
+  const rawAuto = (process.env.JULES_AUTO_MODE ?? '').trim().toUpperCase();
   const autoMode = (rawAuto === '' ? 'AUTO_CREATE_PR' : rawAuto) as JulesConfig['autoMode'];
 
   return {

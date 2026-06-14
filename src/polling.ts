@@ -50,22 +50,26 @@ export async function pollSessions(
     );
     if (remaining.length === 0) break;
 
-    for (const id of remaining) {
+    // Poll all remaining sessions concurrently rather than serially; with N
+    // sessions this turns ~2N sequential requests into 2 parallel waves,
+    // keeping the effective per-tick latency close to a single round-trip
+    // instead of growing linearly with the session count.
+    await Promise.all(remaining.map(async (id) => {
+      // Once failFast has triggered mid-batch, skip the remaining work in
+      // this wave — the loop condition will exit on the next iteration.
+      if (failFast && failed.size > 0) return;
       try {
         const session = await client.getSession(id);
         const { activities } = await client.listActivities(id, 10);
         const status = deriveStatus(session, activities);
 
         if (status === 'completed') markTerminal(id, 'completed');
-        else if (status === 'failed') {
-          markTerminal(id, 'failed');
-          if (failFast) break;
-        }
+        else if (status === 'failed') markTerminal(id, 'failed');
         else if (status === 'cancelled') markTerminal(id, 'cancelled');
       } catch (err) {
         callbacks?.onError?.(id, err as Error);
       }
-    }
+    }));
 
     callbacks?.onPoll?.({
       completed: completed.size,

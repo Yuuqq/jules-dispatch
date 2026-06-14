@@ -18,8 +18,9 @@ export interface DoctorResult {
 export function checkNodeVersion(version: string = process.version): DoctorCheck {
   const match = version.match(/^v(\d+)/);
   const major = match ? parseInt(match[1], 10) : 0;
-  if (major >= 22) return { name: 'node_version', status: 'pass', message: `Node.js ${version} (>= 20)` };
-  if (major >= 20) return { name: 'node_version', status: 'pass', message: `Node.js ${version}` };
+  if (major >= 20) {
+    return { name: 'node_version', status: 'pass', message: `Node.js ${version} (meets >= 20 requirement)` };
+  }
   return { name: 'node_version', status: 'warn', message: `Node.js ${version} (>= 20 recommended)` };
 }
 
