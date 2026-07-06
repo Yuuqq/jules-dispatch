@@ -33,9 +33,16 @@ export async function collectStatus(
       id => fetchSessionForStatus(client, id),
     ));
   } else {
+    // Paginate until we hit scanLimit. A single listSessions() call only
+    // returns one server page (capped well below our scanLimit for large
+    // fleets), so we walk forward through pages and stop once we have enough.
     const scanLimit = options.scanLimit ?? 100;
-    const page = await client.listSessions(scanLimit);
-    sessionsToCheck.push(...page.sessions);
+    let fetched = 0;
+    for await (const s of client.iterateSessions(Math.min(scanLimit, 200))) {
+      sessionsToCheck.push(s);
+      fetched += 1;
+      if (fetched >= scanLimit) break;
+    }
   }
 
   const results = await runBatches(

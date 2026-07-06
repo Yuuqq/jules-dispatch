@@ -85,11 +85,11 @@ export function translateError(err: unknown): TranslatedError {
     };
   }
 
-  if (/YAML|JSON|title|prompt|Invalid task|No (tasks|YAML|documents)/i.test(message)) {
+  if (/YAML|JSON|title|prompt|Invalid task|No (tasks|YAML|documents)|Task directory (not found|is empty)/i.test(message)) {
     return {
       problem: 'Task file validation failed',
       cause: message,
-      fix: 'Fix the task file. Run `jules-dispatch doctor --task-file <path>` to validate',
+      fix: 'Fix the task file or directory. Run `jules-dispatch doctor --task-file <path>` to validate a file',
       code: 'VALIDATION',
     };
   }

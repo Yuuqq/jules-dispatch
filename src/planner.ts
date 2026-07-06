@@ -178,13 +178,21 @@ export async function planTasks(
     body: JSON.stringify({ ...baseBody, response_format: { type: 'json_object' } }),
   });
 
-  // Retry without response_format if the provider 400s on it.
+  // Retry without response_format ONLY when the provider explicitly rejects
+  // that field. Some Ollama / vLLM models 400 on it. Retrying on any other
+  // 400 (bad model name, bad key, malformed request) would mask the real
+  // error and confuse the user, so inspect the body before falling back.
   if (resp.status === 400) {
-    resp = await fetch(`${cfg.baseUrl}/chat/completions`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(baseBody),
-    });
+    const firstBody = await resp.text().catch(() => '');
+    if (/response_format/i.test(firstBody)) {
+      resp = await fetch(`${cfg.baseUrl}/chat/completions`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(baseBody),
+      });
+    } else {
+      throw new Error(`LLM request failed (400) at ${cfg.baseUrl}: ${firstBody.slice(0, 500)}`);
+    }
   }
 
   if (!resp.ok) {

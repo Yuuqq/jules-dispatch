@@ -25,7 +25,10 @@ export function loadConfig(projectDir: string, options: LoadConfigOptions = {}):
   if (!apiKey) {
     const msg = 'JULES_API_KEY is required. Set it in .env, pass --api-key, or set the JULES_API_KEY environment variable.';
     if (options.noExit) throw new Error(msg);
+    // Match the structured error formatting used everywhere else (✗ red,
+    // followed by a Fix: hint) instead of a bare console.error line.
     console.error(msg);
+    console.error('Fix: run `jules-dispatch init`, or set JULES_API_KEY in .env / the environment.');
     process.exit(2);
   }
 
@@ -83,9 +86,23 @@ export function loadTasksFromString(content: string, format: 'yaml' | 'json' = '
 }
 
 export function loadTasksFromDir(dir: string): Array<{ file: string; tasks: TaskDefinition[] }> {
-  const files = readdirSync(dir)
-    .filter(f => f.endsWith('.yaml') || f.endsWith('.yml') || f.endsWith('.json'))
-    .sort();
+  let files: string[];
+  try {
+    files = readdirSync(dir)
+      .filter(f => f.endsWith('.yaml') || f.endsWith('.yml') || f.endsWith('.json'))
+      .sort();
+  } catch (err) {
+    // readdirSync throws ENOENT for a missing dir and ENOTDIR when `dir` is a
+    // file. Surface a clear, actionable message instead of a raw syscall.
+    const code = (err as NodeJS.ErrnoException).code;
+    if (code === 'ENOENT') {
+      throw new Error(`Task directory not found: ${dir}`);
+    }
+    if (code === 'ENOTDIR') {
+      throw new Error(`Expected a directory but found a file: ${dir}`);
+    }
+    throw err;
+  }
 
   return files.map(f => ({
     file: f,

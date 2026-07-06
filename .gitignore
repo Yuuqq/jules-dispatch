@@ -1,6 +1,11 @@
 node_modules/
 dist/
 .env
+.env.backup
+.env.backup.*
+.env.bak
+.env.bak.*
+.env.local
 coverage/
 .dispatch-logs/
 .vitest-cache/

@@ -164,7 +164,7 @@ program
 
     if (opts.watch) {
       // Watch mode keeps the initial report write, but refreshes only render status.
-      const interval = parseIntegerOption(opts.interval, '--interval', 100);
+      const interval = parseIntegerOption(opts.interval, '--interval', 1000);
       // Parse once outside the loop so a bad value fails fast instead of
       // re-validating (and potentially process.exit-ing) on every refresh.
       const scanLimit = parseIntegerOption(opts.scan, '--scan', 1, 200);
@@ -256,7 +256,7 @@ program
     if (ids.length === 0) fail('No session IDs provided. Usage: wait <id1> [id2...]', ExitCode.VALIDATION, 'NO_IDS');
 
     const result = await waitForCompletion(client, config, ids, {
-      interval: parseIntegerOption(opts.interval, '--interval', 1),
+      interval: parseIntegerOption(opts.interval, '--interval', 1000),
       timeout: parseIntegerOption(opts.timeout, '--timeout', 1),
       failFast: opts.failFast,
     });
@@ -480,7 +480,7 @@ Examples:
       emit(
         () => {
           if (result.backed) {
-            console.log(chalk.yellow('Backed up existing .env to .env.backup'));
+            console.log(chalk.yellow(`Backed up existing .env to ${result.backupPath ?? '.env.backup'}`));
           }
           console.log(chalk.green(`✓ Configuration written to ${result.envPath}`));
           console.log(chalk.dim(`  API key: ${'*'.repeat(8)}${result.values.apiKey.slice(-4)}`));
@@ -503,47 +503,69 @@ program
   .option('--interval <ms>', 'poll interval', '5000')
   .action(async (sessionId: string, opts: { interval: string }) => {
     const { client } = getConfig();
-    const interval = parseIntegerOption(opts.interval, '--interval', 1);
+    const interval = parseIntegerOption(opts.interval, '--interval', 1000);
     const seen = new Set<string>();
+    const abort = new AbortController();
+    const onSigint = () => { abort.abort(); };
+    process.on('SIGINT', onSigint);
 
     info(chalk.dim(`Tailing ${sessionId} (Ctrl+C to stop)...\n`));
 
-    while (true) {
-      try {
-        const session = await client.getSession(sessionId);
-        const { activities } = await client.listActivities(sessionId, 30);
+    try {
+      while (!abort.signal.aborted) {
+        try {
+          const session = await client.getSession(sessionId);
+          const { activities } = await client.listActivities(sessionId, 30);
 
-        const newActs = activities.slice().reverse().filter(a => !seen.has(a.id));
-        for (const a of newActs) {
-          seen.add(a.id);
+          const newActs = activities.slice().reverse().filter(a => !seen.has(a.id));
+          for (const a of newActs) {
+            seen.add(a.id);
+            if (isJson()) {
+              process.stdout.write(JSON.stringify({ event: 'activity', activity: a }) + '\n');
+            } else {
+              const ts = a.createTime?.slice(11, 19) ?? '';
+              const who = a.originator === 'agent' ? chalk.cyan('agent') : chalk.magenta('user ');
+              let line = `${chalk.dim(ts)} ${who}`;
+              if (a.planGenerated) line += ` ${chalk.bold('plan generated')} (${a.planGenerated.plan.steps.length} steps)`;
+              else if (a.progressUpdated) line += ` ${a.progressUpdated.title}`;
+              else if (a.sessionCompleted) line += ` ${chalk.green('session completed')}`;
+              else if (a.sessionFailed) line += ` ${chalk.red('session failed:')} ${a.sessionFailed.message ?? ''}`;
+              else if (a.message?.text) line += ` ${chalk.dim(a.message.text.slice(0, 200))}`;
+              console.log(line);
+            }
+          }
+
+          const state = (session.state ?? '').toUpperCase();
+          if (['COMPLETED', 'FAILED', 'CANCELLED', 'CANCELED'].includes(state)) {
+            if (isJson()) {
+              process.stdout.write(JSON.stringify({ event: 'ended', state }) + '\n');
+            } else {
+              info(chalk.bold(`\nSession ended: ${state}`));
+            }
+            process.exit(state === 'COMPLETED' ? ExitCode.OK : ExitCode.GENERIC);
+          }
+        } catch (err) {
+          const t = translateError(err);
           if (isJson()) {
-            process.stdout.write(JSON.stringify({ event: 'activity', activity: a }) + '\n');
+            // In JSON mode the catch was previously a no-op, which made a
+            // persistent API failure look like the command had hung. Emit
+            // an error event so consumers can react / decide to stop.
+            process.stdout.write(JSON.stringify({ event: 'error', error: t.problem, code: t.code }) + '\n');
           } else {
-            const ts = a.createTime?.slice(11, 19) ?? '';
-            const who = a.originator === 'agent' ? chalk.cyan('agent') : chalk.magenta('user ');
-            let line = `${chalk.dim(ts)} ${who}`;
-            if (a.planGenerated) line += ` ${chalk.bold('plan generated')} (${a.planGenerated.plan.steps.length} steps)`;
-            else if (a.progressUpdated) line += ` ${a.progressUpdated.title}`;
-            else if (a.sessionCompleted) line += ` ${chalk.green('session completed')}`;
-            else if (a.sessionFailed) line += ` ${chalk.red('session failed:')} ${a.sessionFailed.message ?? ''}`;
-            else if (a.message?.text) line += ` ${chalk.dim(a.message.text.slice(0, 200))}`;
-            console.log(line);
+            console.error(chalk.red(`Tail error: ${t.problem}`));
+            console.error(chalk.dim(`  ${t.fix}`));
           }
         }
-
-        const state = (session.state ?? '').toUpperCase();
-        if (['COMPLETED', 'FAILED', 'CANCELLED', 'CANCELED'].includes(state)) {
-          info(chalk.bold(`\nSession ended: ${state}`));
-          process.exit(state === 'COMPLETED' ? ExitCode.OK : ExitCode.GENERIC);
-        }
-      } catch (err) {
-        if (!isJson()) {
-          const t = translateError(err);
-          console.error(chalk.red(`Tail error: ${t.problem}`));
-          console.error(chalk.dim(`  ${t.fix}`));
-        }
+        await new Promise(r => setTimeout(r, interval));
       }
-      await new Promise(r => setTimeout(r, interval));
+      // Aborted via Ctrl+C — exit cleanly.
+      if (isJson()) {
+        process.stdout.write(JSON.stringify({ event: 'interrupted' }) + '\n');
+      } else {
+        info(chalk.dim('\nStopped.'));
+      }
+    } finally {
+      process.removeListener('SIGINT', onSigint);
     }
   })
   .addHelpText('after', `

@@ -178,3 +178,268 @@ describe('Fix #3: getLatestPlan returns a deterministic plan for equal timestamp
     }
   });
 });
+
+// ============================================================================
+// Round 2 review fixes (bug + UX pass)
+// ============================================================================
+
+// ---------- Fix R2-1: .gitignore covers .env.backup / .env.bak ----------
+
+describe('Fix R2-1: gitignore covers env backup files', () => {
+  it('ignores .env.backup, .env.bak, and numbered variants', () => {
+    const gitignore = readFileSync('.gitignore', 'utf8');
+    // Without these, `init` writes the API key to .env.backup and git would
+    // happily track it — a real key-leak footgun.
+    expect(gitignore).toMatch(/(^|\n)\.env\.backup(\n|$)/);
+    expect(gitignore).toMatch(/(^|\n)\.env\.bak(\n|$)/);
+  });
+});
+
+// ---------- Fix R2-2: collectStatus paginates instead of one-page listSessions ----------
+
+describe('Fix R2-2: collectStatus walks pages up to scanLimit', () => {
+  beforeEach(() => {
+    vi.spyOn(console, 'log').mockImplementation(() => undefined);
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+  });
+  afterEach(() => vi.restoreAllMocks());
+
+  it('fetches across multiple pages when the server paginates', async () => {
+    // Two pages: 200 each, total 400 sessions available; scanLimit caps at 350.
+    // A correct implementation must walk both pages and stop at the limit.
+    const { collectStatus } = await import('../src/collector.js');
+    const page1 = Array.from({ length: 200 }, (_, i) => ({
+      id: `p1-${i}`, name: `sessions/p1-${i}`, title: `T1-${i}`, prompt: '', url: '',
+      sourceContext: { source: 's', githubRepoContext: { startingBranch: 'main' } }, state: 'COMPLETED',
+    }));
+    const page2 = Array.from({ length: 200 }, (_, i) => ({
+      id: `p2-${i}`, name: `sessions/p2-${i}`, title: `T2-${i}`, prompt: '', url: '',
+      sourceContext: { source: 's', githubRepoContext: { startingBranch: 'main' } }, state: 'COMPLETED',
+    }));
+    let calls = 0;
+    const client = {
+      iterateSessions: async function* () {
+        for (const s of page1) yield s;
+        for (const s of page2) yield s;
+      },
+      listSessions: vi.fn(),   // must NOT be used by the scan path
+      getSession: vi.fn(),
+      listActivities: vi.fn(async () => ({ activities: [] })),
+    };
+    // track how many pages listSessions was called with — should be zero now.
+    const results = await collectStatus(
+      client as unknown as InstanceType<typeof JulesClient>,
+      { apiKey: 'k', defaultSource: '', defaultBranch: 'main', autoMode: 'NONE' },
+      { scanLimit: 350 },
+    );
+
+    expect(results).toHaveLength(350);
+    expect(client.listSessions).not.toHaveBeenCalled();
+  });
+
+  it('handles a single page that already exceeds scanLimit', async () => {
+    const { collectStatus } = await import('../src/collector.js');
+    const big = Array.from({ length: 300 }, (_, i) => ({
+      id: `s-${i}`, name: `s/s-${i}`, title: `T-${i}`, prompt: '', url: '',
+      sourceContext: { source: 's', githubRepoContext: { startingBranch: 'main' } }, state: 'COMPLETED',
+    }));
+    const client = {
+      iterateSessions: async function* () { for (const s of big) yield s; },
+      listSessions: vi.fn(),
+      getSession: vi.fn(),
+      listActivities: vi.fn(async () => ({ activities: [] })),
+    };
+
+    const results = await collectStatus(
+      client as unknown as InstanceType<typeof JulesClient>,
+      { apiKey: 'k', defaultSource: '', defaultBranch: 'main', autoMode: 'NONE' },
+      { scanLimit: 50 },
+    );
+
+    expect(results).toHaveLength(50);
+  });
+});
+
+// ---------- Fix R2-3: init quotes .env values that need it ----------
+
+describe('Fix R2-3: init quotes .env values with special chars', () => {
+  let dir: string;
+  beforeEach(() => { dir = mkdtempSync(join(tmpdir(), 'init-quote-')); });
+  afterEach(() => { rmSync(dir, { recursive: true, force: true }); });
+
+  it('quotes a source containing a # so it is not parsed as a comment', async () => {
+    const result = await runInit({
+      apiKey: 'plain-key',
+      source: 'sources/github/owner/repo # oops',
+      branch: 'main',
+      interactive: false,
+      projectDir: dir,
+    });
+    const content = readFileSync(result.envPath, 'utf8');
+    // The value must be quoted so dotenv does not treat # oops as a comment.
+    expect(content).toContain('JULES_DEFAULT_SOURCE="sources/github/owner/repo # oops"');
+  });
+
+  it('leaves simple values bare for readability', async () => {
+    const result = await runInit({
+      apiKey: 'sk-ABC123',
+      source: 'sources/github/owner/repo',
+      branch: 'main',
+      interactive: false,
+      projectDir: dir,
+    });
+    const content = readFileSync(result.envPath, 'utf8');
+    expect(content).toContain('JULES_API_KEY=sk-ABC123');
+    expect(content).toContain('JULES_DEFAULT_SOURCE=sources/github/owner/repo');
+  });
+
+  it('quotes an empty source explicitly', async () => {
+    const result = await runInit({
+      apiKey: 'k',
+      source: '',
+      branch: 'main',
+      interactive: false,
+      projectDir: dir,
+    });
+    const content = readFileSync(result.envPath, 'utf8');
+    expect(content).toContain('JULES_DEFAULT_SOURCE=""');
+  });
+});
+
+// ---------- Fix R2-4: planner only retries 400 on response_format rejection ----------
+
+describe('Fix R2-4: planner retries 400 only for response_format', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('does NOT retry a 400 caused by a bad model name', async () => {
+    const { planTasks } = await import('../src/planner.js');
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({ error: { message: "model 'gpt-bogus' not found" } }),
+        { status: 400 },
+      ),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(
+      planTasks(
+        { apiKey: 'k', baseUrl: 'https://example.test/v1', model: 'gpt-bogus' },
+        { description: 'do thing', maxTasks: 3 },
+      ),
+    ).rejects.toThrow(/LLM request failed \(400\)/);
+
+    // Exactly one call: the bogus-model 400 must NOT trigger the fallback.
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('retries once (and succeeds) when the 400 mentions response_format', async () => {
+    const { planTasks } = await import('../src/planner.js');
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(
+        new Response('response_format is not supported', { status: 400 }),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            choices: [{ message: { content: JSON.stringify({ rationale: 'r', tasks: [{ title: 'T', prompt: 'P' }] }) } }],
+          }),
+          { status: 200 },
+        ),
+      );
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await planTasks(
+      { apiKey: 'k', baseUrl: 'https://example.test/v1', model: 'm' },
+      { description: 'do thing', maxTasks: 3 },
+    );
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(result.tasks).toHaveLength(1);
+    expect(result.tasks[0].title).toBe('T');
+  });
+});
+
+// ---------- Fix R2-5: loadConfig gives a Fix hint on missing API key ----------
+
+describe('Fix R2-5: loadConfig shows a Fix hint when API key is missing', () => {
+  let dir: string;
+  let exitSpy: ReturnType<typeof vi.spyOn>;
+  let errSpy: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), 'cfg-hint-'));
+    delete process.env.JULES_API_KEY;
+    // Make process.exit throw so the function returns instead of killing the test runner.
+    exitSpy = vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+      throw new Error(`exit:${code}`);
+    }) as never);
+    errSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+  });
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true });
+    vi.restoreAllMocks();
+  });
+
+  it('prints both the requirement message and a Fix line', async () => {
+    const { loadConfig } = await import('../src/config.js');
+    // loadConfig calls process.exit(2), which our spy turns into a throw.
+    expect(() => loadConfig(dir)).toThrow('exit:2');
+
+    const allText = errSpy.mock.calls.map(c => c.join(' ')).join('\n');
+    expect(allText).toContain('JULES_API_KEY is required');
+    expect(allText).toMatch(/Fix:/);
+  });
+});
+
+// ---------- Fix R2-8: loadTasksFromDir friendly errors for missing dir / file-as-dir ----------
+
+describe('Fix R2-8: loadTasksFromDir gives actionable errors', () => {
+  it('throws "Task directory not found" for a missing path', async () => {
+    const { loadTasksFromDir } = await import('../src/config.js');
+    expect(() => loadTasksFromDir(join(tmpdir(), 'definitely-missing-' + Date.now())))
+      .toThrow(/Task directory not found/);
+  });
+
+  it('throws ENOTDIR-style message when the path is a file', async () => {
+    const { loadTasksFromDir } = await import('../src/config.js');
+    const file = join(tmpdir(), 'not-a-dir-' + Date.now() + '.txt');
+    writeFileSync(file, 'hello');
+    try {
+      expect(() => loadTasksFromDir(file)).toThrow(/Expected a directory/);
+    } finally {
+      rmSync(file, { force: true });
+    }
+  });
+
+  it('translateError classifies "Task directory not found" as VALIDATION', async () => {
+    const { translateError } = await import('../src/errors.js');
+    const t = translateError(new Error('Task directory not found: /foo/bar'));
+    expect(t.code).toBe('VALIDATION');
+  });
+});
+
+// ---------- Fix R2-9: init backup is versioned (no clobber) ----------
+
+describe('Fix R2-9: init never overwrites an existing .env.backup', () => {
+  let dir: string;
+  beforeEach(() => { dir = mkdtempSync(join(tmpdir(), 'init-bak-')); });
+  afterEach(() => { rmSync(dir, { recursive: true, force: true }); });
+
+  it('writes .env.backup on first run, .env.backup.1 on the second', async () => {
+    writeFileSync(join(dir, '.env'), 'JULES_API_KEY=first\nJULES_DEFAULT_BRANCH=main\n');
+
+    const r1 = await runInit({ apiKey: 'second', interactive: false, projectDir: dir });
+    expect(r1.backupPath).toBe(join(dir, '.env.backup'));
+    expect(existsSync(join(dir, '.env.backup'))).toBe(true);
+    // Original key preserved in backup.
+    expect(readFileSync(join(dir, '.env.backup'), 'utf8')).toContain('first');
+
+    const r2 = await runInit({ apiKey: 'third', interactive: false, projectDir: dir });
+    expect(r2.backupPath).toBe(join(dir, '.env.backup.1'));
+    expect(existsSync(join(dir, '.env.backup'))).toBe(true);
+    expect(existsSync(join(dir, '.env.backup.1'))).toBe(true);
+    // The FIRST backup is still intact (would have been clobbered before).
+    expect(readFileSync(join(dir, '.env.backup'), 'utf8')).toContain('first');
+    expect(readFileSync(join(dir, '.env.backup.1'), 'utf8')).toContain('second');
+  });
+});

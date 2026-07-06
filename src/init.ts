@@ -14,6 +14,8 @@ export interface InitResult {
   envPath: string;
   created: boolean;
   backed: boolean;
+  /** Absolute path of the backup written for this run, if any. */
+  backupPath?: string;
   values: { apiKey: string; source: string; branch: string };
 }
 
@@ -38,16 +40,17 @@ export async function runInit(options: InitOptions): Promise<InitResult> {
   }
 
   let backed = false;
+  let backupPath = '';
   if (existsSync(envPath)) {
-    const backupPath = resolve(options.projectDir, '.env.backup');
+    backupPath = nextAvailableBackupPath(options.projectDir);
     copyFileSync(envPath, backupPath);
     backed = true;
   }
 
   const lines = [
-    `JULES_API_KEY=${apiKey}`,
-    `JULES_DEFAULT_SOURCE=${source}`,
-    `JULES_DEFAULT_BRANCH=${branch || 'main'}`,
+    `JULES_API_KEY=${formatEnvValue(apiKey)}`,
+    `JULES_DEFAULT_SOURCE=${formatEnvValue(source)}`,
+    `JULES_DEFAULT_BRANCH=${formatEnvValue(branch || 'main')}`,
   ];
   writeFileSync(envPath, lines.join('\n') + '\n');
 
@@ -55,8 +58,40 @@ export async function runInit(options: InitOptions): Promise<InitResult> {
     envPath,
     created: true,
     backed,
+    backupPath: backed ? backupPath : undefined,
     values: { apiKey, source, branch: branch || 'main' },
   };
+}
+
+/**
+ * Pick a backup path that doesn't clobber an existing backup. The first
+ * re-run produces `.env.backup`; a second produces `.env.backup.1`, then
+ * `.env.backup.2`, and so on — so re-running `init` never destroys the
+ * previous backup.
+ */
+function nextAvailableBackupPath(projectDir: string): string {
+  const base = resolve(projectDir, '.env.backup');
+  if (!existsSync(base)) return base;
+  for (let i = 1; ; i++) {
+    const candidate = resolve(projectDir, `.env.backup.${i}`);
+    if (!existsSync(candidate)) return candidate;
+  }
+}
+
+/**
+ * Quote a .env value when it contains characters that dotenv would
+ * misinterpret: whitespace, `#` (comment), `=` (key/value boundary), or
+ * quote characters. Simple values (typical branches / source ids / keys
+ * without spaces) are emitted bare for readability.
+ */
+function formatEnvValue(value: string): string {
+  if (value === '') return '""';
+  // Quote if: leading/trailing whitespace, or any of #, =, ", ', or newline.
+  if (/[#="'\n\r]/.test(value) || /^\s|\s$/.test(value)) {
+    const escaped = value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+    return `"${escaped}"`;
+  }
+  return value;
 }
 
 export async function promptFor(label: string, defaultVal: string): Promise<string> {
