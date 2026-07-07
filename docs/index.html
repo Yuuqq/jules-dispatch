@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="jules-dispatch - 批量并行调度 Google Jules 任务的优雅 CLI 与 MCP 服务器。让 AI 编码助手拥有并行执行超能力，一次命令启动数十个 Jules 会话，自动规划、智能监控、完美集成 Claude Code 与 Codex。">
+    <title>jules-dispatch · 并行调度 Google Jules 的优雅引擎</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&amp;family=Space+Grotesk:wght@500;600&amp;display=swap');
+        
+        /* === Distinctive Design System (frontend-design skill) === */
+        :root {
+            --bg: #0a0a0f;
+            --surface: #121217;
+            --surface-2: #18181f;
+            --border: #272734;
+            --accent: #6366f1;
+            --accent-2: #22d3ee;
+            --text: #e2e8f0;
+            --text-muted: #94a3b8;
+            --success: #34d399;
+        }
+
+        body {
+            font-family: 'Inter', system_ui, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+        }
+        
+        .font-display {
+            font-family: 'Space Grotesk', 'Inter', system_ui, sans-serif;
+            font-weight: 600;
+            letter-spacing: -0.03em;
+        }
+
+        .section-header {
+            font-size: 2.65rem;
+            line-height: 1.05;
+            letter-spacing: -0.045em;
+            font-weight: 700;
+        }
+
+        .glass {
+            background: color-mix(in srgb, var(--surface) 92%, transparent);
+            backdrop-filter: blur(28px);
+            border: 1px solid var(--border);
+        }
+
+        .feature-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            transition: transform 0.25s cubic-bezier(0.23, 1.0, 0.32, 1), 
+                        box-shadow 0.25s cubic-bezier(0.23, 1.0, 0.32, 1),
+                        border-color 0.2s ease;
+            will-change: transform;
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-7px);
+            box-shadow: 0 25px 30px -12px rgb(0 0 0 / 0.25);
+            border-color: var(--accent);
+        }
+
+        .nav-active {
+            color: white;
+            position: relative;
+        }
+        
+        .nav-active:after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(to right, var(--accent), var(--accent-2));
+        }
+
+        .code-block {
+            font-family: ui-monospace, "SF Mono", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            background-color: #0f0f15;
+            border: 1px solid var(--border);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .code-block::before {
+            content: "jules-dispatch";
+            position: absolute;
+            top: 0;
+            left: 0;
+            font-size: 9px;
+            letter-spacing: 1.5px;
+            font-weight: 700;
+            padding: 1px 9px 1px 10px;
+            background: linear-gradient(to right, var(--accent), var(--accent-2));
+            color: white;
+            border-radius: 0 0 5px 0;
+            z-index: 10;
+        }
+
+        .mermaid {
+            background: var(--surface-2);
+            border-radius: 16px;
+            padding: 2rem;
+            border: 1px solid var(--border);
+        }
+
+        .process-step {
+            position: relative;
+        }
+        
+        .process-step:not(:last-child)::after {
+            content: '';
+            position: absolute;
+            top: 32px;
+            left: 19px;
+            width: 2.5px;
+            height: calc(100% - 64px);
+            background: linear-gradient(to bottom, var(--accent), var(--accent-2));
+            opacity: 0.35;
+            border-radius: 2px;
+        }
+
+        .process-number {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-2));
+            color: white;
+            font-weight: 700;
+            font-size: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 9999px;
+            box-shadow: 0 0 0 7px color-mix(in srgb, var(--accent) 18%, transparent);
+            flex-shrink: 0;
+            z-index: 2;
+            position: relative;
+        }
+
+        .apple-button {
+            transition: all 0.2s cubic-bezier(0.23, 1.0, 0.32, 1);
+            font-weight: 600;
+            letter-spacing: -0.01em;
+        }
+        
+        .apple-button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 10px 15px -3px rgb(99 102 241 / 0.35);
+        }
+
+        .premium-shadow {
+            box-shadow: 0 30px 60px -15px rgb(0 0 0 / 0.45);
+        }
+
+        @media (prefers-reduced-motion: no-preference) {
+            .feature-card {
+                transition: transform 0.25s cubic-bezier(0.23, 1.0, 0.32, 1), 
+                            box-shadow 0.25s cubic-bezier(0.23, 1.0, 0.32, 1),
+                            border-color 0.2s ease;
+            }
+        }
+        
+        .section-divider {
+            height: 1px;
+            background: linear-gradient(to right, transparent, var(--border), transparent);
+        }
+    </style>
+</head>
+<body class="bg-zinc-950 text-zinc-200 antialiased">
+    <!-- Navigation -->
+    <nav class="sticky top-0 z-50 border-b border-white/10 bg-zinc-950/95 backdrop-blur-xl">
+        <div class="max-w-screen-2xl mx-auto">
+            <div class="px-8 py-5 flex items-center justify-between">
+                <div class="flex items-center gap-x-3">
+                    <div class="flex items-center gap-x-3">
+                        <div class="w-9 h-9 rounded-2xl bg-gradient-to-br from-violet-600 to-fuchsia-600 flex items-center justify-center shadow-inner">
+                            <i class="fa-solid fa-rocket text-white text-2xl"></i>
+                        </div>
+                        <div>
+                            <span class="font-display text-2xl font-semibold tracking-tighter">jules-dispatch</span>
+                        </div>
+                    </div>
+                    <div class="hidden md:flex items-center gap-x-2 text-xs px-3 py-1 rounded-full border border-white/10 bg-white/5">
+                        <div class="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>
+                        <span class="text-emerald-400 font-medium text-xs tracking-widest">v1.2.0</span>
+                    </div>
+                </div>
+
+                <div class="hidden md:flex items-center gap-x-8 text-sm">
+                    <a href="#features" class="hover:text-white transition-colors text-zinc-400">特性</a>
+                    <a href="#how" class="hover:text-white transition-colors text-zinc-400">工作原理</a>
+                    <a href="#planning" class="hover:text-white transition-colors text-zinc-400">AI 规划</a>
+                    <a href="#start" class="hover:text-white transition-colors text-zinc-400">快速开始</a>
+                    <a href="#mcp" class="hover:text-white transition-colors text-zinc-400">MCP 集成</a>
+                </div>
+
+                <div class="flex items-center gap-x-3">
+                    <a href="https://github.com/Yuuqq/jules-dispatch" target="_blank"
+                       class="inline-flex items-center gap-x-2 px-4 py-2 text-sm rounded-2xl border border-white/10 hover:bg-white/5 transition-all text-zinc-300 hover:text-white">
+                        <i class="fa-brands fa-github"></i>
+                        <span class="hidden sm:inline">GitHub</span>
+                    </a>
+                    <a href="https://www.npmjs.com/package/jules-dispatch" target="_blank"
+                       class="inline-flex items-center gap-x-2 px-5 py-2 text-sm font-semibold rounded-2xl bg-white text-zinc-950 hover:bg-zinc-100 transition-all">
+                        <i class="fa-brands fa-npm"></i>
+                        <span>安装</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <header class="relative pt-16 pb-20 px-6 max-w-screen-2xl mx-auto">
+        <div class="max-w-5xl mx-auto text-center">
+            <div class="inline-flex items-center gap-x-2 px-4 py-1.5 rounded-3xl bg-white/5 border border-white/10 mb-8">
+                <div class="flex items-center -space-x-1">
+                    <div class="w-5 h-5 rounded-full bg-violet-500 ring-2 ring-zinc-950"></div>
+                    <div class="w-5 h-5 rounded-full bg-fuchsia-500 ring-2 ring-zinc-950"></div>
+                </div>
+                <span class="text-sm font-medium text-zinc-300">Google Jules × Claude Code × Codex</span>
+            </div>
+
+            <h1 class="font-display text-7xl md:text-[5.1rem] leading-[0.92] tracking-[-0.055em] font-semibold mb-6">
+                让 Google Jules<br>
+                <span class="bg-gradient-to-r from-[var(--accent)] via-[var(--accent-2)] to-[var(--accent)] bg-clip-text text-transparent">拥有并行超能力</span>
+            </h1>
+            
+            <p class="max-w-2xl mx-auto text-[21px] text-[var(--text-muted)] tracking-tight mb-10">
+                一次命令，启动数十个 AI 编码会话。<br>
+                从孤独的助手，到你专属的并行开发军团。
+            </p>
+
+            <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
+                <button onclick="document.getElementById('start').scrollIntoView({ behavior: 'smooth' })" 
+                        class="apple-button group inline-flex items-center justify-center gap-x-3 px-9 py-4 rounded-3xl bg-white text-zinc-950 text-lg font-semibold shadow-xl hover:shadow-2xl active:scale-[0.985]">
+                    <span>立即开始使用</span>
+                    <i class="fa-solid fa-arrow-right group-active:translate-x-0.5 transition"></i>
+                </button>
+                
+                <a href="https://github.com/Yuuqq/jules-dispatch" target="_blank"
+                   class="apple-button inline-flex items-center justify-center gap-x-3 px-8 py-4 rounded-3xl border border-white/20 hover:bg-white/5 text-lg font-medium transition-all">
+                    <i class="fa-brands fa-github text-xl"></i>
+                    <span>在 GitHub 上查看</span>
+                </a>
+            </div>
+            
+            <div class="mt-8 flex justify-center gap-x-8 text-sm text-zinc-500">
+                <div class="flex items-center gap-x-2">
+                    <i class="fa-solid fa-check text-emerald-400"></i>
+                    <span>MIT 开源</span>
+                </div>
+                <div class="flex items-center gap-x-2">
+                    <i class="fa-solid fa-check text-emerald-400"></i>
+                    <span>Node.js 20+</span>
+                </div>
+                <div class="flex items-center gap-x-2">
+                    <i class="fa-solid fa-check text-emerald-400"></i>
+                    <span>生产就绪</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-16 max-w-6xl mx-auto px-4">
+            <div class="relative rounded-3xl overflow-hidden border border-white/10 shadow-2xl premium-shadow">
+                <img src="https://raw.githubusercontent.com/Yuuqq/jules-dispatch/main/docs/banner.png" 
+                     alt="jules-dispatch 横幅：编排器将任务分发给多个并行 Jules 工作器，每个生成 PR"
+                     class="w-full h-auto object-cover"
+                     onerror="this.style.display='none'; this.parentElement.innerHTML = '<div class=\'h-80 bg-zinc-900 flex items-center justify-center\'><div class=\'text-center\'><i class=\'fa-solid fa-rocket text-6xl text-violet-500/70 mb-4\'></i><p class=\'text-zinc-400\'>并行调度 · 智能编排 · 优雅控制</p></div></div>'">
+                <div class="absolute inset-0 bg-gradient-to-b from-black/30 via-black/10 to-black/60"></div>
+                <div class="absolute bottom-0 left-0 right-0 p-8 text-left">
+                    <div class="max-w-md">
+                        <div class="inline-block px-3 py-1 text-xs font-mono tracking-[3px] bg-white/10 text-white/80 rounded mb-3">ONE ORCHESTRATOR · MANY AGENTS</div>
+                        <p class="text-white/90 text-lg">从一个意图，到数十个并行 PR。<br>这就是规模化 AI 编码的正确打开方式。</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="border-y border-white/10 py-6">
+        <div class="max-w-screen-2xl mx-auto px-8">
+            <div class="flex flex-wrap items-center justify-center gap-x-10 gap-y-4 text-zinc-400 text-sm">
+                <div class="flex items-center gap-x-2">
+                    <i class="fa-brands fa-node-js text-2xl"></i>
+                    <span>TypeScript · Node.js</span>
+                </div>
+                <div class="flex items-center gap-x-2">
+                    <span class="font-mono text-xs px-2 py-px bg-white/5 rounded">MCP</span>
+                    <span>Model Context Protocol</span>
+                </div>
+                <div>兼容 Claude Code · OpenAI Codex CLI</div>
+                <div>支持 OpenAI / Ollama / Groq / OpenRouter 等任意 LLM</div>
+            </div>
+        </div>
+    </div>
+
+    <section class="max-w-screen-2xl mx-auto px-8 pt-20 pb-12">
+        <div class="max-w-4xl mx-auto text-center">
+            <div class="uppercase tracking-[3px] text-xs font-semibold text-violet-400 mb-3">THE VISION</div>
+            <h2 class="section-header tracking-tighter mb-6">Google Jules 很强大。<br>但它本可以更强大。</h2>
+            <p class="text-xl text-zinc-400 max-w-3xl mx-auto">
+                默认情况下，Jules 一次只能处理一个任务。<br>
+                当你需要重构整个代码库、批量迁移框架、或为 20 个模块添加功能时，串行执行会成为瓶颈。
+            </p>
+        </div>
+        
+        <div class="mt-12 grid md:grid-cols-2 gap-6 max-w-5xl mx-auto">
+            <div class="glass rounded-3xl p-8 border border-white/10">
+                <div class="flex items-center gap-x-3 mb-5">
+                    <i class="fa-solid fa-clock text-red-400 text-2xl"></i>
+                    <span class="font-semibold text-lg">以前的体验</span>
+                </div>
+                <ul class="space-y-3 text-zinc-400">
+                    <li class="flex gap-x-3"><i class="fa-solid fa-times mt-1.5 text-red-400/70"></i> <span>手动重复编写 prompt</span></li>
+                    <li class="flex gap-x-3"><i class="fa-solid fa-times mt-1.5 text-red-400/70"></i> <span>等待一个任务完成才能开始下一个</span></li>
+                    <li class="flex gap-x-3"><i class="fa-solid fa-times mt-1.5 text-red-400/70"></i> <span>难以规模化处理大型重构</span></li>
+                    <li class="flex gap-x-3"><i class="fa-solid fa-times mt-1.5 text-red-400/70"></i> <span>AI 代理无法自主并行调用 Jules</span></li>
+                </ul>
+            </div>
+            
+            <div class="glass rounded-3xl p-8 border border-violet-500/30 bg-violet-950/10">
+                <div class="flex items-center gap-x-3 mb-5">
+                    <i class="fa-solid fa-rocket text-violet-400 text-2xl"></i>
+                    <span class="font-semibold text-lg">使用 jules-dispatch 之后</span>
+                </div>
+                <ul class="space-y-3 text-zinc-300">
+                    <li class="flex gap-x-3"><i class="fa-solid fa-check mt-1.5 text-emerald-400"></i> <span>一句话描述目标，AI 自动拆解为多个并行任务</span></li>
+                    <li class="flex gap-x-3"><i class="fa-solid fa-check mt-1.5 text-emerald-400"></i> <span>一键启动 10~50 个 Jules 会话</span></li>
+                    <li class="flex gap-x-3"><i class="fa-solid fa-check mt-1.5 text-emerald-400"></i> <span>实时监控、批准计划、发送消息、取消失控任务</span></li>
+                    <li class="flex gap-x-3"><i class="fa-solid fa-check mt-1.5 text-emerald-400"></i> <span>Claude / Codex 可以直接把 Jules 当作工具使用</span></li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <section id="features" class="max-w-screen-2xl mx-auto px-8 py-16 border-t border-white/10">
+        <div class="max-w-3xl mx-auto text-center mb-12">
+            <div class="text-violet-400 text-xs tracking-[2.5px] font-semibold mb-2">CORE CAPABILITIES</div>
+            <h2 class="section-header tracking-tighter">不是工具的堆砌，而是体验的飞跃</h2>
+            <p class="mt-4 text-xl text-zinc-400">每一个细节都为「大规模 AI 辅助开发」而设计</p>
+        </div>
+
+        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-5 max-w-7xl mx-auto">
+            <div class="feature-card glass rounded-3xl p-8 border border-white/10 group">
+                <div class="w-12 h-12 rounded-2xl bg-violet-500/10 flex items-center justify-center mb-6 group-hover:bg-violet-500/20 transition-colors">
+                    <i class="fa-solid fa-layer-group text-violet-400 text-3xl"></i>
+                </div>
+                <h3 class="font-semibold text-2xl tracking-tight mb-3">极致并行调度</h3>
+                <p class="text-zinc-400 leading-relaxed">通过 <code class="text-violet-300">--parallel 20</code> 等参数，一次性启动数十个 Jules 会话。智能队列管理，避免 API 限流。</p>
+                <div class="mt-6 text-xs text-emerald-400 font-mono">最多支持 50+ 并发</div>
+            </div>
+
+            <div class="feature-card glass rounded-3xl p-8 border border-white/10 group">
+                <div class="w-12 h-12 rounded-2xl bg-violet-500/10 flex items-center justify-center mb-6 group-hover:bg-violet-500/20 transition-colors">
+                    <i class="fa-solid fa-file-code text-violet-400 text-3xl"></i>
+                </div>
+                <h3 class="font-semibold text-2xl tracking-tight mb-3">声明式 YAML 定义</h3>
+                <p class="text-zinc-400 leading-relaxed">任务即代码。用简单 YAML 文件描述 title、repo、branch、prompt。支持多文档、Git 版本控制、团队协作。</p>
+            </div>
+
+            <div class="feature-card glass rounded-3xl p-8 border border-white/10 group">
+                <div class="w-12 h-12 rounded-2xl bg-violet-500/10 flex items-center justify-center mb-6 group-hover:bg-violet-500/20 transition-colors">
+                    <i class="fa-solid fa-brain text-violet-400 text-3xl"></i>
+                </div>
+                <h3 class="font-semibold text-2xl tracking-tight mb-3">AI 自主任务规划 <span class="text-xs align-super text-emerald-400 font-mono">NEW</span></h3>
+                <p class="text-zinc-400 leading-relaxed">v1.2 重点功能。只需一句话描述意图，内置 LLM 规划器自动拆解为多个可并行执行的 Jules 任务。支持任意 OpenAI 兼容模型。</p>
+            </div>
+
+            <div class="feature-card glass rounded-3xl p-8 border border-white/10 group">
+                <div class="w-12 h-12 rounded-2xl bg-violet-500/10 flex items-center justify-center mb-6 group-hover:bg-violet-500/20 transition-colors">
+                    <i class="fa-solid fa-sync text-violet-400 text-3xl"></i>
+                </div>
+                <h3 class="font-semibold text-2xl tracking-tight mb-3">全生命周期智能控制</h3>
+                <p class="text-zinc-400 leading-relaxed">实时 <code>tail</code> 日志流、批准计划、发送跟进消息、取消失控会话、智能重试 + 指数退避。人类始终在环，AI 也可完全自主。</p>
+            </div>
+
+            <div class="feature-card glass rounded-3xl p-8 border border-white/10 group">
+                <div class="w-12 h-12 rounded-2xl bg-violet-500/10 flex items-center justify-center mb-6 group-hover:bg-violet-500/20 transition-colors">
+                    <i class="fa-solid fa-plug text-violet-400 text-3xl"></i>
+                </div>
+                <h3 class="font-semibold text-2xl tracking-tight mb-3">原生 MCP 服务器</h3>
+                <p class="text-zinc-400 leading-relaxed">运行 <code>jules-dispatch mcp</code> 即可将 Jules 暴露为 Claude Code 和 Codex 的工具。你的 AI 编码助手现在拥有真正的并行执行能力。</p>
+                <div class="mt-4 text-xs px-3 py-1 bg-white/5 rounded-full inline-block">12 个强大工具</div>
+            </div>
+
+            <div class="feature-card glass rounded-3xl p-8 border border-white/10 group">
+                <div class="w-12 h-12 rounded-2xl bg-violet-500/10 flex items-center justify-center mb-6 group-hover:bg-violet-500/20 transition-colors">
+                    <i class="fa-solid fa-terminal text-violet-400 text-3xl"></i>
+                </div>
+                <h3 class="font-semibold text-2xl tracking-tight mb-3">开发者与代理体验至上</h3>
+                <p class="text-zinc-400 leading-relaxed"><code>--json</code> 结构化输出、详细审计日志、<code>doctor</code> 诊断命令、按需传入 API Key、stdin 支持。专为脚本、CI 和 AI 代理设计。</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="how" class="max-w-screen-2xl mx-auto px-8 py-16 border-t border-white/10 bg-zinc-900/30">
+        <div class="max-w-4xl mx-auto">
+            <div class="text-center mb-10">
+                <div class="text-violet-400 text-xs tracking-[2.5px] font-semibold mb-2">HOW IT WORKS</div>
+                <h2 class="section-header tracking-tighter">简单、直观、强大</h2>
+                <p class="mt-3 text-xl text-zinc-400">从意图到 PR，只需几步</p>
+            </div>
+
+            <div class="mb-8">
+                <div class="flex items-center justify-between mb-3 px-1">
+                    <div>
+                        <span class="text-xs tracking-[2.5px] font-semibold text-[var(--accent)]">SIGNATURE VISUAL</span>
+                        <div class="font-semibold text-xl tracking-tight">编排流 — 这是整个产品的核心隐喻</div>
+                    </div>
+                    <div class="text-[10px] px-3 py-1 rounded-full border border-[var(--border)] text-[var(--text-muted)]">ONE → MANY → PRs</div>
+                </div>
+                
+                <div class="orchestration-frame rounded-3xl p-2 border border-[var(--border)]">
+                    <pre class="mermaid text-sm">
+flowchart LR
+    O["编排器<br/>你 / Claude / Codex"] 
+    O -->|"编写或规划"| T["tasks/*.yaml<br/>简单声明式任务"]
+    T --> D["jules-dispatch batch<br/>--parallel 20"]
+    D -->|并行调度| J1["Jules #1"]
+    D -->|并行调度| J2["Jules #2"]
+    D -->|并行调度| J3["Jules #N"]
+    
+    J1 --> P1["生成 PR #1"]
+    J2 --> P2["生成 PR #2"]
+    J3 --> P3["生成 PR #N"]
+    
+    classDef orch fill:#6366f120,stroke:#6366f1,color:#a5b4fc
+    classDef tool fill:#0e7490,stroke:#14b8a6,color:#99f6e4
+    classDef worker fill:#854d0e,stroke:#ca8a04,color:#fde047
+    classDef pr fill:#166534,stroke:#4ade80,color:#86efac
+    
+    class O orch
+    class D tool
+    class J1,J2,J3 worker
+    class P1,P2,P3 pr
+                    </pre>
+                </div>
+                <p class="text-center text-xs text-[var(--text-muted)] mt-3 tracking-wide">一个编排器 · 多个并行代理 · 统一收集成果</p>
+            </div>
+
+            <div class="grid md:grid-cols-3 gap-6 text-sm">
+                <div class="flex gap-4">
+                    <div class="font-mono text-violet-400 w-6 shrink-0">01</div>
+                    <div>
+                        <div class="font-semibold mb-1">定义任务</div>
+                        <div class="text-zinc-400">用 YAML 描述你要完成的事情。支持多任务批量定义。</div>
+                    </div>
+                </div>
+                <div class="flex gap-4">
+                    <div class="font-mono text-violet-400 w-6 shrink-0">02</div>
+                    <div>
+                        <div class="font-semibold mb-1">并行调度</div>
+                        <div class="text-zinc-400">jules-dispatch 负责分发、限流、重试和状态跟踪。</div>
+                    </div>
+                </div>
+                <div class="flex gap-4">
+                    <div class="font-mono text-violet-400 w-6 shrink-0">03</div>
+                    <div>
+                        <div class="font-semibold mb-1">收集成果</div>
+                        <div class="text-zinc-400">自动检测 PR、计划审批、失败。支持实时 tail 和结构化输出。</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="planning" class="max-w-screen-2xl mx-auto px-8 py-20 border-t border-white/10">
+        <div class="max-w-5xl mx-auto">
+            <div class="grid lg:grid-cols-12 gap-x-12 items-center">
+                <div class="lg:col-span-7">
+                    <div class="inline-flex items-center gap-x-2 px-4 py-1 rounded-3xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs tracking-widest font-medium mb-4">
+                        v1.2 核心新功能
+                    </div>
+                    <h2 class="section-header tracking-tighter mb-6">停止手写任务。<br>让 AI 为你规划。</h2>
+                    
+                    <div class="prose prose-invert text-zinc-300 text-[15px] max-w-none">
+                        <p>给 jules-dispatch 一句话，它就能调用你配置的 LLM（OpenAI / Ollama / Groq / OpenRouter 等），智能拆解成多个可并行执行的 Jules 任务。</p>
+                        <p class="mt-4">示例意图：</p>
+                    </div>
+                    
+                    <div class="mt-4 p-5 rounded-2xl bg-zinc-900 border border-white/10 font-mono text-sm text-emerald-300">
+                        jules-dispatch auto "将项目中所有 Express 路由迁移到 Fastify，并为每个路由添加请求验证测试"
+                    </div>
+                    
+                    <p class="mt-4 text-sm text-zinc-400">它会规划出 6 个独立任务（认证路由、用户路由、计费路由、中间件替换、启动文件更新、测试），然后询问是否立即并行调度。</p>
+                </div>
+                
+                <div class="lg:col-span-5 mt-10 lg:mt-0">
+                    <div class="glass rounded-3xl p-7 border border-white/10">
+                        <div class="text-xs uppercase tracking-widest text-zinc-500 mb-4">支持的 LLM 提供商</div>
+                        <div class="grid grid-cols-2 gap-3 text-sm">
+                            <div class="flex items-center gap-x-3 px-4 py-3 rounded-2xl bg-white/5"><i class="fa-brands fa-openai w-4"></i> <span>OpenAI（默认）</span></div>
+                            <div class="flex items-center gap-x-3 px-4 py-3 rounded-2xl bg-white/5"><i class="fa-solid fa-server w-4"></i> <span>Ollama（本地）</span></div>
+                            <div class="flex items-center gap-x-3 px-4 py-3 rounded-2xl bg-white/5"><span class="font-mono text-xs">Groq</span></div>
+                            <div class="flex items-center gap-x-3 px-4 py-3 rounded-2xl bg-white/5"><span class="font-mono text-xs">OpenRouter</span></div>
+                            <div class="flex items-center gap-x-3 px-4 py-3 rounded-2xl bg-white/5 col-span-2"><span class="text-xs">Together / Fireworks / DeepInfra / Azure OpenAI / LiteLLM 等任意兼容端点</span></div>
+                        </div>
+                        <div class="mt-5 text-[10px] text-zinc-500">通过环境变量或命令行参数灵活配置，无需修改代码。</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="start" class="max-w-screen-2xl mx-auto px-8 py-16 border-t border-white/10 bg-zinc-900/40">
+        <div class="max-w-5xl mx-auto">
+            <div class="text-center mb-12">
+                <div class="text-violet-400 text-xs tracking-[2.5px] font-semibold mb-2">GET STARTED IN 4 MINUTES</div>
+                <h2 class="section-header tracking-tighter">四步上手，立即释放并行生产力</h2>
+            </div>
+
+            <div class="max-w-4xl mx-auto space-y-10">
+                <div class="process-step flex flex-col md:flex-row gap-x-8 gap-y-4 items-start group">
+                    <div class="flex items-center gap-x-4 md:w-64 shrink-0">
+                        <div class="process-number font-mono">01</div>
+                        <div>
+                            <div class="font-semibold text-xl tracking-tight">全局安装</div>
+                            <div class="text-xs text-[var(--text-muted)] mt-0.5">一次安装，永久可用</div>
+                        </div>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="code-block rounded-2xl p-5 text-sm border border-[var(--border)]">
+                            <button onclick="copyCode(this)" class="absolute top-4 right-4 px-3 py-1 text-[10px] bg-white/5 hover:bg-white/10 rounded-xl flex items-center gap-x-1.5 text-[var(--text-muted)] hover:text-white transition">
+                                <i class="fa-regular fa-copy text-xs"></i> <span>复制</span>
+                            </button>
+                            <pre class="overflow-x-auto pt-3"><code>npm install -g jules-dispatch</code></pre>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="process-step flex flex-col md:flex-row gap-x-8 gap-y-4 items-start group">
+                    <div class="flex items-center gap-x-4 md:w-64 shrink-0">
+                        <div class="process-number font-mono">02</div>
+                        <div>
+                            <div class="font-semibold text-xl tracking-tight">初始化配置</div>
+                            <div class="text-xs text-[var(--text-muted)] mt-0.5">连接你的 Jules API Key</div>
+                        </div>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="code-block rounded-2xl p-5 text-sm border border-[var(--border)]">
+                            <button onclick="copyCode(this)" class="absolute top-4 right-4 px-3 py-1 text-[10px] bg-white/5 hover:bg-white/10 rounded-xl flex items-center gap-x-1.5 text-[var(--text-muted)] hover:text-white transition">
+                                <i class="fa-regular fa-copy text-xs"></i> <span>复制</span>
+                            </button>
+                            <pre class="overflow-x-auto pt-3"><code>jules-dispatch init</code></pre>
+                        </div>
+                        <p class="mt-3 text-sm text-[var(--text-muted)]">交互式向导配置 <strong>JULES_API_KEY</strong>。支持 <code class="text-xs">--api-key</code> 按次传入。</p>
+                    </div>
+                </div>
+
+                <div class="process-step flex flex-col md:flex-row gap-x-8 gap-y-4 items-start group">
+                    <div class="flex items-center gap-x-4 md:w-64 shrink-0">
+                        <div class="process-number font-mono">03</div>
+                        <div>
+                            <div class="font-semibold text-xl tracking-tight">声明任务（YAML）</div>
+                            <div class="text-xs text-[var(--text-muted)] mt-0.5">版本可控，可团队协作</div>
+                        </div>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm text-[var(--text-muted)] mb-3">创建 <code>tasks/</code> 目录，使用简单 YAML 定义任务（支持多文档 <code>---</code>）：</p>
+                        
+                        <div class="code-block rounded-2xl p-5 text-sm border border-[var(--border)]">
+                            <button onclick="copyCode(this)" class="absolute top-4 right-4 px-3 py-1 text-[10px] bg-white/5 hover:bg-white/10 rounded-xl flex items-center gap-x-1.5 text-[var(--text-muted)] hover:text-white transition">
+                                <i class="fa-regular fa-copy text-xs"></i> <span>复制</span>
+                            </button>
+                            <pre class="overflow-x-auto pt-3 text-xs"><code># tasks/migrate-to-fastify.yaml
+title: "迁移认证路由到 Fastify"
+repo: "your-org/your-repo"
+branch: "main"
+prompt: |
+  将 /api/auth 下的所有 Express 路由迁移到 Fastify。
+  使用 Fastify 插件系统，保持原有中间件逻辑。
+  添加适当的 schema 验证。</code></pre>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="process-step flex flex-col md:flex-row gap-x-8 gap-y-4 items-start group">
+                    <div class="flex items-center gap-x-4 md:w-64 shrink-0">
+                        <div class="process-number font-mono">04</div>
+                        <div>
+                            <div class="font-semibold text-xl tracking-tight">并行调度执行</div>
+                            <div class="text-xs text-[var(--text-muted)] mt-0.5">启动你的 AI 编码军团</div>
+                        </div>
+                    </div>
+                    <div class="flex-1 min-w-0 space-y-5">
+                        <div>
+                            <div class="text-xs uppercase tracking-widest text-[var(--text-muted)] mb-2">单任务 / 批量 / AI 规划</div>
+                            
+                            <div class="space-y-3">
+                                <div class="code-block rounded-2xl p-4 text-sm border border-[var(--border)]">
+                                    <button onclick="copyCode(this)" class="absolute top-3.5 right-4 px-3 py-1 text-[10px] bg-white/5 hover:bg-white/10 rounded-xl flex items-center gap-x-1.5 text-[var(--text-muted)] hover:text-white transition">
+                                        <i class="fa-regular fa-copy text-xs"></i> <span>复制</span>
+                                    </button>
+                                    <pre class="overflow-x-auto pt-2"><code>jules-dispatch dispatch tasks/migrate-to-fastify.yaml</code></pre>
+                                </div>
+                                
+                                <div class="code-block rounded-2xl p-4 text-sm border border-[var(--border)]">
+                                    <button onclick="copyCode(this)" class="absolute top-3.5 right-4 px-3 py-1 text-[10px] bg-white/5 hover:bg-white/10 rounded-xl flex items-center gap-x-1.5 text-[var(--text-muted)] hover:text-white transition">
+                                        <i class="fa-regular fa-copy text-xs"></i> <span>复制</span>
+                                    </button>
+                                    <pre class="overflow-x-auto pt-2"><code>jules-dispatch batch tasks/ --parallel 12</code></pre>
+                                </div>
+                                
+                                <div class="code-block rounded-2xl p-4 text-sm border border-[var(--border)]">
+                                    <button onclick="copyCode(this)" class="absolute top-3.5 right-4 px-3 py-1 text-[10px] bg-white/5 hover:bg-white/10 rounded-xl flex items-center gap-x-1.5 text-[var(--text-muted)] hover:text-white transition">
+                                        <i class="fa-regular fa-copy text-xs"></i> <span>复制</span>
+                                    </button>
+                                    <pre class="overflow-x-auto pt-2"><code>jules-dispatch auto "为整个项目添加完整的 TypeScript 类型和 Vitest 测试"</code></pre>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mt-10 text-center">
+                <a href="https://github.com/Yuuqq/jules-dispatch/blob/main/README.md" target="_blank"
+                   class="inline-flex items-center text-sm text-violet-400 hover:text-violet-300 transition gap-x-2">
+                    查看完整命令参考与高级选项 <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <section id="mcp" class="max-w-screen-2xl mx-auto px-8 py-20 border-t border-white/10">
+        <div class="max-w-5xl mx-auto">
+            <div class="grid lg:grid-cols-12 gap-x-16 items-center">
+                <div class="lg:col-span-5">
+                    <div class="sticky top-24">
+                        <div class="text-violet-400 text-xs tracking-[2.5px] font-semibold mb-3">FOR AI AGENTS</div>
+                        <h2 class="section-header tracking-tighter mb-6">让你的 AI 编码助手<br>真正拥有「并行执行」能力</h2>
+                        
+                        <p class="text-lg text-zinc-300">jules-dispatch 不仅是一个 CLI，更是强大的 <span class="font-semibold text-white">MCP Server</span>。</p>
+                        
+                        <div class="mt-8 space-y-4 text-sm">
+                            <div class="flex gap-4">
+                                <i class="fa-solid fa-robot mt-1 text-violet-400 w-5"></i>
+                                <div>Claude Code 可以直接调用 <code>jules_dispatch</code> 等工具</div>
+                            </div>
+                            <div class="flex gap-4">
+                                <i class="fa-solid fa-robot mt-1 text-violet-400 w-5"></i>
+                                <div>Codex CLI 同样支持，无缝集成</div>
+                            </div>
+                            <div class="flex gap-4">
+                                <i class="fa-solid fa-robot mt-1 text-violet-400 w-5"></i>
+                                <div>暴露 12 个核心工具：调度、等待、审批、取消、规划等</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="lg:col-span-7 mt-12 lg:mt-0">
+                    <div class="glass rounded-3xl p-8 border border-white/10">
+                        <div class="uppercase text-xs tracking-widest text-zinc-500 mb-4">在 Claude Code 中配置（示例）</div>
+                        
+                        <div class="code-block rounded-2xl p-6 text-xs overflow-x-auto">
+                            <pre><code>{
+  "mcpServers": {
+    "jules": {
+      "command": "jules-dispatch",
+      "args": ["mcp"],
+      "env": {
+        "JULES_API_KEY": "your-jules-api-key-here",
+        "LLM_API_KEY": "sk-..."   // 可选，用于 AI 规划
+      }
+    }
+  }
+}</code></pre>
+                        </div>
+                        
+                        <p class="mt-6 text-xs text-zinc-400">配置完成后，在 Claude Code 中直接说：<br>
+                        <span class="font-mono text-emerald-300">"使用 Jules 并行重构用户模块和订单模块"</span></p>
+                        
+                        <div class="mt-8 pt-6 border-t border-white/10 text-xs text-zinc-400">
+                            详细配置请参考项目中的 <a href="https://github.com/Yuuqq/jules-dispatch/blob/main/docs/MCP-INTEGRATION.md" target="_blank" class="text-violet-400 hover:underline">MCP-INTEGRATION.md</a> 或 <a href="https://github.com/Yuuqq/jules-dispatch/blob/main/CLAUDE.md" target="_blank" class="text-violet-400 hover:underline">CLAUDE.md</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="max-w-screen-2xl mx-auto px-8 py-20 border-t border-white/10">
+        <div class="max-w-3xl mx-auto text-center">
+            <h2 class="font-display text-6xl tracking-tighter mb-6">准备好让你的<br>AI 编码能力起飞了吗？</h2>
+            <p class="text-xl text-zinc-400 mb-10">jules-dispatch 是目前最优雅、最强大的 Google Jules 并行化与编排解决方案。</p>
+            
+            <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                <button onclick="document.getElementById('start').scrollIntoView({ behavior: 'smooth' })" 
+                        class="apple-button px-10 py-4 rounded-3xl bg-white text-zinc-950 font-semibold text-lg inline-flex items-center justify-center gap-x-3 active:scale-[0.985]">
+                    开始使用 <i class="fa-solid fa-rocket"></i>
+                </button>
+                <a href="https://github.com/Yuuqq/jules-dispatch" target="_blank"
+                   class="apple-button px-9 py-4 rounded-3xl border border-white/30 hover:bg-white/5 font-medium text-lg inline-flex items-center justify-center gap-x-3">
+                    <i class="fa-brands fa-github"></i> Star 项目
+                </a>
+            </div>
+            
+            <p class="mt-8 text-xs text-zinc-500">MIT License · 由开发者为开发者打造</p>
+        </div>
+    </section>
+
+    <footer class="border-t border-white/10 py-10 text-xs text-zinc-500">
+        <div class="max-w-screen-2xl mx-auto px-8 flex flex-col md:flex-row items-center justify-between gap-y-4">
+            <div>
+                © 2025–2026 jules-dispatch · Made with ❤️ for the AI-native development community
+            </div>
+            <div class="flex items-center gap-x-6">
+                <a href="https://github.com/Yuuqq/jules-dispatch/blob/main/README.md" target="_blank" class="hover:text-zinc-300">English README</a>
+                <a href="https://github.com/Yuuqq/jules-dispatch/blob/main/README.zh-CN.md" target="_blank" class="hover:text-zinc-300">中文 README</a>
+                <a href="https://www.npmjs.com/package/jules-dispatch" target="_blank" class="hover:text-zinc-300">npm</a>
+                <span>·</span>
+                <span>需要帮助？在 GitHub 提交 Issue</span>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        function initializeTailwind() {
+            const root = document.documentElement;
+            root.style.setProperty('--accent', '#6366f1');
+            root.style.setProperty('--accent-2', '#22d3ee');
+            
+            if (typeof tailwind !== 'undefined') {
+                console.log('%c[frontend-design] Distinctive token system initialized (indigo + cyan orchestration theme)', 'color:#64748b');
+            }
+        }
+
+        function copyCode(button) {
+            const pre = button.parentElement.querySelector('pre');
+            if (!pre) return;
+            
+            const code = pre.innerText.trim();
+            navigator.clipboard.writeText(code).then(() => {
+                const originalText = button.innerHTML;
+                button.innerHTML = `<i class="fa-solid fa-check"></i> <span>已复制</span>`;
+                button.classList.add('!bg-emerald-500/20', '!text-emerald-400');
+                
+                setTimeout(() => {
+                    button.innerHTML = originalText;
+                    button.classList.remove('!bg-emerald-500/20', '!text-emerald-400');
+                }, 2200);
+            }).catch(() => {
+                const textArea = document.createElement('textarea');
+                textArea.value = code;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                
+                const originalText = button.innerHTML;
+                button.innerHTML = `<i class="fa-solid fa-check"></i> <span>已复制</span>`;
+                setTimeout(() => {
+                    button.innerHTML = originalText;
+                }, 2000);
+            });
+        }
+
+        function initializeMermaid() {
+            if (typeof mermaid !== 'undefined') {
+                mermaid.initialize({
+                    startOnLoad: true,
+                    theme: 'dark',
+                    securityLevel: 'loose',
+                    flowchart: {
+                        curve: 'basis',
+                        padding: 20
+                    },
+                    themeVariables: {
+                        primaryColor: '#6366f1',
+                        primaryTextColor: '#a5b4fc',
+                        primaryBorderColor: '#6366f1',
+                        lineColor: '#64748b',
+                        secondaryColor: '#0e7490',
+                        tertiaryColor: '#166534'
+                    }
+                });
+                
+                setTimeout(() => {
+                    const mermaidElements = document.querySelectorAll('.mermaid');
+                    mermaidElements.forEach(el => {
+                        if (!el.getAttribute('data-processed')) {
+                            mermaid.init(undefined, el);
+                        }
+                    });
+                }, 300);
+            }
+        }
+
+        function initializeSmoothScroll() {
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function(e) {
+                    const targetId = this.getAttribute('href').substring(1);
+                    const targetElement = document.getElementById(targetId);
+                    
+                    if (targetElement) {
+                        e.preventDefault();
+                        targetElement.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'start'
+                        });
+                        history.pushState(null, null, `#${targetId}`);
+                    }
+                });
+            });
+        }
+
+        function addKeyboardHints() {
+            document.addEventListener('keydown', function(e) {
+                if (e.key === '/' && document.activeElement.tagName === 'BODY') {
+                    e.preventDefault();
+                    const startSection = document.getElementById('start');
+                    if (startSection) startSection.scrollIntoView({ behavior: 'smooth' });
+                }
+            });
+            console.log('%c[jules-dispatch] GitHub Pages site initialized. Press "/" to jump to Getting Started.', 'color:#64748b');
+        }
+
+        function initializeSite() {
+            initializeTailwind();
+            initializeMermaid();
+            initializeSmoothScroll();
+            addKeyboardHints();
+            document.documentElement.classList.add('site-loaded');
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializeSite);
+        } else {
+            initializeSite();
+        }
+    </script>
+</body>
+</html>
