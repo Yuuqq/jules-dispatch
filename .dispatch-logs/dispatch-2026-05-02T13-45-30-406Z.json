@@ -1,0 +1,360 @@
+[
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\infra-01-longcat-client.yaml",
+    "sessionId": "11559980640255316212",
+    "sessionUrl": "https://jules.google.com/session/11559980640255316212",
+    "title": "INFRA: 更新 llm_client.py 支持 Longcat API",
+    "status": "dispatched"
+  },
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\infra-02-requirements.yaml",
+    "sessionId": "",
+    "sessionUrl": "",
+    "title": "INFRA: 为论文二和论文三创建 requirements.txt",
+    "status": "failed",
+    "error": "fetch failed"
+  },
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\infra-03-gitignore.yaml",
+    "sessionId": "15597229183627030553",
+    "sessionUrl": "https://jules.google.com/session/15597229183627030553",
+    "title": "INFRA: 更新 .gitignore 覆盖新项目",
+    "status": "dispatched"
+  },
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\infra-04-longcat-test.yaml",
+    "sessionId": "13921922094732952576",
+    "sessionUrl": "https://jules.google.com/session/13921922094732952576",
+    "title": "INFRA: 创建 LongCat API 连通性测试脚本",
+    "status": "dispatched"
+  },
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\p2-01-doubao-client.yaml",
+    "sessionId": "17085648195980952166",
+    "sessionUrl": "https://jules.google.com/session/17085648195980952166",
+    "title": "P2: 实现豆包角色扮演 API 客户端",
+    "status": "dispatched"
+  },
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\p2-02-wenxin-client.yaml",
+    "sessionId": "14803108784334465908",
+    "sessionUrl": "https://jules.google.com/session/14803108784334465908",
+    "title": "P2: 实现文心一言角色扮演 API 客户端",
+    "status": "dispatched"
+  },
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\p2-03-xingye-web.yaml",
+    "sessionId": "4394968393668374649",
+    "sessionUrl": "https://jules.google.com/session/4394968393668374649",
+    "title": "P2: 实现星野 Playwright Web 自动化客户端",
+    "status": "dispatched"
+  },
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\p2-04-talkie-web.yaml",
+    "sessionId": "9790532933590121088",
+    "sessionUrl": "https://jules.google.com/session/9790532933590121088",
+    "title": "P2: 实现 Talkie Playwright Web 自动化客户端",
+    "status": "dispatched"
+  },
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\p2-05-zhumengdao-charai.yaml",
+    "sessionId": "10405924549458667147",
+    "sessionUrl": "https://jules.google.com/session/10405924549458667147",
+    "title": "P2: 实现筑梦岛和 Character.AI Web 自动化客户端",
+    "status": "dispatched"
+  },
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\p2-06-user-templates.yaml",
+    "sessionId": "10773722359957968249",
+    "sessionUrl": "https://jules.google.com/session/10773722359957968249",
+    "title": "P2: 实现多轮对话用户响应模板生成器",
+    "status": "dispatched"
+  },
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\p2-07-runner-tests.yaml",
+    "sessionId": "17805915224232057677",
+    "sessionUrl": "https://jules.google.com/session/17805915224232057677",
+    "title": "P2: 实现多轮审计运行器单元测试",
+    "status": "dispatched"
+  },
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\p2-08-codebook-tests.yaml",
+    "sessionId": "10540667020170193495",
+    "sessionUrl": "https://jules.google.com/session/10540667020170193495",
+    "title": "P2: 实现编码引擎单元测试",
+    "status": "dispatched"
+  },
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\p2-09-analysis-tests.yaml",
+    "sessionId": "3057797921559668245",
+    "sessionUrl": "https://jules.google.com/session/3057797921559668245",
+    "title": "P2: 实现轨迹和危机响应分析单元测试",
+    "status": "dispatched"
+  },
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\p2-10-viz.yaml",
+    "sessionId": "15735445048037253904",
+    "sessionUrl": "https://jules.google.com/session/15735445048037253904",
+    "title": "P2: 创建可视化模块",
+    "status": "dispatched"
+  },
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\p2-11-paper-intro-lit.yaml",
+    "sessionId": "9448440383565913828",
+    "sessionUrl": "https://jules.google.com/session/9448440383565913828",
+    "title": "P2: 撰写论文引言和文献综述（中文）",
+    "status": "dispatched"
+  },
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\p2-12-paper-method.yaml",
+    "sessionId": "14999123405477163642",
+    "sessionUrl": "https://jules.google.com/session/14999123405477163642",
+    "title": "P2: 撰写研究设计与方法（中文）",
+    "status": "dispatched"
+  },
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\p2-13-discourse-analysis.yaml",
+    "sessionId": "10276494970630390472",
+    "sessionUrl": "https://jules.google.com/session/10276494970630390472",
+    "title": "P2: 实现社交媒体话语分析模块",
+    "status": "dispatched"
+  },
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\p2-14-env-example.yaml",
+    "sessionId": "3533138631430605298",
+    "sessionUrl": "https://jules.google.com/session/3533138631430605298",
+    "title": "P2: 创建 .env.example 和 .gitignore",
+    "status": "dispatched"
+  },
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\p2-15-paper-results.yaml",
+    "sessionId": "7895793129645473943",
+    "sessionUrl": "https://jules.google.com/session/7895793129645473943",
+    "title": "P2: 撰写论文结果章节（中文）",
+    "status": "dispatched"
+  },
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\p2-16-paper-discussion.yaml",
+    "sessionId": "13119586543161036319",
+    "sessionUrl": "https://jules.google.com/session/13119586543161036319",
+    "title": "P2: 撰写论文讨论和结论（中文）",
+    "status": "dispatched"
+  },
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\p2-17-abstract-refs.yaml",
+    "sessionId": "6979323089580572316",
+    "sessionUrl": "https://jules.google.com/session/6979323089580572316",
+    "title": "P2: 撰写摘要和参考文献",
+    "status": "dispatched"
+  },
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\p2-18-update-longcat.yaml",
+    "sessionId": "17057931073934085531",
+    "sessionUrl": "https://jules.google.com/session/17057931073934085531",
+    "title": "P2: 更新所有代码引用从 GLM 改为 LongCat",
+    "status": "dispatched"
+  },
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\p2-19-run-pilot.yaml",
+    "sessionId": "3088913164206279393",
+    "sessionUrl": "https://jules.google.com/session/3088913164206279393",
+    "title": "P2: 完善 run_pilot.py 入口脚本",
+    "status": "dispatched"
+  },
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\p2-20-reliability.yaml",
+    "sessionId": "4620668999463798983",
+    "sessionUrl": "https://jules.google.com/session/4620668999463798983",
+    "title": "P2: 实现信度分析模块",
+    "status": "dispatched"
+  },
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\p2-21-data-validation.yaml",
+    "sessionId": "13995069867211454241",
+    "sessionUrl": "https://jules.google.com/session/13995069867211454241",
+    "title": "P2: 创建数据验证和清洗工具",
+    "status": "dispatched"
+  },
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\p2-22-ipd-case-study.yaml",
+    "sessionId": "11732578254028715542",
+    "sessionUrl": "https://jules.google.com/session/11732578254028715542",
+    "title": "P2: 实现 IPD 机制案例研究模块",
+    "status": "dispatched"
+  },
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\p2-23-system-prompts.yaml",
+    "sessionId": "14254872499915418000",
+    "sessionUrl": "https://jules.google.com/session/14254872499915418000",
+    "title": "P2: 优化 companion client 的 system prompt 工程",
+    "status": "dispatched"
+  },
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\p3-01-weibo-crawl.yaml",
+    "sessionId": "17415301322949286555",
+    "sessionUrl": "https://jules.google.com/session/17415301322949286555",
+    "title": "P3: 完善 WeiboSearchAdapter 爬虫实现",
+    "status": "dispatched"
+  },
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\p3-02-style-features.yaml",
+    "sessionId": "12629662937722590672",
+    "sessionUrl": "https://jules.google.com/session/12629662937722590672",
+    "title": "P3: 完善 StyleFeatureExtractor 中文文本风格特征",
+    "status": "dispatched"
+  },
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\p3-03-ai-detector.yaml",
+    "sessionId": "13782830240308775029",
+    "sessionUrl": "https://jules.google.com/session/13782830240308775029",
+    "title": "P3: 完善 AIDetector 三通道融合检测器",
+    "status": "dispatched"
+  },
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\p3-04-topic-model.yaml",
+    "sessionId": "3772586447188891986",
+    "sessionUrl": "https://jules.google.com/session/3772586447188891986",
+    "title": "P3: 完善 BERTopic 主题模型 + GTE/PTE 计算",
+    "status": "dispatched"
+  },
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\p3-05-event-history.yaml",
+    "sessionId": "4318160634778585474",
+    "sessionUrl": "https://jules.google.com/session/4318160634778585474",
+    "title": "P3: 完善事件史重建和崩解点检测",
+    "status": "dispatched"
+  },
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\p3-06-trust-experiment.yaml",
+    "sessionId": "1483687435488637551",
+    "sessionUrl": "https://jules.google.com/session/1483687435488637551",
+    "title": "P3: 完善信任实验 LLM-as-Participant 实现",
+    "status": "dispatched"
+  },
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\p3-07-detection-tests.yaml",
+    "sessionId": "5707463418535428702",
+    "sessionUrl": "https://jules.google.com/session/5707463418535428702",
+    "title": "P3: 编写 AI 检测器单元测试",
+    "status": "dispatched"
+  },
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\p3-08-entropy-tests.yaml",
+    "sessionId": "16659085761528453971",
+    "sessionUrl": "https://jules.google.com/session/16659085761528453971",
+    "title": "P3: 编写主题熵和事件史分析单元测试",
+    "status": "dispatched"
+  },
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\p3-09-trust-tests.yaml",
+    "sessionId": "10053447694604364679",
+    "sessionUrl": "https://jules.google.com/session/10053447694604364679",
+    "title": "P3: 编写信任实验单元测试",
+    "status": "dispatched"
+  },
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\p3-10-viz.yaml",
+    "sessionId": "14723438218435457068",
+    "sessionUrl": "https://jules.google.com/session/14723438218435457068",
+    "title": "P3: 创建可视化模块",
+    "status": "dispatched"
+  },
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\p3-11-paper-intro-lit.yaml",
+    "sessionId": "10049065077085716064",
+    "sessionUrl": "https://jules.google.com/session/10049065077085716064",
+    "title": "P3: 撰写论文引言和文献综述（中文）",
+    "status": "dispatched"
+  },
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\p3-12-paper-method.yaml",
+    "sessionId": "15757123188876246718",
+    "sessionUrl": "https://jules.google.com/session/15757123188876246718",
+    "title": "P3: 撰写研究设计与方法（中文）",
+    "status": "dispatched"
+  },
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\p3-13-run-scripts.yaml",
+    "sessionId": "10304538391082129429",
+    "sessionUrl": "https://jules.google.com/session/10304538391082129429",
+    "title": "P3: 完善 run_pilot.py 入口脚本",
+    "status": "dispatched"
+  },
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\p3-14-run-analysis.yaml",
+    "sessionId": "2560881241199592969",
+    "sessionUrl": "https://jules.google.com/session/2560881241199592969",
+    "title": "P3: 完善 run_analysis.py 综合分析脚本",
+    "status": "dispatched"
+  },
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\p3-15-paper-results.yaml",
+    "sessionId": "3808765658756094882",
+    "sessionUrl": "https://jules.google.com/session/3808765658756094882",
+    "title": "P3: 撰写论文结果章节（中文）",
+    "status": "dispatched"
+  },
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\p3-16-paper-discussion.yaml",
+    "sessionId": "12424219005047064376",
+    "sessionUrl": "https://jules.google.com/session/12424219005047064376",
+    "title": "P3: 撰写论文讨论和结论（中文）",
+    "status": "dispatched"
+  },
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\p3-17-abstract-refs.yaml",
+    "sessionId": "7752642871611493405",
+    "sessionUrl": "https://jules.google.com/session/7752642871611493405",
+    "title": "P3: 撰写摘要和参考文献",
+    "status": "dispatched"
+  },
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\p3-18-update-longcat.yaml",
+    "sessionId": "11563178204835858535",
+    "sessionUrl": "https://jules.google.com/session/11563178204835858535",
+    "title": "P3: 更新所有代码引用从 GLM 改为 LongCat",
+    "status": "dispatched"
+  },
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\p3-19-crawl-tests.yaml",
+    "sessionId": "10440919083093102142",
+    "sessionUrl": "https://jules.google.com/session/10440919083093102142",
+    "title": "P3: 编写微博爬虫单元测试",
+    "status": "dispatched"
+  },
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\p3-20-sentiment-dict.yaml",
+    "sessionId": "12413082138877366932",
+    "sessionUrl": "https://jules.google.com/session/12413082138877366932",
+    "title": "P3: 创建中文情感词典模块",
+    "status": "dispatched"
+  },
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\p3-21-data-validation.yaml",
+    "sessionId": "1856502414989166378",
+    "sessionUrl": "https://jules.google.com/session/1856502414989166378",
+    "title": "P3: 创建数据验证和清洗工具",
+    "status": "dispatched"
+  },
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\p3-22-style-tests.yaml",
+    "sessionId": "11517262441439147117",
+    "sessionUrl": "https://jules.google.com/session/11517262441439147117",
+    "title": "P3: 编写风格特征提取单元测试",
+    "status": "dispatched"
+  },
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\p3-23-cross-event-analysis.yaml",
+    "sessionId": "14033082169309703984",
+    "sessionUrl": "https://jules.google.com/session/14033082169309703984",
+    "title": "P3: 实现跨事件对比分析模块",
+    "status": "dispatched"
+  },
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\p3-24-ai-subtype-examples.yaml",
+    "sessionId": "9572083156845183157",
+    "sessionUrl": "https://jules.google.com/session/9572083156845183157",
+    "title": "P3: 创建 AI 内容子类型分类的标注数据生成器",
+    "status": "dispatched"
+  }
+]

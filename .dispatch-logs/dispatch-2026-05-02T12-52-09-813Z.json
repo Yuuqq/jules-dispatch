@@ -1,0 +1,239 @@
+[
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\infra-01-longcat-client.yaml",
+    "sessionId": "",
+    "sessionUrl": "",
+    "title": "INFRA: 更新 llm_client.py 支持 Longcat API",
+    "status": "failed",
+    "error": "fetch failed"
+  },
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\infra-02-requirements.yaml",
+    "sessionId": "",
+    "sessionUrl": "",
+    "title": "INFRA: 为论文二和论文三创建 requirements.txt",
+    "status": "failed",
+    "error": "Jules API 400: {\n  \"error\": {\n    \"code\": 400,\n    \"message\": \"Precondition check failed.\",\n    \"status\": \"FAILED_PRECONDITION\"\n  }\n}\n"
+  },
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\infra-03-gitignore.yaml",
+    "sessionId": "",
+    "sessionUrl": "",
+    "title": "INFRA: 更新 .gitignore 覆盖新项目",
+    "status": "failed",
+    "error": "fetch failed"
+  },
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\p2-01-doubao-client.yaml",
+    "sessionId": "15759856905437475864",
+    "sessionUrl": "https://jules.google.com/session/15759856905437475864",
+    "title": "P2: 实现豆包角色扮演 API 客户端",
+    "status": "dispatched"
+  },
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\p2-02-wenxin-client.yaml",
+    "sessionId": "",
+    "sessionUrl": "",
+    "title": "P2: 实现文心一言角色扮演 API 客户端",
+    "status": "failed",
+    "error": "fetch failed"
+  },
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\p2-03-xingye-web.yaml",
+    "sessionId": "",
+    "sessionUrl": "",
+    "title": "P2: 实现星野 Playwright Web 自动化客户端",
+    "status": "failed",
+    "error": "fetch failed"
+  },
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\p2-04-talkie-web.yaml",
+    "sessionId": "9235145439748302850",
+    "sessionUrl": "https://jules.google.com/session/9235145439748302850",
+    "title": "P2: 实现 Talkie Playwright Web 自动化客户端",
+    "status": "dispatched"
+  },
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\p2-05-zhumengdao-charai.yaml",
+    "sessionId": "9162333682373735843",
+    "sessionUrl": "https://jules.google.com/session/9162333682373735843",
+    "title": "P2: 实现筑梦岛和 Character.AI Web 自动化客户端",
+    "status": "dispatched"
+  },
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\p2-06-user-templates.yaml",
+    "sessionId": "5551969450928774842",
+    "sessionUrl": "https://jules.google.com/session/5551969450928774842",
+    "title": "P2: 实现多轮对话用户响应模板生成器",
+    "status": "dispatched"
+  },
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\p2-07-runner-tests.yaml",
+    "sessionId": "",
+    "sessionUrl": "",
+    "title": "P2: 实现多轮审计运行器单元测试",
+    "status": "failed",
+    "error": "Jules API 400: {\n  \"error\": {\n    \"code\": 400,\n    \"message\": \"Precondition check failed.\",\n    \"status\": \"FAILED_PRECONDITION\"\n  }\n}\n"
+  },
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\p2-08-codebook-tests.yaml",
+    "sessionId": "5959171923975768579",
+    "sessionUrl": "https://jules.google.com/session/5959171923975768579",
+    "title": "P2: 实现编码引擎单元测试",
+    "status": "dispatched"
+  },
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\p2-09-analysis-tests.yaml",
+    "sessionId": "15448091827757615316",
+    "sessionUrl": "https://jules.google.com/session/15448091827757615316",
+    "title": "P2: 实现轨迹和危机响应分析单元测试",
+    "status": "dispatched"
+  },
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\p2-10-viz.yaml",
+    "sessionId": "",
+    "sessionUrl": "",
+    "title": "P2: 创建可视化模块",
+    "status": "failed",
+    "error": "Jules API 400: {\n  \"error\": {\n    \"code\": 400,\n    \"message\": \"Precondition check failed.\",\n    \"status\": \"FAILED_PRECONDITION\"\n  }\n}\n"
+  },
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\p2-11-paper-intro-lit.yaml",
+    "sessionId": "",
+    "sessionUrl": "",
+    "title": "P2: 撰写论文引言和文献综述（中文）",
+    "status": "failed",
+    "error": "Jules API 400: {\n  \"error\": {\n    \"code\": 400,\n    \"message\": \"Precondition check failed.\",\n    \"status\": \"FAILED_PRECONDITION\"\n  }\n}\n"
+  },
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\p2-12-paper-method.yaml",
+    "sessionId": "3552924032674865385",
+    "sessionUrl": "https://jules.google.com/session/3552924032674865385",
+    "title": "P2: 撰写研究设计与方法（中文）",
+    "status": "dispatched"
+  },
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\p2-13-discourse-analysis.yaml",
+    "sessionId": "",
+    "sessionUrl": "",
+    "title": "P2: 实现社交媒体话语分析模块",
+    "status": "failed",
+    "error": "Jules API 400: {\n  \"error\": {\n    \"code\": 400,\n    \"message\": \"Precondition check failed.\",\n    \"status\": \"FAILED_PRECONDITION\"\n  }\n}\n"
+  },
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\p2-14-env-example.yaml",
+    "sessionId": "2582823698603781284",
+    "sessionUrl": "https://jules.google.com/session/2582823698603781284",
+    "title": "P2: 创建 .env.example 和 .gitignore",
+    "status": "dispatched"
+  },
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\p3-01-weibo-crawl.yaml",
+    "sessionId": "",
+    "sessionUrl": "",
+    "title": "P3: 完善 WeiboSearchAdapter 爬虫实现",
+    "status": "failed",
+    "error": "Jules API 400: {\n  \"error\": {\n    \"code\": 400,\n    \"message\": \"Precondition check failed.\",\n    \"status\": \"FAILED_PRECONDITION\"\n  }\n}\n"
+  },
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\p3-02-style-features.yaml",
+    "sessionId": "",
+    "sessionUrl": "",
+    "title": "P3: 完善 StyleFeatureExtractor 中文文本风格特征",
+    "status": "failed",
+    "error": "Jules API 400: {\n  \"error\": {\n    \"code\": 400,\n    \"message\": \"Precondition check failed.\",\n    \"status\": \"FAILED_PRECONDITION\"\n  }\n}\n"
+  },
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\p3-03-ai-detector.yaml",
+    "sessionId": "",
+    "sessionUrl": "",
+    "title": "P3: 完善 AIDetector 三通道融合检测器",
+    "status": "failed",
+    "error": "Jules API 400: {\n  \"error\": {\n    \"code\": 400,\n    \"message\": \"Precondition check failed.\",\n    \"status\": \"FAILED_PRECONDITION\"\n  }\n}\n"
+  },
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\p3-04-topic-model.yaml",
+    "sessionId": "",
+    "sessionUrl": "",
+    "title": "P3: 完善 BERTopic 主题模型 + GTE/PTE 计算",
+    "status": "failed",
+    "error": "Jules API 400: {\n  \"error\": {\n    \"code\": 400,\n    \"message\": \"Precondition check failed.\",\n    \"status\": \"FAILED_PRECONDITION\"\n  }\n}\n"
+  },
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\p3-05-event-history.yaml",
+    "sessionId": "",
+    "sessionUrl": "",
+    "title": "P3: 完善事件史重建和崩解点检测",
+    "status": "failed",
+    "error": "Jules API 400: {\n  \"error\": {\n    \"code\": 400,\n    \"message\": \"Precondition check failed.\",\n    \"status\": \"FAILED_PRECONDITION\"\n  }\n}\n"
+  },
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\p3-06-trust-experiment.yaml",
+    "sessionId": "",
+    "sessionUrl": "",
+    "title": "P3: 完善信任实验 LLM-as-Participant 实现",
+    "status": "failed",
+    "error": "Jules API 400: {\n  \"error\": {\n    \"code\": 400,\n    \"message\": \"Precondition check failed.\",\n    \"status\": \"FAILED_PRECONDITION\"\n  }\n}\n"
+  },
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\p3-07-detection-tests.yaml",
+    "sessionId": "",
+    "sessionUrl": "",
+    "title": "P3: 编写 AI 检测器单元测试",
+    "status": "failed",
+    "error": "Jules API 400: {\n  \"error\": {\n    \"code\": 400,\n    \"message\": \"Precondition check failed.\",\n    \"status\": \"FAILED_PRECONDITION\"\n  }\n}\n"
+  },
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\p3-08-entropy-tests.yaml",
+    "sessionId": "",
+    "sessionUrl": "",
+    "title": "P3: 编写主题熵和事件史分析单元测试",
+    "status": "failed",
+    "error": "Jules API 400: {\n  \"error\": {\n    \"code\": 400,\n    \"message\": \"Precondition check failed.\",\n    \"status\": \"FAILED_PRECONDITION\"\n  }\n}\n"
+  },
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\p3-09-trust-tests.yaml",
+    "sessionId": "17949294535096338561",
+    "sessionUrl": "https://jules.google.com/session/17949294535096338561",
+    "title": "P3: 编写信任实验单元测试",
+    "status": "dispatched"
+  },
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\p3-10-viz.yaml",
+    "sessionId": "",
+    "sessionUrl": "",
+    "title": "P3: 创建可视化模块",
+    "status": "failed",
+    "error": "Jules API 400: {\n  \"error\": {\n    \"code\": 400,\n    \"message\": \"Precondition check failed.\",\n    \"status\": \"FAILED_PRECONDITION\"\n  }\n}\n"
+  },
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\p3-11-paper-intro-lit.yaml",
+    "sessionId": "17115303768316392878",
+    "sessionUrl": "https://jules.google.com/session/17115303768316392878",
+    "title": "P3: 撰写论文引言和文献综述（中文）",
+    "status": "dispatched"
+  },
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\p3-12-paper-method.yaml",
+    "sessionId": "",
+    "sessionUrl": "",
+    "title": "P3: 撰写研究设计与方法（中文）",
+    "status": "failed",
+    "error": "Jules API 400: {\n  \"error\": {\n    \"code\": 400,\n    \"message\": \"Precondition check failed.\",\n    \"status\": \"FAILED_PRECONDITION\"\n  }\n}\n"
+  },
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\p3-13-run-scripts.yaml",
+    "sessionId": "3596262487143755229",
+    "sessionUrl": "https://jules.google.com/session/3596262487143755229",
+    "title": "P3: 完善 run_pilot.py 入口脚本",
+    "status": "dispatched"
+  },
+  {
+    "taskFile": "E:\\Research\\llm-privacy-audit\\vendor\\jules-dispatch\\tasks\\p3-14-run-analysis.yaml",
+    "sessionId": "",
+    "sessionUrl": "",
+    "title": "P3: 完善 run_analysis.py 综合分析脚本",
+    "status": "failed",
+    "error": "Jules API 400: {\n  \"error\": {\n    \"code\": 400,\n    \"message\": \"Precondition check failed.\",\n    \"status\": \"FAILED_PRECONDITION\"\n  }\n}\n"
+  }
+]

@@ -1,0 +1,892 @@
+[
+  {
+    "sessionId": "7151788877852819059",
+    "title": "Food Jieyang (retry 3)",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/walk-in-cs/pull/106",
+    "prTitle": "feat: add Jieyang food guide",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "8977793064194559304",
+    "title": "Night Jieyang retry2",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/walk-in-cs/pull/99",
+    "prTitle": "Add night visiting info for Jieyang spots",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "9552926849992598179",
+    "title": "Walk Difficulty Shantou",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/walk-in-cs/pull/100",
+    "prTitle": "Add walking difficulty data for Shantou spots",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "16771915388992390049",
+    "title": "Walk Difficulty Jieyang retry2",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/walk-in-cs/pull/97",
+    "prTitle": "Add walk difficulty data for Jieyang spots",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "16791290916449273",
+    "title": "Events Shantou",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/walk-in-cs/pull/104",
+    "prTitle": "fix: merge annual events data correctly for Shantou spots",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "3701379334847919333",
+    "title": "Photo Spots Shantou",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/walk-in-cs/pull/105",
+    "prTitle": "chore: ensure photo spots data for Shantou is populated",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "11872123833336163175",
+    "title": "Food Jieyang",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/walk-in-cs/pull/101",
+    "prTitle": "Add food guide data for Jieyang spots",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "15746383357560092270",
+    "title": "Audio Guide Chaozhou",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/walk-in-cs/pull/98",
+    "prTitle": "Add audio guide scripts for Chaozhou spots",
+    "lastActivity": "Created the Node.js script generate_audio_guide.js which contains the 10 extr...",
+    "activities": 5
+  },
+  {
+    "sessionId": "15854402973149428147",
+    "title": "Route Highlights Jieyang",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/walk-in-cs/pull/102",
+    "prTitle": "feat: add Jieyang themed walking routes",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "2694875864757829989",
+    "title": "Cultural Stories Chaozhou",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/walk-in-cs/pull/103",
+    "prTitle": "feat: add chaozhou cultural spots data",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "2179080076365028807",
+    "title": "Web City Covers Jieyang Shanwei",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/walk-in-cs/pull/96",
+    "prTitle": "feat: generate covers for Jieyang and Shanwei",
+    "lastActivity": "Verified that cover-jieyang.jpg and cover-shanwei.jpg are 800x500 JPEGs and u...",
+    "activities": 5
+  },
+  {
+    "sessionId": "12413082138877366932",
+    "title": "P3: 创建中文情感词典模块",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/llm-privacy-audit/pull/85",
+    "prTitle": "feat(paper3): add local chinese sentiment analysis module",
+    "lastActivity": "Implemented `sentiment.py` with `SentimentAnalyzer` containing extensive buil...",
+    "activities": 5
+  },
+  {
+    "sessionId": "1856502414989166378",
+    "title": "P3: 创建数据验证和清洗工具",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/llm-privacy-audit/pull/67",
+    "prTitle": "Add data validator for paper3 truth fragmentation",
+    "lastActivity": "Created the `ValidationResult` dataclass and validation functions `validate_p...",
+    "activities": 5
+  },
+  {
+    "sessionId": "11517262441439147117",
+    "title": "P3: 编写风格特征提取单元测试",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/llm-privacy-audit/pull/75",
+    "prTitle": "Add StyleFeatureExtractor Unit Tests",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "2560881241199592969",
+    "title": "P3: 完善 run_analysis.py 综合分析脚本",
+    "status": "running",
+    "lastActivity": "Updated parse_args to use default output/results for output-dir",
+    "activities": 5
+  },
+  {
+    "sessionId": "12424219005047064376",
+    "title": "P3: 撰写论文讨论和结论（中文）",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/llm-privacy-audit/pull/96",
+    "prTitle": "Add Discussion and Conclusion Drafts for Paper 3",
+    "lastActivity": "Created 05_discussion.md based on the provided specifications.",
+    "activities": 5
+  },
+  {
+    "sessionId": "9572083156845183157",
+    "title": "P3: 创建 AI 内容子类型分类的标注数据生成器",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/llm-privacy-audit/pull/66",
+    "prTitle": "feat: generate synthetic calibration data for AI detector",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "3808765658756094882",
+    "title": "P3: 撰写论文结果章节（中文）",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/llm-privacy-audit/pull/92",
+    "prTitle": "Draft paper3 truth fragmentation results section",
+    "lastActivity": "Created `04_results.md` using a script, drafted ~7149 characters (which corre...",
+    "activities": 5
+  },
+  {
+    "sessionId": "14033082169309703984",
+    "title": "P3: 实现跨事件对比分析模块",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/llm-privacy-audit/pull/63",
+    "prTitle": "feat(p3): add cross-event comparative analysis framework",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "11563178204835858535",
+    "title": "P3: 更新所有代码引用从 GLM 改为 LongCat",
+    "status": "running",
+    "lastActivity": "Unknown",
+    "activities": 1
+  },
+  {
+    "sessionId": "7752642871611493405",
+    "title": "P3: 撰写摘要和参考文献",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/llm-privacy-audit/pull/93",
+    "prTitle": "Add Abstracts and References for Paper 3",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "10440919083093102142",
+    "title": "P3: 编写微博爬虫单元测试",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/llm-privacy-audit/pull/74",
+    "prTitle": "Add tests and checkpointing for WeiboCrawler",
+    "lastActivity": "Understood the task and prepared testing environment.",
+    "activities": 5
+  },
+  {
+    "sessionId": "11732578254028715542",
+    "title": "P2: 实现 IPD 机制案例研究模块",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/llm-privacy-audit/pull/79",
+    "prTitle": "feat(paper2): Add IPD mechanisms case study extraction and formatting script",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "10304538391082129429",
+    "title": "P3: 完善 run_pilot.py 入口脚本",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/llm-privacy-audit/pull/90",
+    "prTitle": "feat(p3_truth): implement end-to-end run_pilot.py",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "10049065077085716064",
+    "title": "P3: 撰写论文引言和文献综述（中文）",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/llm-privacy-audit/pull/100",
+    "prTitle": "Add Introduction and Literature Review sections for Paper 3",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "13782830240308775029",
+    "title": "P3: 完善 AIDetector 三通道融合检测器",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/llm-privacy-audit/pull/97",
+    "prTitle": "Improve AIDetector with refined channels and concurrency",
+    "lastActivity": "C2 logic has been updated in `src/analysis/ai_detector.py` to use a heuristic...",
+    "activities": 5
+  },
+  {
+    "sessionId": "16659085761528453971",
+    "title": "P3: 编写主题熵和事件史分析单元测试",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/llm-privacy-audit/pull/104",
+    "prTitle": "test(paper3): add unit tests for entropy and event history",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "6979323089580572316",
+    "title": "P2: 撰写摘要和参考文献",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/llm-privacy-audit/pull/77",
+    "prTitle": "Add paper2 abstract and references",
+    "lastActivity": "Verified the creation and contents of 00_abstracts.md and 99_references.md.",
+    "activities": 5
+  },
+  {
+    "sessionId": "1483687435488637551",
+    "title": "P3: 完善信任实验 LLM-as-Participant 实现",
+    "status": "running",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "14254872499915418000",
+    "title": "P2: 优化 companion client 的 system prompt 工程",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/llm-privacy-audit/pull/80",
+    "prTitle": "Add product configurations for paper2_companion_audit",
+    "lastActivity": "Created paper2_companion_audit/data/configs/",
+    "activities": 5
+  },
+  {
+    "sessionId": "14723438218435457068",
+    "title": "P3: 创建可视化模块",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/llm-privacy-audit/pull/68",
+    "prTitle": "feat: implement visualization module for Paper 3",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "13995069867211454241",
+    "title": "P2: 创建数据验证和清洗工具",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/llm-privacy-audit/pull/72",
+    "prTitle": "feat(paper2): implement data validator and cleaner for paper2",
+    "lastActivity": "Verified `paper2_companion_audit/src/data/products.json` by running cat comma...",
+    "activities": 5
+  },
+  {
+    "sessionId": "17415301322949286555",
+    "title": "P3: 完善 WeiboSearchAdapter 爬虫实现",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/llm-privacy-audit/pull/103",
+    "prTitle": "feat(weibo-crawler): implement robust crawl methods, fallback api, and checkpointing",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "4620668999463798983",
+    "title": "P2: 实现信度分析模块",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/llm-privacy-audit/pull/88",
+    "prTitle": "feat(p2): add reliability engine for coder consistency analysis",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "17057931073934085531",
+    "title": "P2: 更新所有代码引用从 GLM 改为 LongCat",
+    "status": "running",
+    "lastActivity": "Unknown",
+    "activities": 1
+  },
+  {
+    "sessionId": "10053447694604364679",
+    "title": "P3: 编写信任实验单元测试",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/llm-privacy-audit/pull/69",
+    "prTitle": "test: add unit tests for paper3 trust_experiment.py",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "4318160634778585474",
+    "title": "P3: 完善事件史重建和崩解点检测",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/llm-privacy-audit/pull/102",
+    "prTitle": "Refactor EventHistoryBuilder with Timeseries Reconstruction, Breakdown Detection, and Cross-Correlation",
+    "lastActivity": "Refactored `build` method in `EventHistoryBuilder` to output correctly struct...",
+    "activities": 5
+  },
+  {
+    "sessionId": "15757123188876246718",
+    "title": "P3: 撰写研究设计与方法（中文）",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/llm-privacy-audit/pull/59",
+    "prTitle": "docs(paper3): add methodology section 03_methodology.md",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "12629662937722590672",
+    "title": "P3: 完善 StyleFeatureExtractor 中文文本风格特征",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/llm-privacy-audit/pull/83",
+    "prTitle": "feat: Implement robust 24-dimensional StyleFeatureExtractor for paper3",
+    "lastActivity": "Implemented the `StyleFeatureExtractor` class in `paper3_truth_fragmentation/...",
+    "activities": 5
+  },
+  {
+    "sessionId": "5707463418535428702",
+    "title": "P3: 编写 AI 检测器单元测试",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/llm-privacy-audit/pull/95",
+    "prTitle": "Add pytest suite for AIDetector",
+    "lastActivity": "Already verified the setup code via bash command in previous step.",
+    "activities": 5
+  },
+  {
+    "sessionId": "3772586447188891986",
+    "title": "P3: 完善 BERTopic 主题模型 + GTE/PTE 计算",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/llm-privacy-audit/pull/78",
+    "prTitle": "feat(entropy): Implement TopicEntropyAnalyzer logic for GTE, PTE, and Granger Causality",
+    "lastActivity": "Modified compute_gte to return the specified DataFrame output format.",
+    "activities": 5
+  },
+  {
+    "sessionId": "3088913164206279393",
+    "title": "P2: 完善 run_pilot.py 入口脚本",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/llm-privacy-audit/pull/94",
+    "prTitle": "feat(p2_companion_audit): implement end-to-end pilot pipeline script",
+    "lastActivity": "Successfully added imports, argparse and sys.path configuration logic to pape...",
+    "activities": 5
+  },
+  {
+    "sessionId": "14999123405477163642",
+    "title": "P2: 撰写研究设计与方法（中文）",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/llm-privacy-audit/pull/101",
+    "prTitle": "Add paper 2 methodology draft",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "13921922094732952576",
+    "title": "INFRA: 创建 LongCat API 连通性测试脚本",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/llm-privacy-audit/pull/87",
+    "prTitle": "Add LongCat API models and integration tests",
+    "lastActivity": "Verified the models are in MODEL_REGISTRY by running `test_script.py` contain...",
+    "activities": 5
+  },
+  {
+    "sessionId": "10540667020170193495",
+    "title": "P2: 实现编码引擎单元测试",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/llm-privacy-audit/pull/62",
+    "prTitle": "Add Multi-Turn Codebook Engine and Pytest Suite",
+    "lastActivity": "Implemented `paper2_companion_audit/tests/test_multi_turn_codebook.py` with 8...",
+    "activities": 5
+  },
+  {
+    "sessionId": "14803108784334465908",
+    "title": "P2: 实现文心一言角色扮演 API 客户端",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/llm-privacy-audit/pull/73",
+    "prTitle": "Implement WenxinCompanionClient",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "10405924549458667147",
+    "title": "P2: 实现筑梦岛和 Character.AI Web 自动化客户端",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/llm-privacy-audit/pull/60",
+    "prTitle": "feat: implement Playwright-based companion web clients",
+    "lastActivity": "Created the file `paper2_companion_audit/src/clients/companion_client.py` and...",
+    "activities": 5
+  },
+  {
+    "sessionId": "13119586543161036319",
+    "title": "P2: 撰写论文讨论和结论（中文）",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/llm-privacy-audit/pull/89",
+    "prTitle": "Add discussion and conclusion sections for paper2",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "3057797921559668245",
+    "title": "P2: 实现轨迹和危机响应分析单元测试",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/llm-privacy-audit/pull/71",
+    "prTitle": "test(paper2): implement analysis module tests",
+    "lastActivity": "Implemented trajectory.py and crisis_response.py.",
+    "activities": 5
+  },
+  {
+    "sessionId": "10276494970630390472",
+    "title": "P2: 实现社交媒体话语分析模块",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/llm-privacy-audit/pull/81",
+    "prTitle": "feat(paper2): implement discourse analysis framework for AI attachment",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "3533138631430605298",
+    "title": "P2: 创建 .env.example 和 .gitignore",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/llm-privacy-audit/pull/86",
+    "prTitle": "Add .env.example and .gitignore for paper2_companion_audit",
+    "lastActivity": "Verified the files were created correctly with the requested content.",
+    "activities": 5
+  },
+  {
+    "sessionId": "15597229183627030553",
+    "title": "INFRA: 更新 .gitignore 覆盖新项目",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/llm-privacy-audit/pull/98",
+    "prTitle": "Update root .gitignore for paper2 and paper3 runtime files",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "15735445048037253904",
+    "title": "P2: 创建可视化模块",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/llm-privacy-audit/pull/70",
+    "prTitle": "feat(paper2): implement viz.py for publication charts",
+    "lastActivity": "Created paper2_companion_audit/output/figures/ directory for saving plots.",
+    "activities": 5
+  },
+  {
+    "sessionId": "9790532933590121088",
+    "title": "P2: 实现 Talkie Playwright Web 自动化客户端",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/llm-privacy-audit/pull/76",
+    "prTitle": "feat(companion): implement Playwright-based Talkie and Xingye web clients",
+    "lastActivity": "Created the base class CompanionWebClient with initialization, session manage...",
+    "activities": 5
+  },
+  {
+    "sessionId": "11559980640255316212",
+    "title": "INFRA: 更新 llm_client.py 支持 Longcat API",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/llm-privacy-audit/pull/91",
+    "prTitle": "Route GLM models through Longcat proxy",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "10773722359957968249",
+    "title": "P2: 实现多轮对话用户响应模板生成器",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/llm-privacy-audit/pull/99",
+    "prTitle": "feat(paper2): create user response template generator",
+    "lastActivity": "Verified that the file was created using list_files.",
+    "activities": 5
+  },
+  {
+    "sessionId": "17805915224232057677",
+    "title": "P2: 实现多轮审计运行器单元测试",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/llm-privacy-audit/pull/84",
+    "prTitle": "Implement MultiTurnRunner and corresponding tests for paper2 companion audit",
+    "lastActivity": "Created the directory structure for `paper2_companion_audit/src/audit` and `p...",
+    "activities": 5
+  },
+  {
+    "sessionId": "7895793129645473943",
+    "title": "P2: 撰写论文结果章节（中文）",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/llm-privacy-audit/pull/64",
+    "prTitle": "Draft Results Section for Paper 2 (Companion Audit)",
+    "lastActivity": "Created `paper2_companion_audit/paper/sections/04_results.md` and populated i...",
+    "activities": 5
+  },
+  {
+    "sessionId": "9448440383565913828",
+    "title": "P2: 撰写论文引言和文献综述（中文）",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/llm-privacy-audit/pull/61",
+    "prTitle": "feat(paper2): add introduction and literature review sections",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "17085648195980952166",
+    "title": "P2: 实现豆包角色扮演 API 客户端",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/llm-privacy-audit/pull/82",
+    "prTitle": "Implement Doubao Companion Client for paper 2",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "4394968393668374649",
+    "title": "P2: 实现星野 Playwright Web 自动化客户端",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/llm-privacy-audit/pull/65",
+    "prTitle": "feat: Implement XingyeCompanionClient with Playwright",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "16602617480211538943",
+    "title": "Night Content Jieyang retry",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/walk-in-cs/pull/92",
+    "prTitle": "Add night visiting info for Jieyang spots",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "8927378985182057037",
+    "title": "Walking Difficulty Jieyang retry",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/walk-in-cs/pull/90",
+    "prTitle": "Add walk difficulty data for Jieyang spots",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "6009764249669028022",
+    "title": "Time of Day    Shanwei",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/walk-in-cs/pull/79",
+    "prTitle": "Add time of day recommendations for Shanwei spots",
+    "lastActivity": "Generated data/time-of-day-shanwei.json with best time of day research for al...",
+    "activities": 5
+  },
+  {
+    "sessionId": "4273245153403067900",
+    "title": "Time of Day    Jieyang",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/walk-in-cs/pull/95",
+    "prTitle": "feat: add time of day recommendations for Jieyang spots",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "4809035029943472470",
+    "title": "Time of Day    Chaozhou",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/walk-in-cs/pull/78",
+    "prTitle": "Generate time-of-day data for Chaozhou spots",
+    "lastActivity": "Executed the script `node generate-time-of-day.js` to write the JSON data to...",
+    "activities": 5
+  },
+  {
+    "sessionId": "15785462356485822056",
+    "title": "Time of Day    Shantou",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/walk-in-cs/pull/94",
+    "prTitle": "feat: add time of day recommendations for Shantou spots",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "14589148450356141478",
+    "title": "Customs Shanwei",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/walk-in-cs/pull/88",
+    "prTitle": "feat(data): add customs data for Shanwei spots",
+    "lastActivity": "Created script `generate_customs.js` containing LLM-generated JSON for 10 spots.",
+    "activities": 5
+  },
+  {
+    "sessionId": "15774883112712153534",
+    "title": "Customs Jieyang",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/walk-in-cs/pull/89",
+    "prTitle": "feat: add Jieyang customs JSON data",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "2497128245532399482",
+    "title": "Customs Chaozhou",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/walk-in-cs/pull/68",
+    "prTitle": "Add Chaozhou local customs and etiquette data",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "12427390223468683119",
+    "title": "Customs Shantou",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/walk-in-cs/pull/81",
+    "prTitle": "Generate Shantou Customs Data",
+    "lastActivity": "Verified that the generated JSON properties are valid and conform to the crit...",
+    "activities": 5
+  },
+  {
+    "sessionId": "14464299606587280972",
+    "title": "Family Access    Shanwei",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/walk-in-cs/pull/80",
+    "prTitle": "feat: add accessibility data for Shanwei spots",
+    "lastActivity": "Created generate.js to generate the accessibility JSON data for all 10 Shanwe...",
+    "activities": 5
+  },
+  {
+    "sessionId": "7956766470206938657",
+    "title": "Family Access    Jieyang",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/walk-in-cs/pull/75",
+    "prTitle": "Add Jieyang spots family and accessibility data",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "16692695317636786619",
+    "title": "Family Access    Chaozhou",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/walk-in-cs/pull/76",
+    "prTitle": "Add Chaozhou Spots Accessibility Data",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "17973421531382867873",
+    "title": "Family Access    Shantou",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/walk-in-cs/pull/66",
+    "prTitle": "Add family and accessibility data for Shantou spots",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "14855282212460691866",
+    "title": "Budget Info    Shanwei",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/walk-in-cs/pull/87",
+    "prTitle": "feat: add budget info for Shanwei spots",
+    "lastActivity": "Created the script `scripts/generate_budget_shanwei.js` to read the seed file...",
+    "activities": 5
+  },
+  {
+    "sessionId": "14996024540335191930",
+    "title": "Budget Info    Jieyang",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/walk-in-cs/pull/83",
+    "prTitle": "Add Jieyang budget info",
+    "lastActivity": "Created verify_budget.js with checks for JSON format and required properties...",
+    "activities": 5
+  },
+  {
+    "sessionId": "7887964903412221733",
+    "title": "Budget Info    Chaozhou",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/walk-in-cs/pull/82",
+    "prTitle": "Add Chaozhou spots budget data",
+    "lastActivity": "Created and ran `generate_budget_chaozhou.js`, successfully generating `data/...",
+    "activities": 5
+  },
+  {
+    "sessionId": "736206894151645872",
+    "title": "Budget Info    Shantou",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/walk-in-cs/pull/91",
+    "prTitle": "Add Shantou spots budget information",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "2471844720945645969",
+    "title": "Weather Tips    Shanwei",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/walk-in-cs/pull/73",
+    "prTitle": "Create weather-based recommendations for Shanwei spots",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "8281673153497776080",
+    "title": "Weather Tips    Jieyang",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/walk-in-cs/pull/67",
+    "prTitle": "feat: add weather recommendations for Jieyang spots",
+    "lastActivity": "Created the script generate_jieyang_weather.js which reads the seed file, ext...",
+    "activities": 5
+  },
+  {
+    "sessionId": "10238649879602951799",
+    "title": "Weather Tips    Chaozhou",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/walk-in-cs/pull/69",
+    "prTitle": "feat: add weather tips for Chaozhou spots",
+    "lastActivity": "I have created the data/weather-tips-chaozhou.json file with weather-based re...",
+    "activities": 5
+  },
+  {
+    "sessionId": "9517991643143605635",
+    "title": "Weather Tips    Shantou",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/walk-in-cs/pull/74",
+    "prTitle": "feat: add weather-based recommendations for Shantou spots",
+    "lastActivity": "Removed temporary script `generate_weather.js` that was used during generation.",
+    "activities": 5
+  },
+  {
+    "sessionId": "15885558308897386305",
+    "title": "Night Content    Shanwei",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/walk-in-cs/pull/85",
+    "prTitle": "feat: generate night visiting info for Shanwei spots",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "1206783022729169827",
+    "title": "Night Content    Jieyang",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/walk-in-cs/pull/72",
+    "prTitle": "Add night visiting info for Jieyang spots",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "15060445164017824539",
+    "title": "Night Content    Chaozhou",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/walk-in-cs/pull/77",
+    "prTitle": "Add night visiting information for Chaozhou spots",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "841401694786137086",
+    "title": "Night Content    Shantou",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/walk-in-cs/pull/70",
+    "prTitle": "Add Night Info JSON for Shantou Spots",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "3614391513159845264",
+    "title": "Walking Difficulty    Shanwei",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/walk-in-cs/pull/64",
+    "prTitle": "feat: add walking difficulty data for shanwei spots",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "15826858732978384648",
+    "title": "Walking Difficulty    Jieyang",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/walk-in-cs/pull/65",
+    "prTitle": "feat: add walking difficulty data for Jieyang spots",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "6338856072259022410",
+    "title": "Walking Difficulty    Chaozhou",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/walk-in-cs/pull/71",
+    "prTitle": "chore: add walking difficulty data for Chaozhou spots",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "1032875366192808500",
+    "title": "Walking Difficulty    Shantou",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/walk-in-cs/pull/93",
+    "prTitle": "feat: generate walking difficulty data for Shantou spots",
+    "lastActivity": "Created `validate.js` to check the data constraints in `data/walk-difficulty-...",
+    "activities": 5
+  },
+  {
+    "sessionId": "18244877656690082658",
+    "title": "Walk Difficulty    Shantou",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/walk-in-cs/pull/84",
+    "prTitle": "feat: Generate walking difficulty data for Shantou spots",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "1920822928769668662",
+    "title": "Walking Paths — Shanwei",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/walk-in-cs/pull/86",
+    "prTitle": "Add Shanwei walking paths",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "6796565268000667284",
+    "title": "Walking Paths — Jieyang",
+    "status": "running",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "9287226350522369408",
+    "title": "Walking Paths — Shantou",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/walk-in-cs/pull/63",
+    "prTitle": "Generate walking paths for Shantou spots",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "1339398968467087157",
+    "title": "Events Calendar — Shanwei",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/walk-in-cs/pull/61",
+    "prTitle": "Add Shanwei annual events data",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "5780188122160056458",
+    "title": "Events Calendar — Shantou",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/walk-in-cs/pull/62",
+    "prTitle": "Add Shantou spots annual events data",
+    "lastActivity": "I already executed the generation script in a previous step, and `data/events...",
+    "activities": 5
+  },
+  {
+    "sessionId": "3552924032674865385",
+    "title": "P2: 撰写研究设计与方法（中文）",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/llm-privacy-audit/pull/55",
+    "prTitle": "Add methodology section to Paper 2 companion audit",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "5551969450928774842",
+    "title": "P2: 实现多轮对话用户响应模板生成器",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/llm-privacy-audit/pull/36",
+    "prTitle": "Add P2 User Response Templates",
+    "lastActivity": "Created `user_response_templates.py` with the `generate_user_turns` signature...",
+    "activities": 5
+  },
+  {
+    "sessionId": "9162333682373735843",
+    "title": "P2: 实现筑梦岛和 Character.AI Web 自动化客户端",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/llm-privacy-audit/pull/31",
+    "prTitle": "Add companion web clients for Zhumengdao and CharacterAI",
+    "lastActivity": "I have created the `CompanionWebClient` base class in `paper2_companion_audit...",
+    "activities": 5
+  }
+]

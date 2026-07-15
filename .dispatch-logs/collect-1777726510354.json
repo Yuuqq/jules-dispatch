@@ -1,0 +1,778 @@
+[
+  {
+    "sessionId": "3552924032674865385",
+    "title": "P2: 撰写研究设计与方法（中文）",
+    "status": "running",
+    "lastActivity": "Error fetching activities",
+    "activities": 0
+  },
+  {
+    "sessionId": "5551969450928774842",
+    "title": "P2: 实现多轮对话用户响应模板生成器",
+    "status": "running",
+    "lastActivity": "Error fetching activities",
+    "activities": 0
+  },
+  {
+    "sessionId": "9162333682373735843",
+    "title": "P2: 实现筑梦岛和 Character.AI Web 自动化客户端",
+    "status": "running",
+    "lastActivity": "Error fetching activities",
+    "activities": 0
+  },
+  {
+    "sessionId": "17949294535096338561",
+    "title": "P3: 编写信任实验单元测试",
+    "status": "running",
+    "lastActivity": "Error fetching activities",
+    "activities": 0
+  },
+  {
+    "sessionId": "15759856905437475864",
+    "title": "P2: 实现豆包角色扮演 API 客户端",
+    "status": "running",
+    "lastActivity": "Error fetching activities",
+    "activities": 0
+  },
+  {
+    "sessionId": "9235145439748302850",
+    "title": "P2: 实现 Talkie Playwright Web 自动化客户端",
+    "status": "running",
+    "lastActivity": "Error fetching activities",
+    "activities": 0
+  },
+  {
+    "sessionId": "3596262487143755229",
+    "title": "P3: 完善 run_pilot.py 入口脚本",
+    "status": "running",
+    "lastActivity": "Error fetching activities",
+    "activities": 0
+  },
+  {
+    "sessionId": "15448091827757615316",
+    "title": "P2: 实现轨迹和危机响应分析单元测试",
+    "status": "running",
+    "lastActivity": "Error fetching activities",
+    "activities": 0
+  },
+  {
+    "sessionId": "17115303768316392878",
+    "title": "P3: 撰写论文引言和文献综述（中文）",
+    "status": "running",
+    "lastActivity": "Error fetching activities",
+    "activities": 0
+  },
+  {
+    "sessionId": "2582823698603781284",
+    "title": "P2: 创建 .env.example 和 .gitignore",
+    "status": "running",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "5959171923975768579",
+    "title": "P2: 实现编码引擎单元测试",
+    "status": "running",
+    "lastActivity": "Error fetching activities",
+    "activities": 0
+  },
+  {
+    "sessionId": "14122565066740460314",
+    "title": "P3: 完善 run_pilot.py 入口脚本",
+    "status": "running",
+    "lastActivity": "Error fetching activities",
+    "activities": 0
+  },
+  {
+    "sessionId": "2267137511315355179",
+    "title": "P3: 完善 run_analysis.py 综合分析脚本",
+    "status": "running",
+    "lastActivity": "Error fetching activities",
+    "activities": 0
+  },
+  {
+    "sessionId": "18217558367068728125",
+    "title": "P3: 撰写研究设计与方法（中文）",
+    "status": "running",
+    "lastActivity": "Unknown",
+    "activities": 2
+  },
+  {
+    "sessionId": "14959073874160152825",
+    "title": "P3: 撰写论文引言和文献综述（中文）",
+    "status": "running",
+    "lastActivity": "Error fetching activities",
+    "activities": 0
+  },
+  {
+    "sessionId": "3802960167424982504",
+    "title": "P3: 编写信任实验单元测试",
+    "status": "running",
+    "lastActivity": "Created the test file `test_trust_experiment.py` in `src/papers/p3_truth/test...",
+    "activities": 5
+  },
+  {
+    "sessionId": "14757716042879981850",
+    "title": "P3: 创建可视化模块",
+    "status": "running",
+    "lastActivity": "Unknown",
+    "activities": 3
+  },
+  {
+    "sessionId": "17924598958555612364",
+    "title": "P3: 编写 AI 检测器单元测试",
+    "status": "running",
+    "lastActivity": "Unknown",
+    "activities": 3
+  },
+  {
+    "sessionId": "8642087368156812807",
+    "title": "P3: 编写主题熵和事件史分析单元测试",
+    "status": "running",
+    "lastActivity": "Error fetching activities",
+    "activities": 0
+  },
+  {
+    "sessionId": "5123111215149801620",
+    "title": "P3: 完善事件史重建和崩解点检测",
+    "status": "running",
+    "lastActivity": "Error fetching activities",
+    "activities": 0
+  },
+  {
+    "sessionId": "4003003649217364363",
+    "title": "P3: 完善信任实验 LLM-as-Participant 实现",
+    "status": "running",
+    "lastActivity": "Error fetching activities",
+    "activities": 0
+  },
+  {
+    "sessionId": "6540179694802862400",
+    "title": "P3: 完善 AIDetector 三通道融合检测器",
+    "status": "running",
+    "lastActivity": "Error fetching activities",
+    "activities": 0
+  },
+  {
+    "sessionId": "17492453091343473322",
+    "title": "P3: 完善 BERTopic 主题模型 + GTE/PTE 计算",
+    "status": "running",
+    "lastActivity": "Error fetching activities",
+    "activities": 0
+  },
+  {
+    "sessionId": "9051654739997902754",
+    "title": "P3: 完善 WeiboSearchAdapter 爬虫实现",
+    "status": "running",
+    "lastActivity": "Unknown",
+    "activities": 2
+  },
+  {
+    "sessionId": "14147403786987150800",
+    "title": "P3: 完善 StyleFeatureExtractor 中文文本风格特征",
+    "status": "running",
+    "lastActivity": "Directory paper3_truth_fragmentation/src/detection/ has been created successf...",
+    "activities": 5
+  },
+  {
+    "sessionId": "12332829329916247316",
+    "title": "P2: 实现社交媒体话语分析模块",
+    "status": "running",
+    "lastActivity": "Verified creation of paper2_companion_audit/src/analysis and paper2_companion...",
+    "activities": 5
+  },
+  {
+    "sessionId": "12637477830586905683",
+    "title": "P2: 创建 .env.example 和 .gitignore",
+    "status": "running",
+    "lastActivity": "Wrote .env.example to paper2_companion_audit",
+    "activities": 3
+  },
+  {
+    "sessionId": "13487832106200364021",
+    "title": "P2: 撰写研究设计与方法（中文）",
+    "status": "running",
+    "lastActivity": "Error fetching activities",
+    "activities": 0
+  },
+  {
+    "sessionId": "14127481826900087306",
+    "title": "P2: 撰写论文引言和文献综述（中文）",
+    "status": "running",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "9283891730499486981",
+    "title": "P2: 实现轨迹和危机响应分析单元测试",
+    "status": "running",
+    "lastActivity": "Created the required directories and verified them via ls -R",
+    "activities": 4
+  },
+  {
+    "sessionId": "1951107509594607523",
+    "title": "P2: 创建可视化模块",
+    "status": "running",
+    "lastActivity": "Read the content of `paper2_companion_audit/src/analysis/viz.py` and confirme...",
+    "activities": 5
+  },
+  {
+    "sessionId": "3646620742245702595",
+    "title": "P2: 实现多轮审计运行器单元测试",
+    "status": "running",
+    "lastActivity": "Error fetching activities",
+    "activities": 0
+  },
+  {
+    "sessionId": "8907379643147780712",
+    "title": "P2: 实现编码引擎单元测试",
+    "status": "running",
+    "lastActivity": "Error fetching activities",
+    "activities": 0
+  },
+  {
+    "sessionId": "3244825657660670417",
+    "title": "P2: 实现多轮对话用户响应模板生成器",
+    "status": "running",
+    "lastActivity": "Error fetching activities",
+    "activities": 0
+  },
+  {
+    "sessionId": "4107499484228977371",
+    "title": "P2: 实现筑梦岛和 Character.AI Web 自动化客户端",
+    "status": "running",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "1425299653903797585",
+    "title": "P2: 实现星野 Playwright Web 自动化客户端",
+    "status": "running",
+    "lastActivity": "Verified the creation and contents of requirements.txt.",
+    "activities": 5
+  },
+  {
+    "sessionId": "10694944579364992446",
+    "title": "P2: 实现 Talkie Playwright Web 自动化客户端",
+    "status": "running",
+    "lastActivity": "Error fetching activities",
+    "activities": 0
+  },
+  {
+    "sessionId": "1078427746780446412",
+    "title": "P2: 实现文心一言角色扮演 API 客户端",
+    "status": "running",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "7368506214936849654",
+    "title": "P2: 实现豆包角色扮演 API 客户端",
+    "status": "running",
+    "lastActivity": "Error fetching activities",
+    "activities": 0
+  },
+  {
+    "sessionId": "11689973990245948559",
+    "title": "INFRA: 更新 .gitignore 覆盖新项目",
+    "status": "running",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "2716482579756285407",
+    "title": "INFRA: 为论文二和论文三创建 requirements.txt",
+    "status": "running",
+    "lastActivity": "Verified the content of `paper2_companion_audit/requirements.txt` is correct.",
+    "activities": 5
+  },
+  {
+    "sessionId": "17772679887344591608",
+    "title": "Example Task — Enrich Spot Data",
+    "status": "running",
+    "lastActivity": "Unknown",
+    "activities": 2
+  },
+  {
+    "sessionId": "5731677986760428404",
+    "title": "P2: 创建 .env.example 和 .gitignore",
+    "status": "running",
+    "lastActivity": "Created paper2_companion_audit/.env.example",
+    "activities": 5
+  },
+  {
+    "sessionId": "450499712534854323",
+    "title": "P2: 实现社交媒体话语分析模块",
+    "status": "running",
+    "lastActivity": "Error fetching activities",
+    "activities": 0
+  },
+  {
+    "sessionId": "4152893978307998876",
+    "title": "P2: 撰写研究设计与方法（中文）",
+    "status": "running",
+    "lastActivity": "Error fetching activities",
+    "activities": 0
+  },
+  {
+    "sessionId": "1697107091806862204",
+    "title": "P2: 撰写论文引言和文献综述（中文）",
+    "status": "running",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "15537622799628510948",
+    "title": "P2: 创建可视化模块",
+    "status": "running",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "10135273096353244870",
+    "title": "P2: 实现轨迹和危机响应分析单元测试",
+    "status": "running",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "5286151922649447537",
+    "title": "P2: 实现编码引擎单元测试",
+    "status": "running",
+    "lastActivity": "Unknown",
+    "activities": 2
+  },
+  {
+    "sessionId": "15390488993293627150",
+    "title": "P2: 实现多轮审计运行器单元测试",
+    "status": "running",
+    "lastActivity": "Unknown",
+    "activities": 2
+  },
+  {
+    "sessionId": "16351171436292976460",
+    "title": "P2: 实现多轮对话用户响应模板生成器",
+    "status": "running",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "16658566813460375818",
+    "title": "P2: 实现筑梦岛和 Character.AI Web 自动化客户端",
+    "status": "running",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "10750265766628461258",
+    "title": "P2: 实现 Talkie Playwright Web 自动化客户端",
+    "status": "running",
+    "lastActivity": "Talkie client was appended in the first step since I wrote the whole file tog...",
+    "activities": 5
+  },
+  {
+    "sessionId": "6568641823591694366",
+    "title": "P2: 实现星野 Playwright Web 自动化客户端",
+    "status": "running",
+    "lastActivity": "Created `paper2_companion_audit/requirements.txt` and added `playwright` to it.",
+    "activities": 5
+  },
+  {
+    "sessionId": "5123111215149804105",
+    "title": "P2: 实现豆包角色扮演 API 客户端",
+    "status": "running",
+    "lastActivity": "The `DoubaoCompanionClient` class is fully implemented, initializing from the...",
+    "activities": 5
+  },
+  {
+    "sessionId": "8711302240803574095",
+    "title": "P2: 实现文心一言角色扮演 API 客户端",
+    "status": "running",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "12035321479799926317",
+    "title": "INFRA: 为论文二和论文三创建 requirements.txt",
+    "status": "running",
+    "lastActivity": "Created paper3_truth_fragmentation/requirements.txt",
+    "activities": 5
+  },
+  {
+    "sessionId": "12372759908215197502",
+    "title": "INFRA: 更新 .gitignore 覆盖新项目",
+    "status": "running",
+    "lastActivity": "Updated `.gitignore` with the new rules by appending them to the file.",
+    "activities": 5
+  },
+  {
+    "sessionId": "2680273052258524288",
+    "title": "Example Task — Enrich Spot Data",
+    "status": "running",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "3576235339953254277",
+    "title": "INFRA: 更新 llm_client.py 支持 Longcat API",
+    "status": "running",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "16839011888787976318",
+    "title": "Visitor Info    Jieyang (retry)",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/walk-in-cs/pull/59",
+    "prTitle": "Add Jieyang Visitor Info JSON",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "13543136217370915436",
+    "title": "Food    Jieyang (retry)",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/walk-in-cs/pull/58",
+    "prTitle": "feat: add jieyang signature foods data",
+    "lastActivity": "Wrote a python script `generate_food.py` to generate the required food data b...",
+    "activities": 5
+  },
+  {
+    "sessionId": "2137805328946279920",
+    "title": "Route Highlights    Jieyang (retry)",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/walk-in-cs/pull/56",
+    "prTitle": "Add Jieyang route highlights data",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "827020829700037752",
+    "title": "Cultural Stories    Chaozhou (retry)",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/walk-in-cs/pull/55",
+    "prTitle": "feat: add cultural stories data for Chaozhou spots",
+    "lastActivity": "Verified JSON file contains 10 elements, is valid JSON, and all historical an...",
+    "activities": 5
+  },
+  {
+    "sessionId": "17543253510625340185",
+    "title": "Audio Guide    Chaozhou (retry)",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/walk-in-cs/pull/57",
+    "prTitle": "Add audio guide scripts for Chaozhou spots",
+    "lastActivity": "Verified the `data/audio-guide-chaozhou.json` file.",
+    "activities": 5
+  },
+  {
+    "sessionId": "1740345130426211523",
+    "title": "Photo Spots    Shantou (retry)",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/walk-in-cs/pull/60",
+    "prTitle": "Add Shantou photo spots JSON data",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "7952503671249415320",
+    "title": "Write CLI integration tests for new commands",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/slide-skill/pull/13",
+    "prTitle": "Add CLI integration tests for new commands",
+    "lastActivity": "Created tests/test_cli_new.py",
+    "activities": 5
+  },
+  {
+    "sessionId": "12354545693693650929",
+    "title": "Update SKILL.md guide with MiMo TTS and competition toolkit",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/slide-skill/pull/9",
+    "prTitle": "Update SKILL.md with new v1.3 features",
+    "lastActivity": "Verified that the updated documentation has been correctly added to SKILL.md.",
+    "activities": 5
+  },
+  {
+    "sessionId": "1411948157694697881",
+    "title": "Add type hints and fix lint issues across all modules",
+    "status": "running",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "9755731609510737440",
+    "title": "Write integration tests for competition workflow end-to-end",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/slide-skill/pull/11",
+    "prTitle": "Add integration tests for competition workflow",
+    "lastActivity": "Verified the contents of tests/test_competition_workflow.py.",
+    "activities": 5
+  },
+  {
+    "sessionId": "11659423144703673228",
+    "title": "Write unit tests for draft_notes.py module",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/slide-skill/pull/8",
+    "prTitle": "test: add unit tests for draft_notes.py",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "7803272032940803874",
+    "title": "Write unit tests for rehearse.py module",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/slide-skill/pull/15",
+    "prTitle": "Add rehearse tests and fix CJK weight detection",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "17481421462359341587",
+    "title": "Write unit tests for mimo_tts.py module",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/slide-skill/pull/10",
+    "prTitle": "Add unit tests for MiMo TTS module",
+    "lastActivity": "Already verified the written code using `cat` in the previous step.",
+    "activities": 5
+  },
+  {
+    "sessionId": "14697771352646155182",
+    "title": "Write unit tests for competition.py module",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/slide-skill/pull/7",
+    "prTitle": "Add comprehensive unit tests for competition.py",
+    "lastActivity": "Already verified via cat in the previous step.",
+    "activities": 5
+  },
+  {
+    "sessionId": "16268357059087170368",
+    "title": "Integration test — full pipeline with competition example",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/slide-skill/pull/6",
+    "prTitle": "docs: add integration test results",
+    "lastActivity": "Verified SVG output quality including checking width, height, viewBox and abs...",
+    "activities": 5
+  },
+  {
+    "sessionId": "13881906280901354269",
+    "title": "Improve SVG visual design and polish",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/slide-skill/pull/14",
+    "prTitle": "feat: improve SVG layout visuals",
+    "lastActivity": "Added url(#card-shadow) filter to background rects in _render_bullet_list in...",
+    "activities": 5
+  },
+  {
+    "sessionId": "2880519923413257394",
+    "title": "Add multiple layout templates for visual variety",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/slide-skill/pull/12",
+    "prTitle": "feat: add multiple SVG layout templates for visual variety",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "11841245016889179754",
+    "title": "Fix title overflow and empty body content",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/slide-skill/pull/16",
+    "prTitle": "Fix SVG title text overflow and empty body rendering",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "8396982592064802979",
+    "title": "Fix SVG text layout — bullet points and line breaks",
+    "status": "running",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "7746729123472092827",
+    "title": "Food    Shanwei",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/walk-in-cs/pull/42",
+    "prTitle": "Add Shanwei foods data",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "17569605114181693792",
+    "title": "Food — Jieyang",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/walk-in-cs/pull/18",
+    "prTitle": "Add Jieyang food data",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "16375580699948101932",
+    "title": "Food — Chaozhou",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/walk-in-cs/pull/25",
+    "prTitle": "feat: add signature food data for Chaozhou spots",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "11498374691665216139",
+    "title": "Food — Shantou",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/walk-in-cs/pull/31",
+    "prTitle": "Add signature local foods for Shantou spots",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "4036808386966975988",
+    "title": "Route Highlights — Shanwei",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/walk-in-cs/pull/26",
+    "prTitle": "Add Shanwei walking routes highlights",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "3725867150080217917",
+    "title": "Route Highlights — Jieyang",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/walk-in-cs/pull/20",
+    "prTitle": "feat: add route highlights for Jieyang",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "4742409468558766412",
+    "title": "Route Highlights — Chaozhou",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/walk-in-cs/pull/45",
+    "prTitle": "feat(data): add route highlights for Chaozhou",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "6151381331100743651",
+    "title": "Route Highlights — Shantou",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/walk-in-cs/pull/49",
+    "prTitle": "feat: add Shantou route highlights json",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "1995692605816424984",
+    "title": "Web City Covers — Jieyang + Shanwei",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/walk-in-cs/pull/23",
+    "prTitle": "Generate web companion city cover images for Jieyang and Shanwei",
+    "lastActivity": "Installed dependencies using npm install and verified sharp is available.",
+    "activities": 5
+  },
+  {
+    "sessionId": "338323354896834910",
+    "title": "Cover Images — Jieyang + Shanwei Areas",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/walk-in-cs/pull/21",
+    "prTitle": "feat: generate Jieyang and Shanwei area cover images",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "2964336692580405823",
+    "title": "Photo Spots — Shanwei",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/walk-in-cs/pull/41",
+    "prTitle": "Add Shanwei photo spots data",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "5410218895670047131",
+    "title": "Photo Spots — Jieyang",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/walk-in-cs/pull/40",
+    "prTitle": "Add photo spots data for Jieyang",
+    "lastActivity": "Researched photo spots for the 10 spots found in Jieyang.",
+    "activities": 5
+  },
+  {
+    "sessionId": "11677633279845090793",
+    "title": "Photo Spots — Chaozhou",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/walk-in-cs/pull/51",
+    "prTitle": "Add photography tips for Chaozhou spots",
+    "lastActivity": "Verified script was created successfully.",
+    "activities": 5
+  },
+  {
+    "sessionId": "17163973938845838686",
+    "title": "Photo Spots — Shantou",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/walk-in-cs/pull/22",
+    "prTitle": "Add Shantou Photo Spots Data",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "7716078827775599112",
+    "title": "Cultural Stories — Shanwei",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/walk-in-cs/pull/43",
+    "prTitle": "Add cultural stories and anecdotes for Shanwei spots",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "14948588530830189864",
+    "title": "Cultural Stories — Jieyang",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/walk-in-cs/pull/38",
+    "prTitle": "Add cultural data for Jieyang spots",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "1484803492464738676",
+    "title": "Cultural Stories — Chaozhou",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/walk-in-cs/pull/24",
+    "prTitle": "Add Chaozhou cultural stories and anecdotes",
+    "lastActivity": "Compiled cultural stories and anecdotes for all 10 Chaozhou spots based on th...",
+    "activities": 5
+  },
+  {
+    "sessionId": "7851135397877207529",
+    "title": "Cultural Stories — Shantou",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/walk-in-cs/pull/50",
+    "prTitle": "Add cultural data for Shantou spots",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "16069953614895510676",
+    "title": "Seasonal — Shanwei",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/walk-in-cs/pull/35",
+    "prTitle": "Research seasonal visiting info for Shanwei spots",
+    "lastActivity": "Unknown",
+    "activities": 5
+  },
+  {
+    "sessionId": "6547348054289323136",
+    "title": "Seasonal — Jieyang",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/walk-in-cs/pull/44",
+    "prTitle": "feat: Add Jieyang seasonal spot info data",
+    "lastActivity": "Researched seasonal information for the 10 Jieyang spots and wrote the data t...",
+    "activities": 5
+  },
+  {
+    "sessionId": "9134261089203919223",
+    "title": "Seasonal — Chaozhou",
+    "status": "running",
+    "prUrl": "https://github.com/Yuuqq/walk-in-cs/pull/37",
+    "prTitle": "feat: add seasonal info for chaozhou spots",
+    "lastActivity": "Unknown",
+    "activities": 5
+  }
+]
