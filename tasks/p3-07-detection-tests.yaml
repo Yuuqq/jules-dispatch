@@ -1,0 +1,22 @@
+title: "P3: 编写 AI 检测器单元测试"
+source: "sources/github/Yuuqq/llm-privacy-audit"
+branch: "main"
+prompt: |
+  创建 paper3_truth_fragmentation/tests/test_ai_detector.py
+
+  为 paper3_truth_fragmentation/src/detection/ai_detector.py 编写单元测试。
+
+  要求：
+  1. 使用 pytest
+  2. mock 所有外部 API 调用（llm_client）和本地模型调用
+  3. 测试用例：
+     - test_c3_voting_unanimous_ai: 3/3 投 AI → vote_score 接近 1.0
+     - test_c3_voting_majority_ai: 2/3 投 AI → 标为 AI
+     - test_c3_voting_minority_ai: 1/3 投 AI → 标为 human
+     - test_c2_heuristic_ai_text: 典型 AI 文本（结构化、成语多、连接词多）→ style_score > 0.6
+     - test_c2_heuristic_human_text: 典型人类文本（口语、错别字、颜文字）→ style_score < 0.4
+     - test_fusion_thresholds: 验证 0.65/0.40 阈值正确
+     - test_fusion_weighted_score: 验证权重 0.3/0.3/0.4
+     - test_batch_detection: 验证批量处理 100 条的速度和正确性
+     - test_empty_text_handling: 空文本/纯 emoji/超短文本的边界处理
+  4. 手写 5 条 AI 风格微博 + 5 条真人风格微博作为测试数据

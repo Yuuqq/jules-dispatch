@@ -1,0 +1,35 @@
+title: "P2: 创建 .env.example 和 .gitignore"
+source: "sources/github/Yuuqq/llm-privacy-audit"
+branch: "main"
+prompt: |
+  创建 paper2_companion_audit/.env.example 和 paper2_companion_audit/.gitignore
+
+  .env.example 内容：
+  ```
+  # Paper 2: AI Companion Audit
+  # 被测产品 API
+  DOUBAO_API_BASE=https://ark.cn-beijing.volces.com/api/v3
+  DOUBAO_API_KEY=your-doubao-api-key
+  WENXIN_API_BASE=https://qianfan.baidubce.com/v2
+  WENXIN_API_KEY=your-wenxin-api-key
+
+  # Longcat 代理（用于 LLM Judge）
+  LONGCAT_API_BASE=https://longcat.ai/v1
+  LONGCAT_API_KEY=your-longcat-api-key
+
+  # 运行时参数
+  MAX_CONCURRENCY=8
+  TEMPERATURE=0.8
+  MAX_TURNS=10
+  ```
+
+  .gitignore 内容：
+  ```
+  .env
+  __pycache__/
+  *.pyc
+  output/
+  data/raw/
+  *.parquet
+  .dispatch-logs/
+  ```

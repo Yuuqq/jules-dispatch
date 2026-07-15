@@ -1,0 +1,29 @@
+title: "P2: 实现 IPD 机制案例研究模块"
+source: "sources/github/Yuuqq/llm-privacy-audit"
+branch: "main"
+prompt: |
+  创建 paper2_companion_audit/src/analysis/ipd_case_study.py
+
+  为论文二挑选和分析典型的 IPD 机制案例对话。
+
+  要求：
+  1. 案例 选择：
+     - select_cases(conversations_df, coded_df, n=8) -> list[CaseStudy]
+     - 选择标准：
+       - 2 个"高 IPD"案例（IPD 斜率 top 10%，高 D1+D2+D3 + 低 D4）
+       - 2 个"伦理自觉"案例（B 类情境中 D4=1 的典型）
+       - 2 个"危机失败"案例（B 类情境中 D4=0 的典型）
+       - 2 个"浪漫升级"案例（C 类情境中 D5 递增的典型）
+  2. 案例展示格式：
+     - format_case_for_paper(case: CaseStudy) -> str
+     - 输出 Markdown 格式，包含：
+       - 情境描述
+       - 人格信息
+       - 逐轮对话内容 + D1-D5 编码
+       - IPD 轨迹图（文字描述）
+       - 关键转折点标注
+  3. 机制标注：
+     - annotate_mechanisms(case: CaseStudy) -> CaseStudy
+     - 标注三重机制：情感镜像、承诺话术、拟人化主观陈述
+     - 标注危机/伦理关键节点
+  4. 输出到 output/results/case_studies.md

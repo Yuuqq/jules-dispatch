@@ -1,0 +1,25 @@
+title: "P3: 编写风格特征提取单元测试"
+source: "sources/github/Yuuqq/llm-privacy-audit"
+branch: "main"
+prompt: |
+  创建 paper3_truth_fragmentation/tests/test_style_features.py
+
+  为 style_features.py 编写单元测试。
+
+  要求：
+  1. 使用 pytest
+  2. 测试用例：
+     - test_sentence_length_features: 验证平均句长、方差、最大最小值
+     - test_punctuation_features: 标点密度、逗号/句号比、感叹/问号比
+     - test_idiom_density: 成语检测（"一心一意""不约而同"等）
+     - test_connector_ratio: 连接词检测（"首先""其次""总之""然而"）
+     - test_list_markers: 结构化列表检测（"1." "2." "一、" "二、"）
+     - test_colloquial_markers: 口语化标记（"哈哈""卧槽""绝了"）
+     - test_first_person_ratio: 第一人称密度
+     - test_entity_density: 实体密度（数字、时间、地名）
+     - test_repeated_3gram: 3-gram 重复率
+     - test_empty_text: 空文本返回全零
+     - test_short_text: 超短文本（1-2 字）不报错
+     - test_extract_all: 整合提取返回完整 dict 且所有值为 float
+  3. 每个测试用真实中文微博文本（手写 5 条 AI 风格 + 5 条真人风格）
+  4. 验证 AI 风格文本的 connector_ratio 和 idiom_density 显著高于真人文本

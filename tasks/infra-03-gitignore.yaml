@@ -1,0 +1,25 @@
+title: "INFRA: 更新 .gitignore 覆盖新项目"
+source: "sources/github/Yuuqq/llm-privacy-audit"
+branch: "main"
+prompt: |
+  更新根目录 .gitignore，确保覆盖论文二和论文三的运行时文件。
+
+  添加以下规则（如果不存在）：
+  - __pycache__/
+  - *.pyc
+  - .env
+  - data/cookies/
+  - data/runs/
+  - data/coded/
+  - data/experiments/
+  - data/final/
+  - data/labeled/
+  - data/models/
+  - output/
+  - *.parquet
+  - .dispatch-logs/
+  - vendor/jules-dispatch/node_modules/
+  - paper2_companion_audit/output/
+  - paper3_truth_fragmentation/output/
+
+  注意：不要删除 .gitignore 中已有的规则，只追加缺失的。

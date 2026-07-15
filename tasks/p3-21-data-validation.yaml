@@ -1,0 +1,30 @@
+title: "P3: 创建数据验证和清洗工具"
+source: "sources/github/Yuuqq/llm-privacy-audit"
+branch: "main"
+prompt: |
+  创建 paper3_truth_fragmentation/src/audit/data_validator.py
+
+  为论文三的数据管线实现验证和清洗工具。
+
+  要求：
+  1. 微博数据验证：
+     - validate_post(post: dict) -> ValidationResult
+     - 检查：post_id 唯一、content 非空、posted_at 有效 ISO 时间戳
+     - 检查：likes/reposts/comments ≥ 0 整数
+     - 检查：user_id_hash 为 12 位 hex
+     - 检查：content 长度 1-5000 字
+  2. 检测结果验证：
+     - validate_detection(result: dict) -> ValidationResult
+     - 检查：label 在 {AI, human, uncertain}
+     - 检查：confidence 在 [0, 1]
+     - 检查：ai_subtype 在 {T1, T2, T3, T4, none}
+  3. 信任实验数据验证：
+     - validate_judgment(judgment: dict) -> ValidationResult
+     - 检查：judgment 在 {human, AI, uncertain}
+     - 检查：trust_score 在 [1, 7] 整数
+     - 检查：reasoning 非空 30-200 字
+  4. 事件时间窗验证：
+     - validate_time_windows(event_config: dict) -> ValidationResult
+     - 检查：core 在 pre 之后、post 在 core 之后
+     - 检查：无重叠
+  5. 批量验证 + 质量报告生成

@@ -1,0 +1,22 @@
+title: "P2: 实现多轮审计运行器单元测试"
+source: "sources/github/Yuuqq/llm-privacy-audit"
+branch: "main"
+prompt: |
+  创建 paper2_companion_audit/tests/test_multi_turn_runner.py
+
+  为 paper2_companion_audit/src/audit/multi_turn_runner.py 编写全面的单元测试。
+
+  要求：
+  1. 使用 pytest
+  2. mock 所有外部 API 调用（companion_client 和 codebook_engine）
+  3. 测试用例：
+     - test_expand_tasks: 验证任务展开数量正确（10 × 3 × 6 × 5 = 900）
+     - test_checkpoint_save_and_resume: 验证检查点保存和恢复
+     - test_single_conversation_flow: 验证单次 10 轮对话的完整流程
+     - test_concurrent_execution: 验证并发执行不产生数据竞争
+     - test_error_handling_api_failure: API 调用失败时的错误处理
+     - test_error_handling_timeout: 超时处理
+     - test_output_format: 验证输出 CSV 的列名和数据格式
+  4. 使用 tmp_path fixture 处理临时文件
+  5. 每个 mock 的 AI 响应应模拟真实的角色扮演对话（中文，有情感）
+  6. 创建 paper2_companion_audit/tests/__init__.py

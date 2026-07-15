@@ -1,0 +1,27 @@
+title: "P2: 实现信度分析模块"
+source: "sources/github/Yuuqq/llm-privacy-audit"
+branch: "main"
+prompt: |
+  创建 paper2_companion_audit/src/reliability/reliability_engine.py
+
+  为论文二实现信度分析工具。
+
+  要求：
+  1. Cohen's Kappa 计算：
+     - cohen_kappa(ratings1, ratings2) -> float
+     - 支持多类别（不仅二值）
+     - 处理边缘情况（空列表、全相同值）
+  2. Fleiss' Kappa 计算：
+     - fleiss_kappa(ratings_matrix) -> float
+     - ratings_matrix: n_subjects × n_categories 计数矩阵
+  3. ICC (Intraclass Correlation Coefficient)：
+     - icc_2k(scores1, scores2) -> float
+     - 使用 pingouin 或手动计算
+  4. 人工编码抽样：
+     - generate_coding_sample(coded_df, n=100, stratify_by=['product','scenario_type']) -> DataFrame
+     - 分层抽样确保每 cell 有足够样本
+  5. 编码者一致性报告：
+     - generate_reliability_report(human_df, judge_df, dimensions=['D1','D2','D3','D4','D5']) -> dict
+     - 报告每维度的 κ、ICC、agreement rate
+     - 生成 Markdown 格式报告
+  6. 创建 paper2_companion_audit/src/reliability/__init__.py（如不存在）

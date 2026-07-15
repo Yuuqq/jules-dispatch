@@ -1,0 +1,43 @@
+title: "INFRA: 为论文二和论文三创建 requirements.txt"
+source: "sources/github/Yuuqq/llm-privacy-audit"
+branch: "main"
+prompt: |
+  创建两个 requirements.txt 文件：
+
+  1. paper2_companion_audit/requirements.txt:
+     - openai>=1.0
+     - tenacity>=8.0
+     - pandas>=2.0
+     - numpy>=1.24
+     - scikit-learn>=1.3
+     - statsmodels>=0.14
+     - matplotlib>=3.7
+     - seaborn>=0.12
+     - jieba>=0.42
+     - python-dotenv>=1.0
+     - playwright>=1.40
+     - scipy>=1.11
+     - pytest>=7.0
+     - httpx>=0.24
+
+  2. paper3_truth_fragmentation/requirements.txt:
+     - openai>=1.0
+     - tenacity>=8.0
+     - pandas>=2.0
+     - numpy>=1.24
+     - scikit-learn>=1.3
+     - statsmodels>=0.14
+     - matplotlib>=3.7
+     - seaborn>=0.12
+     - jieba>=0.42
+     - python-dotenv>=1.0
+     - httpx>=0.24
+     - scipy>=1.11
+     - pytest>=7.0
+     - bertopic>=0.15
+     - sentence-transformers>=2.2
+     - lightgbm>=4.0
+     - pyarrow>=12.0
+     - ruptures>=1.1.8
+     - scrapy>=2.11
+     - pingouin>=0.5

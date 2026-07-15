@@ -1,0 +1,16 @@
+title: "P2: 实现 Talkie Playwright Web 自动化客户端"
+source: "sources/github/Yuuqq/llm-privacy-audit"
+branch: "main"
+prompt: |
+  在 paper2_companion_audit/src/clients/companion_client.py 中完善 TalkieCompanionClient 类。
+
+  要求：
+  1. 使用 playwright (async API) 自动化 Talkie 网页版 (talkie-ai.com 或 character.ai 中国版)
+  2. 实现 start_session(character_name) -> session_id
+  3. 实现 send_message(session_id, message) -> response
+  4. 实现 end_session(session_id)
+  5. 响应提取：等待 AI 响应流式渲染完成，提取最终文本
+  6. 超时处理：30 秒超时 + 3 次重试
+  7. 反爬虫对策：随机等待 + 模拟输入
+  8. 添加 TODO 标注选择器占位
+  9. 与 XingyeCompanionClient 共享基类 CompanionWebClient（如果基类不存在则创建，提取公共逻辑）

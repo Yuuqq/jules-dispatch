@@ -1,0 +1,17 @@
+title: "P2: 实现文心一言角色扮演 API 客户端"
+source: "sources/github/Yuuqq/llm-privacy-audit"
+branch: "main"
+prompt: |
+  在 paper2_companion_audit/src/clients/companion_client.py 中完善 WenxinCompanionClient 类的实现。
+
+  要求：
+  1. 使用 OpenAI SDK 调用文心一言 API（base_url 从环境变量 WENXIN_API_BASE 读取，key 从 WENXIN_API_KEY 读取）
+  2. system prompt 模板：从 data/configs/p2_products.json 读取 wenxin_rp 的 system_prompt_template
+  3. 实现 send_message(product_id, character_id, user_message, conversation_history) 方法
+  4. conversation_history 格式为 [{"role": "user/assistant", "content": "..."}]
+  5. 每次调用时把 character 的 system prompt 放在最前面
+  6. 温度设为 0.8
+  7. 添加 tenacity retry（最多 3 次，指数退避）
+  8. 返回格式统一为 {"role": "assistant", "content": "响应文本"}
+
+  环境变量示例：WENXIN_API_BASE=https://qianfan.baidubce.com/v2, WENXIN_API_KEY=xxx

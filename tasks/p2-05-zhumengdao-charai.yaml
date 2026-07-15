@@ -1,0 +1,22 @@
+title: "P2: 实现筑梦岛和 Character.AI Web 自动化客户端"
+source: "sources/github/Yuuqq/llm-privacy-audit"
+branch: "main"
+prompt: |
+  在 paper2_companion_audit/src/clients/companion_client.py 中完善 ZhumengdaoCompanionClient 和 CharacterAICompanionClient 类。
+
+  要求：
+  1. 两个类都继承 CompanionWebClient 基类（如不存在则创建）
+  2. ZhumengdaoCompanionClient：
+     - 筑梦岛网页版自动化
+     - start_session / send_message / end_session 接口
+     - TODO 标注具体选择器
+  3. CharacterAICompanionClient：
+     - character.ai 网页版自动化（中文角色）
+     - 同上接口
+     - TODO 标注具体选择器
+  4. 共享基类 CompanionWebClient：
+     - 封装 playwright page 管理
+     - _wait_for_response(timeout=30) 方法
+     - _simulate_typing(text, speed_range=(0.03, 0.08)) 方法
+     - _random_delay(min_s=2, max_s=5) 方法
+     - 上下文管理器支持 async with

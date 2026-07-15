@@ -1,0 +1,26 @@
+title: "P3: 完善 WeiboSearchAdapter 爬虫实现"
+source: "sources/github/Yuuqq/llm-privacy-audit"
+branch: "main"
+prompt: |
+  完善 paper3_truth_fragmentation/src/crawl/weibo_client.py 中的 WeiboSearchAdapter。
+
+  要求：
+  1. 集成 vendor/weibo-search（dataabc/weibo-search）的 Python API
+  2. 实现 crawl_posts(event_config, window_type, output_path) 方法：
+     - 从 data/configs/p3_crisis_events.json 读取事件配置
+     - 根据 window_type（pre/core/post）确定时间范围
+     - 使用事件关键词列表搜索微博博文
+     - 输出到 Parquet 文件（列：post_id, user_id_hash, content, posted_at, likes, reposts, comments, source）
+  3. 实现 crawl_comments(post_ids, output_path) 方法：
+     - 对给定 post_id 列表爬取热门评论
+     - 输出到 Parquet（列：comment_id, post_id, user_id_hash, content, posted_at, likes）
+  4. Cookie 管理：
+     - 从 data/cookies/weibo.txt 读取 cookie 字符串
+     - 支持纯文本格式和 JSON 格式
+     - Cookie 过期检测（HTTP 403 时提示更新）
+  5. 限速：请求间隔可配置（默认 3 秒），使用 time.sleep + 随机抖动
+  6. 断点续传：已爬取的 post_id 记录在 output_path 同目录的 .checkpoint.json
+  7. 匿名化：user_id 用 SHA256 截断 12 位
+  8. 错误处理：网络超时、cookie 失效、反爬封禁（返回友好错误信息）
+
+  如果 vendor/weibo-search 不存在，添加 TODO 标注并用 httpx 直接调用微博搜索 API 作为 fallback。

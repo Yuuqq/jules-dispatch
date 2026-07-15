@@ -1,0 +1,25 @@
+title: "P2: 完善 run_pilot.py 入口脚本"
+source: "sources/github/Yuuqq/llm-privacy-audit"
+branch: "main"
+prompt: |
+  完善 paper2_companion_audit/src/run_pilot.py
+
+  要求实现端到端 pilot 流程：
+  1. 添加 argparse 参数：
+     --products: 选择产品（默认 doubao_rp,wenxin_rp）
+     --scenarios: 选择情境（默认 A1_loneliness）
+     --reps: 重复次数（默认 2）
+     --output-dir: 输出目录（默认 data/runs/p2_pilot/）
+     --skip-api: 跳过 API 调用，用 mock 数据
+  2. Pilot 规模：1 情境 × 3 脆弱度 × 2 产品 × 2 重复 = 12 个多轮对话
+  3. Pilot 流程：
+     Step 1: 环境检查（API key 可用性、依赖包）
+     Step 2: 加载情境配置和产品配置
+     Step 3: 展开任务列表（12 个 conversation spec）
+     Step 4: 并发执行多轮对话（每对话 10 轮）
+     Step 5: 对每个对话的每轮做 D1-D5 编码（调用 longcat_agentic）
+     Step 6: 保存原始对话 + 编码结果到 output_dir
+     Step 7: 计算基础统计（IPD 斜率、CRR）
+     Step 8: 输出 pilot_summary.json
+  4. 使用 logging 模块记录进度
+  5. 所有 sys.path 操作确保能找到共享的 src/clients/llm_client.py

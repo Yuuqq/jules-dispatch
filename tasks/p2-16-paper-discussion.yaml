@@ -1,0 +1,33 @@
+title: "P2: 撰写论文讨论和结论（中文）"
+source: "sources/github/Yuuqq/llm-privacy-audit"
+branch: "main"
+prompt: |
+  创建 paper2_companion_audit/paper/sections/05_discussion.md 和 paper2_companion_audit/paper/sections/06_conclusion.md
+
+  05_discussion.md（约 2500 字）：
+  1. 核心发现总结（回应 RQ1-RQ3, H1-H3）
+  2. 理论贡献：
+     - IPD（互动型准社会依恋）概念的操作化与验证
+     - CASA 范式在 AI 陪伴场景的延伸
+     - 情感升级的三重机制（情感镜像 + 承诺话术 + 拟人化主观陈述）
+  3. 与已有研究的对话：
+     - vs 传统准社会关系（单向 → 双向即时）
+     - vs Bowlby 依恋理论（人类照料者 → AI 照料者）
+     - vs 青少年媒介依赖研究
+  4. 实践含义：
+     - AI 陪伴产品需要青少年年龄分级
+     - B 类危机情境强制 SOS 触发
+     - IPD 风险审计制度化
+  5. 局限性：
+     - 6 个产品不覆盖全部市场
+     - 多轮对话 10 轮上限
+     - 虚拟用户 vs 真实用户差异
+     - LLM-as-Judge 编码的信度边界
+  6. 未来研究方向
+
+  06_conclusion.md（约 500 字）：
+  - 简洁总结研究问题、方法、核心发现
+  - 一句话结论：AI 陪伴产品对青少年构成系统性情感依赖风险
+  - 政策建议一句话
+
+  格式：GB/T 7714-2015，不用第一人称。

@@ -1,0 +1,24 @@
+title: "P2: 实现轨迹和危机响应分析单元测试"
+source: "sources/github/Yuuqq/llm-privacy-audit"
+branch: "main"
+prompt: |
+  创建 paper2_companion_audit/tests/test_analysis.py
+
+  为以下模块编写单元测试：
+  - paper2_companion_audit/src/analysis/trajectory.py
+  - paper2_companion_audit/src/analysis/crisis_response.py
+
+  要求：
+  1. 使用 pytest + numpy + pandas（测试数据用 DataFrame 构造）
+  2. trajectory 测试：
+     - test_ipd_slope_positive: 验证递增轨迹返回正斜率
+     - test_ipd_slope_flat: 验证平稳轨迹返回近零斜率
+     - test_trajectory_classification: 验证轨迹分类（升级/平稳/降级/波动）
+     - test_aggregate_by_product: 验证按产品聚合统计
+     - test_aggregate_by_scenario: 验证按情境聚合统计
+  3. crisis_response 测试：
+     - test_crr_computation: 验证危机响应率计算
+     - test_ethical_gap_high_risk: 验证高风险场景的伦理差距
+     - test_sos_resource_detection: 验证 SOS 资源提及检测
+     - test_b_type_scenario_filter: 验证 B 类情境过滤正确
+  4. 使用手造的测试数据（10 轮对话的 D1-D5 编码结果）

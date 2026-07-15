@@ -1,0 +1,26 @@
+title: "P3: 创建 AI 内容子类型分类的标注数据生成器"
+source: "sources/github/Yuuqq/llm-privacy-audit"
+branch: "main"
+prompt: |
+  创建 paper3_truth_fragmentation/src/detection/generate_calibration_data.py
+
+  生成 AI 检测器校准用的合成数据。
+
+  要求：
+  1. 生成真人风格微博文本（200 条）：
+     - 从真实微博风格特征分布中采样
+     - 包含：错别字、口语化、emoji、@提及、具体地名/人名
+     - 题材：灾难/事故/食品安全相关
+     - 使用模板 + 随机化生成
+  2. 生成 T1（完全 AI 生成）风格文本（200 条）：
+     - 模拟 GPT/Kimi/文心的中文输出风格
+     - 特征：结构化、成语多、连接词多、无具体细节、语气中性
+  3. 生成 T2（AI 改写真人原始）风格文本（200 条）：
+     - 以真人文本为基础，模拟 AI 润色
+     - 保留部分细节但语气更流畅
+  4. 生成 T3（AI 翻译）风格文本（100 条）：
+     - 模拟英文→中文翻译痕迹
+     - "的"字过多、欧化句式、"作为一个..."
+  5. 每条包含：text, ground_truth_label, ai_subtype, source_model
+  6. 输出到 data/labeled/p3_calibration_synthetic.csv
+  7. 可作为 C2 LightGBM 训练数据和 C1 PPL 校准数据的替代

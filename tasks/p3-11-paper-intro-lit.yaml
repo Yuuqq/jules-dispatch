@@ -1,0 +1,24 @@
+title: "P3: 撰写论文引言和文献综述（中文）"
+source: "sources/github/Yuuqq/llm-privacy-audit"
+branch: "main"
+prompt: |
+  创建 paper3_truth_fragmentation/paper/sections/01_introduction.md 和 paper3_truth_fragmentation/paper/sections/02_literature_review.md
+
+  中文计算传播学论文，主题"真相碎片化：公共危机事件中 AI 生成内容在微博舆论场的渗透路径与个人化叙事建构"。
+
+  01_introduction.md（约 1500 字）：
+  1. 背景：生成式 AI 内容在公共危机中的渗透（2024 年典型案例）
+  2. 问题提出：AI 内容是否改变了舆论场的信息结构？
+  3. "真相碎片化"概念引入：前 AI 时代谣言有主导叙事，AI 时代每人收到个人化拼接版
+  4. 研究问题 RQ1-RQ3 + 研究假设
+  5. 研究意义：理论（PTE 概念）、方法（AI 内容检测 + LLM 实验）、实践（平台标注政策）
+
+  02_literature_review.md（约 3500 字）：
+  1. 危机传播理论（Situational Crisis Communication Theory）
+  2. 集体意义建构（Weick, 1993; Shibutani, 1966 谣言经典理论）
+  3. 假新闻扩散（Vosoughi et al., 2018, Science — 虚假传播快于真实）
+  4. AI 生成内容检测技术综述（PPL、风格特征、LLM 判断）
+  5. 计算社会科学中的 LLM-as-Participant 方法论（Argyle et al., 2023; Park et al., 2023）
+  6. "真相碎片化"理论框架：Personal Truth Entropy (PTE) 概念提出
+
+  格式：GB/T 7714-2015，关键术语首现标英文，不用第一人称。

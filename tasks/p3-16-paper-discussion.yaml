@@ -1,0 +1,32 @@
+title: "P3: 撰写论文讨论和结论（中文）"
+source: "sources/github/Yuuqq/llm-privacy-audit"
+branch: "main"
+prompt: |
+  创建 paper3_truth_fragmentation/paper/sections/05_discussion.md 和 paper3_truth_fragmentation/paper/sections/06_conclusion.md
+
+  05_discussion.md（约 3000 字）：
+  1. 核心发现总结（回应 RQ1-RQ3）
+  2. 理论贡献：
+     - PTE（个人真相熵）概念的操作化与验证
+     - "真相碎片化" vs 传统假新闻扩散理论（Vosoughi et al., 2018）
+     - 集体意义建构在 AI 时代的失效机制
+  3. 与已有研究的对话：
+     - vs 谣言传播研究（主导叙事 → 个人化叙事崩解）
+     - vs AI 内容检测技术文献
+     - vs LLM-as-Participant 方法论讨论
+  4. 方法论反思：
+     - 三通道检测器的精度与局限
+     - 虚拟被试 vs 真人被试的外部效度
+     - BERTopic 在中文短文本上的适用性
+  5. 政策含义：
+     - 危机情境下平台主动标注 AI 内容的政策建议
+     - 危机期 AI 内容风险指数
+     - 公共传播机构的"主导叙事维护"职能
+  6. 局限性与未来方向
+
+  06_conclusion.md（约 500 字）：
+  - 简洁总结
+  - 核心论点：AI 生成内容正在系统性瓦解公共危机中的集体意义建构
+  - 政策呼吁
+
+  格式：GB/T 7714-2015，不用第一人称。

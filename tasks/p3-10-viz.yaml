@@ -1,0 +1,22 @@
+title: "P3: 创建可视化模块"
+source: "sources/github/Yuuqq/llm-privacy-audit"
+branch: "main"
+prompt: |
+  创建 paper3_truth_fragmentation/src/analysis/viz.py
+
+  为论文三生成出版级图表。使用 matplotlib + seaborn。
+
+  要求：
+  1. 配置中文字体（SimHei/Microsoft YaHei + fallback）
+  2. 实现 6 个图表函数：
+     - plot_ai_timeline(df): AI 渗透时间线（X=时间，Y=AI 比例%，3 事件叠加或分面）
+     - plot_entropy_curves(df): GTE + PTE 时序曲线（双 Y 轴，标注崩解点）
+     - plot_pte_distribution(df): PTE 分布直方图（AI 高 vs AI 低样本对比）
+     - plot_trust_heatmap(df): 人格 × 内容类型信任热力图
+     - plot_cue_lexicon(cues): 启发式线索词条形图（top 20-30）
+     - plot_event_comparison(df): 跨事件对比（3 事件 × 核心指标雷达图）
+  3. 每个函数接受 DataFrame 或 dict 参数
+  4. 输出到 output/figures/，dpi=300，figsize=(10,7)
+  5. 配色统一（seaborn muted 或自定义）
+  6. 所有文字中文
+  7. 返回 figure 对象

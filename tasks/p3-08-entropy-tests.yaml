@@ -1,0 +1,23 @@
+title: "P3: 编写主题熵和事件史分析单元测试"
+source: "sources/github/Yuuqq/llm-privacy-audit"
+branch: "main"
+prompt: |
+  创建 paper3_truth_fragmentation/tests/test_entropy.py
+
+  为 topic_model.py 和 event_history.py 编写单元测试。
+
+  要求：
+  1. 使用 pytest + pandas + numpy
+  2. topic_model 测试：
+     - test_gte_computation: 手造 100 条博文 + 5 个主题分布，验证 GTE 计算
+     - test_gte_increases_with_diversity: 主题越分散 GTE 越高
+     - test_pte_per_user: 验证单个用户的信息暴露熵
+     - test_granger_significant: AI 比例与 GTE 有因果关系时检测出显著性
+     - test_granger_not_significant: 随机数据不应有因果关系
+  3. event_history 测试：
+     - test_breakdown_point_detection: 在已知崩解点数据上检测出正确位置
+     - test_time_alignment: 验证时间序列对齐
+     - test_cross_correlation: 验证滞后相关计算
+     - test_aligned_timeseries: 验证跨事件相对时间对齐
+  4. 测试数据用 numpy/pandas 构造（不需要真实微博数据）
+  5. 创建 paper3_truth_fragmentation/tests/__init__.py

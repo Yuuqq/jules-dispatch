@@ -1,0 +1,17 @@
+title: "P2: 实现星野 Playwright Web 自动化客户端"
+source: "sources/github/Yuuqq/llm-privacy-audit"
+branch: "main"
+prompt: |
+  在 paper2_companion_audit/src/clients/companion_client.py 中完善 XingyeCompanionClient 类的 Playwright 实现。
+
+  要求：
+  1. 使用 playwright (async API) 自动化星野网页版
+  2. 实现 start_session(character_name) -> session_id：打开星野网页，搜索角色，进入对话
+  3. 实现 send_message(session_id, message) -> response：输入消息，等待响应，提取 AI 回复文本
+  4. 实现 end_session(session_id)：清理会话
+  5. 响应提取：等待 .message-bubble 或类似的 AI 响应元素出现，提取文本
+  6. 超时处理：消息发送后 30 秒内无响应则重试，最多 3 次
+  7. 反爬虫对策：随机等待 2-5 秒、模拟人类输入速度
+  8. 添加详细的 TODO 标注说明哪些选择器需要根据实际网页调整
+  9. 确保异步代码正确使用 async/await
+  10. 添加 playwright 到 requirements.txt（如果没有的话创建该文件在 paper2_companion_audit/ 下）

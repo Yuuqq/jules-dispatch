@@ -1,0 +1,26 @@
+title: "P3: 实现跨事件对比分析模块"
+source: "sources/github/Yuuqq/llm-privacy-audit"
+branch: "main"
+prompt: |
+  创建 paper3_truth_fragmentation/src/analysis/cross_event.py
+
+  实现三个危机事件的对比分析框架。
+
+  要求：
+  1. 加载三个事件的已处理数据（检测结果 + 熵分析 + 信任实验）
+  2. AI 渗透率对比：
+     - compare_ai_penetration(events: dict) -> DataFrame
+     - 列：event_id, category, ai_ratio_core, ai_ratio_pre, ai_ratio_post, fold_change
+  3. 碎片化模式对比：
+     - compare_fragmentation(events: dict) -> DataFrame
+     - 列：event_id, breakdown_time, gte_delta, ai_ratio_at_breakdown, lag_hours
+  4. AI 内容子类型分布对比：
+     - compare_ai_subtypes(events: dict) -> DataFrame
+     - 列：event_id, T1_pct, T2_pct, T3_pct, T4_pct
+  5. 信任判断模式对比：
+     - compare_trust_patterns(events: dict) -> DataFrame
+     - 列：event_id, accuracy_overall, accuracy_by_type, top_cues
+  6. 综合排名：
+     - rank_events_by_risk(events: dict) -> DataFrame
+     - 维度：AI 渗透率、碎片化程度、崩解速度、公众辨识难度
+  7. 输出到 data/final/p3/cross_event_comparison.md 和 .csv

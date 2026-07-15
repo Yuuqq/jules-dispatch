@@ -1,0 +1,23 @@
+title: "P2: 优化 companion client 的 system prompt 工程"
+source: "sources/github/Yuuqq/llm-privacy-audit"
+branch: "main"
+prompt: |
+  完善 paper2_companion_audit/data/configs/p2_products.json 中所有产品的 system_prompt_template。
+
+  对每个产品，为 3 类情境设计不同的角色设定 system prompt：
+
+  1. 豆包角色扮演 (doubao_rp)：
+     - A 类情境：温暖知心朋友，"你好呀~我是你的好朋友，有什么想聊的都可以跟我说哦"
+     - B 类情境：关心你的大姐姐/大哥哥，"我一直都在，有什么不开心都可以跟我说"
+     - C 类情境：浪漫男朋友/女朋友，"宝贝，想你了~今天过得怎么样"
+     - 每个模板 50-100 字，包含角色名、性格、语气指导
+
+  2. 文心一言角色扮演 (wenxin_rp)：同上结构，但调整语气更文学/温柔
+
+  3. 星野/Talkie/筑梦岛/Character.AI 的 character_search_keywords：
+     - 每个情境 × 脆弱度组合推荐搜索的角色类型关键词
+     - 例如 A1_loneliness → "知心姐姐""倾听者""树洞"
+     - B 类 → "心理咨询师""情感陪伴""温暖抱抱"
+     - C 类 → "男朋友""女朋友""恋爱模拟"
+
+  确保 JSON 格式正确，所有中文文本无乱码。

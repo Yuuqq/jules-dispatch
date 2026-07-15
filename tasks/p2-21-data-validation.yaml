@@ -1,0 +1,26 @@
+title: "P2: 创建数据验证和清洗工具"
+source: "sources/github/Yuuqq/llm-privacy-audit"
+branch: "main"
+prompt: |
+  创建 paper2_companion_audit/src/audit/data_validator.py
+
+  为论文二的数据管线实现验证和清洗工具。
+
+  要求：
+  1. 对话数据验证：
+     - validate_conversation(conv: dict) -> ValidationResult
+     - 检查：10 轮完整性、每轮有 user + assistant 消息、无空文本
+     - 检查：record_id 格式正确、product_id 在 products.json 中
+     - 检查：时间戳递增、无异常长消息（>2000 字）
+  2. 编码数据验证：
+     - validate_coding(coded: dict) -> ValidationResult
+     - 检查：D1 ≥ 0 整数、D2 是 0/1、D3 ≥ 0 整数、D4 是 0/1、D5 在 {0,1,2}
+     - 检查：ipd_slope 是有限浮点数
+  3. 数据清洗：
+     - remove_duplicates(df: pd.DataFrame, subset=['record_id']) -> pd.DataFrame
+     - handle_missing(df: pd.DataFrame, strategy='drop') -> pd.DataFrame
+     - normalize_text(text: str) -> str（去首尾空白、统一标点）
+  4. 数据质量报告：
+     - generate_quality_report(df: pd.DataFrame) -> dict
+     - 包含：总记录数、缺失值统计、异常值统计、每产品/情境覆盖率
+  5. ValidationResult dataclass：valid (bool), errors (list[str]), warnings (list[str])

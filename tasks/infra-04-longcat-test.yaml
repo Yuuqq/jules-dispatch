@@ -1,0 +1,22 @@
+title: "INFRA: 创建 LongCat API 连通性测试脚本"
+source: "sources/github/Yuuqq/llm-privacy-audit"
+branch: "main"
+prompt: |
+  创建 tests/test_longcat_client.py（在项目根目录的 tests/ 下）。
+
+  测试 LongCat API 通过 llm_client.py 的连通性和基本功能。
+
+  要求：
+  1. 使用 pytest
+  2. 从 .env 或 paper1_privacy_audit/.env 加载配置
+  3. 测试用例：
+     - test_longcat_flash_connectivity: longcat_flash 模型能正常响应
+     - test_longcat_thinking_connectivity: longcat_thinking 模型能正常响应
+     - test_longcat_lite_connectivity: longcat_lite 模型能正常响应
+     - test_longcat_agentic_connectivity: longcat_agentic 模型能正常响应
+     - test_json_output: chat_json 返回正确解析的 dict
+     - test_chinese_encoding: 中文输入输出不乱码
+     - test_retry_on_failure: mock 一次失败后成功重试
+  4. 每个测试使用简短 prompt（"回复 OK"），max_tokens=10，节省 API 调用
+  5. 添加 @pytest.mark.skipif 标记：如果 LONGCAT_API_KEY 不存在则跳过
+  6. 创建 tests/__init__.py

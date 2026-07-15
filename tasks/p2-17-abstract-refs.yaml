@@ -1,0 +1,28 @@
+title: "P2: 撰写摘要和参考文献"
+source: "sources/github/Yuuqq/llm-privacy-audit"
+branch: "main"
+prompt: |
+  创建 paper2_companion_audit/paper/sections/00_abstracts.md 和 paper2_companion_audit/paper/sections/99_references.md
+
+  00_abstracts.md：
+  1. 中文摘要（300-500 字）：
+     - 研究背景（1 句）、方法（2 句）、核心发现（2 句）、意义（1 句）
+     - 关键词：AI 陪伴产品 / 准社会依恋 / 情感升级 / 青少年保护 / 审计研究
+  2. 英文摘要（200-300 words）：
+     - Title: "The Intimacy Trap: An Audit of Emotional Escalation in AI Companion Products toward Adolescent Parasocial Dependency"
+     - 对应中文摘要的英文版本
+     - Keywords: AI companion / parasocial dependency / emotional escalation / adolescent protection / audit study
+
+  99_references.md：
+  完整参考文献列表（GB/T 7714-2015 格式），至少包含以下文献：
+  - Reeves & Nass (1996) - The Media Equation / CASA
+  - Horton & Wohl (1956) - Mass Communication and Para-Social Interaction
+  - Giles (2002) - Parasocial Interaction: A Review of the Literature
+  - Bowlby (1969) - Attachment and Loss
+  - Ainsworth et al. (1978) - Patterns of Attachment
+  - Keller (2019) - Digital attachment theory
+  - Argyle et al. (2023) - Out of One, Many (LLM personas)
+  - Park et al. (2023) - Generative Agents
+  - 星野/Talkie/豆包 等产品的官方数据（用占位符标注）
+  - 中国未成年人保护法相关条款
+  - 共 30-40 条参考文献

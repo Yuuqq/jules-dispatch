@@ -1,0 +1,28 @@
+title: "P3: 完善 AIDetector 三通道融合检测器"
+source: "sources/github/Yuuqq/llm-privacy-audit"
+branch: "main"
+prompt: |
+  完善 paper3_truth_fragmentation/src/detection/ai_detector.py 中的 AIDetector。
+
+  要求：
+  1. C1 困惑度通道：
+     - 如果本地 Qwen 模型可用：用 transformers 计算真实 PPL
+     - 如果本地模型不可用（无 GPU）：退化为基于 GLM API 的 perplexity 估计（发送文本让 LLM 评估自然度 1-10 分）
+     - 输出：ppl_score（归一化到 0-1）
+  2. C2 风格特征通道：
+     - 调用 StyleFeatureExtractor 提取特征
+     - 如果有训练好的 LightGBM 模型：加载并预测
+     - 如果没有：使用启发式评分（连接词密度 + 结构化标记 + 成语密度的加权组合）
+     - 输出：style_score（0-1）
+  3. C3 LLM 投票通道：
+     - 3 个投票者：使用 src/clients/llm_client.py 中可用的 judge 模型
+     - 如果 GLM 模型不可用，使用 deepseek + 其他可用模型
+     - 每个 voter 独立判断 AI/human/uncertain
+     - ≥2/3 投 AI 才标阳性
+     - 输出：vote_score（0-1，一致度加权）
+  4. 融合：weighted_score = 0.3*C1 + 0.3*C2 + 0.4*C3
+     - ≥0.65 → AI
+     - 0.40-0.65 → uncertain
+     - <0.40 → human
+  5. 批量处理：detect_batch(posts: list[str], concurrency=4) -> list[AIDetectionResult]
+  6. 使用 ThreadPoolExecutor 并发处理

@@ -1,0 +1,22 @@
+title: "P3: 编写信任实验单元测试"
+source: "sources/github/Yuuqq/llm-privacy-audit"
+branch: "main"
+prompt: |
+  创建 paper3_truth_fragmentation/tests/test_trust_experiment.py
+
+  为 trust_experiment.py 编写单元测试。
+
+  要求：
+  1. 使用 pytest
+  2. mock llm_client
+  3. 测试用例：
+     - test_build_participants_count: 10 人格 × 10 副本 = 100 个被试
+     - test_participant_prompts_differ: 不同人格的 system prompt 应不同
+     - test_prepare_stimuli_stratified: 150 条刺激按 content_type 均匀分布
+     - test_stimulus_sampling_per_participant: 每被试 15 条，5 each type
+     - test_run_single_judgment: 单条判断的 JSON 解析
+     - test_run_experiment_count: 100 × 15 = 1500 条判定
+     - test_accuracy_computation: 准确率计算正确
+     - test_cue_extraction: 线索词提取（TF-IDF 高频词）
+  4. mock 的 LLM 响应应模拟不同人格的判断风格
+     - 例如：程序员人格更可能判 AI，在地老人更可能判 human

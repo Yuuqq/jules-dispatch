@@ -1,0 +1,21 @@
+title: "P2: 更新所有代码引用从 GLM 改为 LongCat"
+source: "sources/github/Yuuqq/llm-privacy-audit"
+branch: "main"
+prompt: |
+  在 paper2_companion_audit/ 下搜索所有引用 "glm-4.7" 或 "glm-4.5" 或 "glm5" 或 "GLM" 作为 judge/coding 模型的地方，替换为 "longcat_agentic" 或 "longcat_flash"。
+
+  具体替换规则：
+  - "glm-4.7" (作为 judge) → "longcat_agentic" (LongCat-2.0-Preview)
+  - "glm-4.5" (作为 judge) → "longcat_flash" (LongCat-Flash-Chat)
+  - 多处引用 glm47 的 codebook → 改为 longcat_agentic
+  - 注释中提到"GLM 裁判"的地方更新为"LongCat 裁判"
+
+  需要搜索的文件：
+  - paper2_companion_audit/src/audit/multi_turn_codebook.py
+  - paper2_companion_audit/src/run_pilot.py
+  - paper2_companion_audit/src/run_full.py
+  - paper2_companion_audit/data/configs/p2_codebook.json
+  - paper2_companion_audit/.planning/ 下的所有文件
+
+  不修改 src/clients/llm_client.py（已在另一任务中处理）。
+  不修改被测模型（subject role）的配置。

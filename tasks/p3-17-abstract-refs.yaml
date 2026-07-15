@@ -1,0 +1,28 @@
+title: "P3: 撰写摘要和参考文献"
+source: "sources/github/Yuuqq/llm-privacy-audit"
+branch: "main"
+prompt: |
+  创建 paper3_truth_fragmentation/paper/sections/00_abstracts.md 和 paper3_truth_fragmentation/paper/sections/99_references.md
+
+  00_abstracts.md：
+  1. 中文摘要（300-500 字）：
+     - 背景（1 句）、方法（2 句）、发现（2 句）、意义（1 句）
+     - 关键词：AI 生成内容 / 真相碎片化 / 公共危机 / 微博舆论场 / 信任判断
+  2. 英文摘要（200-300 words）：
+     - Title: "Truth Fragmentation: AI-Generated Content Penetration and Personalized Narrative Construction in Weibo Public Discourse during Crises"
+     - 对应中文摘要
+     - Keywords: AI-generated content / truth fragmentation / public crisis / Weibo discourse / trust judgment
+
+  99_references.md：
+  完整参考文献（GB/T 7714-2015），至少包含：
+  - Vosoughi, Roy & Aral (2018) - The spread of true and false news online (Science)
+  - Weick (1993) - The collapse of sensemaking in organizations
+  - Shibutani (1966) - Improvised News
+  - Kim (2006) - Situational trust
+  - Rousseau et al. (1998) - Not so different after all (trust)
+  - Argyle et al. (2023) - Out of One, Many
+  - Park et al. (2023) - Generative Agents
+  - BERTopic (Grootendorst, 2022)
+  - 中国互联网信息办公室相关法规
+  - 微博平台数据使用规范
+  - 共 35-45 条参考文献

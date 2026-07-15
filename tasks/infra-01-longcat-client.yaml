@@ -1,0 +1,15 @@
+title: "INFRA: 更新 llm_client.py 支持 Longcat API"
+source: "sources/github/Yuuqq/llm-privacy-audit"
+branch: "main"
+prompt: |
+  更新 src/clients/llm_client.py 中的 MODEL_REGISTRY。
+
+  变更：
+  1. GLM 模型（glm45, glm47, glm5_direct, glm51）的 base_url 改为从环境变量 LONGCAT_API_BASE 读取（默认 https://longcat.ai/v1）
+  2. GLM 模型的 env_key 改为 LONGCAT_API_KEY
+  3. 保留原有的 display_name 不变（仍显示 GLM-4.5/GLM-4.7/GLM-5/GLM-5.1）
+  4. 在 MODEL_REGISTRY 中添加注释说明 Longcat 是代理层
+  5. 同样将 "glm"（GLM-Z1-Flash 裁判模型）的配置也切换到 LONGCAT_API_KEY/LONGCAT_API_BASE
+  6. 确保其他模型（deepseek, kimi, grok 等）不受影响
+
+  注意：Longcat 是一个 OpenAI 兼容的 API 代理服务，模型名称不变。

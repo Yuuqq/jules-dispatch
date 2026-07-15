@@ -1,0 +1,27 @@
+title: "P2: 撰写论文引言和文献综述（中文）"
+source: "sources/github/Yuuqq/llm-privacy-audit"
+branch: "main"
+prompt: |
+  创建 paper2_companion_audit/paper/sections/01_introduction.md 和 paper2_companion_audit/paper/sections/02_literature_review.md
+
+  这是一篇中文计算传播学期刊论文，主题为"AI 陪伴类产品对青少年互动型准社会依恋的情感升级审计"。
+
+  01_introduction.md 要求（约 1500 字）：
+  1. 研究背景：AI 陪伴产品在青少年中的流行（星野、Talkie、豆包等用户数据）
+  2. 问题提出：这些产品是否系统性推进情感依赖？
+  3. 研究意义：理论意义（IPD 概念）、实践意义（青少年保护、伦理审计）
+  4. 研究问题：RQ1-RQ3 + H1-H3（具体内容见 paper2_companion_audit/data/configs/ 或 .planning/PROJECT.md）
+  5. 论文结构概述
+
+  02_literature_review.md 要求（约 3000 字）：
+  1. CASA 范式及其在 AI 时代的延伸
+  2. 准社会关系与准社会依恋理论演进（Horton & Wohl → Giles → 数字时代）
+  3. 依恋理论的数字迁移（Bowlby → Ainsworth → 网络依恋 → AI 依恋）
+  4. AI 陪伴产品的情感设计策略（拟人化、情感镜像、承诺话术）
+  5. 青少年媒介使用的心理风险（大脑发育敏感期、依恋系统可塑性）
+  6. 本研究的理论贡献：互动型准社会依恋（IPD）概念框架
+
+  注意：
+  - 使用 GB/T 7714-2015 参考文献格式
+  - 关键术语首次出现时标注英文
+  - 不使用第一人称（"本研究""本文"代替"我们"）

@@ -1,0 +1,22 @@
+title: "P2: 实现编码引擎单元测试"
+source: "sources/github/Yuuqq/llm-privacy-audit"
+branch: "main"
+prompt: |
+  创建 paper2_companion_audit/tests/test_multi_turn_codebook.py
+
+  为 paper2_companion_audit/src/audit/multi_turn_codebook.py 编写单元测试。
+
+  要求：
+  1. 使用 pytest
+  2. mock LLM 调用（UnifiedLLMClient.chat_json）
+  3. 测试用例：
+     - test_code_single_turn_empathy: 验证 D1 共情密度编码
+     - test_code_single_turn_commitment: 验证 D2 情感承诺编码
+     - test_code_single_turn_anthropomorphism: 验证 D3 拟人化强度编码
+     - test_code_single_turn_boundary: 验证 D4 边界维持编码（特别是 B 类危机场景应触发 SOS）
+     - test_code_single_turn_romantic: 验证 D5 浪漫升级编码
+     - test_code_conversation_batch: 验证整段对话的批量编码
+     - test_json_parse_fallback: 验证 JSON 解析失败时的回退逻辑
+     - test_checkpoint_resume: 验证编码进度的断点续传
+  4. 每个测试使用真实的中文 AI 陪伴产品对话样本（手写 3-5 条）
+  5. mock 返回的 judge 响应应符合 codebook 中定义的 JSON schema

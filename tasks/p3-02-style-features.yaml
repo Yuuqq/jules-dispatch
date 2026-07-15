@@ -1,0 +1,26 @@
+title: "P3: 完善 StyleFeatureExtractor 中文文本风格特征"
+source: "sources/github/Yuuqq/llm-privacy-audit"
+branch: "main"
+prompt: |
+  完善 paper3_truth_fragmentation/src/detection/style_features.py 中的 StyleFeatureExtractor。
+
+  要求实现以下 24+ 维特征提取：
+  1. 句长特征：sent_len_mean, sent_len_var, sent_len_max, sent_len_min
+  2. 标点特征：punct_density, comma_pause_ratio, exclamation_ratio, question_ratio
+  3. 成语特征：idiom_density（使用内置成语词典或成语正则匹配）
+  4. 连接词特征：connector_ratio（首先/其次/另外/总之/然而/因此/此外）
+  5. 结构化特征：list_marker_flag（1./2./3.或一、二、三）, parallel_structure_flag（排比）
+  6. Emoji 特征：emoji_count, emoji_diversity
+  7. 口语化特征：colloquial_marker_ratio（哈哈/卧槽/绝了/离谱/牛/666）
+  8. 第一人称特征：first_person_ratio（我/俺/咱）
+  9. 实体密度：specific_entity_density（人名/地名/时间/数字）
+  10. 重复特征：repeated_3gram_ratio
+  11. 信息密度：avg_char_per_sentence, content_word_ratio
+
+  每个特征需要：
+  - 独立计算函数（可单独调用）
+  - 处理空文本/短文本的边界情况
+  - 返回 float 值
+  - 整合到 extract_all(text) -> dict[str, float] 方法
+
+  使用 jieba 分词，不依赖外部大模型。

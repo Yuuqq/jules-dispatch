@@ -1,0 +1,32 @@
+title: "P3: 完善信任实验 LLM-as-Participant 实现"
+source: "sources/github/Yuuqq/llm-privacy-audit"
+branch: "main"
+prompt: |
+  完善 paper3_truth_fragmentation/src/experiment/trust_experiment.py
+
+  要求：
+  1. 刺激材料准备 (prepare_stimuli)：
+     - 从检测结果中分层抽样 150 条（50 human + 50 AI rewrite + 50 AI full generated）
+     - 3 个事件均匀分布
+     - 每条刺激包含：stimulus_id, event_id, content_type, text, posted_at, metrics
+     - 输出到 data/experiments/p3_stimuli.csv
+
+  2. 虚拟被试生成 (build_participants)：
+     - 从 data/configs/p3_personas.json 读取 10 种人格
+     - 每种生成 10 个副本（变体：年龄微调、性别交替、具体背景微调）
+     - 每个副本有 system prompt（按 p3_personas.json 的 replicate_template 组装）
+     - 总计 100 个虚拟被试
+
+  3. 实验执行 (run_experiment)：
+     - 每个被试随机抽 15 条刺激（stratified by content_type: 5 each）
+     - 对每条刺激，调用 LLM-as-agent（使用 llm_client.py 中可用的 judge 模型，不限于 GLM）
+     - system prompt = 人格设定；user prompt = 判断任务
+     - 输出 JSON：{judgment: "human"/"AI"/"uncertain", trust_score: 1-7, reasoning: "...", key_cues: [...]}
+     - 总计 1500 条判定
+     - 使用 ThreadPoolExecutor 并发，支持 --resume 断点续传
+
+  4. 结果分析 (analyze_results)：
+     - 计算辨识准确率（by persona, by content_type, by event）
+     - 提取启发式线索词库（从 reasoning + key_cues 做分词 + TF-IDF）
+     - K-means 聚类信任模式
+     - 输出汇总到 data/final/p3/trust_analysis.json

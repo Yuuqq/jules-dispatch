@@ -1,0 +1,25 @@
+title: "P3: 完善 run_pilot.py 入口脚本"
+source: "sources/github/Yuuqq/llm-privacy-audit"
+branch: "main"
+prompt: |
+  完善 paper3_truth_fragmentation/src/run_pilot.py
+
+  要求实现端到端 pilot 流程：
+  1. 添加 argparse 参数：
+     --event: 选择事件（默认 E1_typhoon_2024）
+     --sample-size: 每窗口采样数（默认 500）
+     --skip-crawl: 跳过爬取步骤（使用已有数据）
+     --output-dir: 输出目录（默认 data/runs/p3_pilot/）
+  2. Pilot 流程：
+     Step 1: 环境检查（cookie 文件存在性、依赖包）
+     Step 2: 爬取 1 个事件的核心窗口数据（sample_size 条）
+     Step 3: 对爬取数据运行 AI 检测
+     Step 4: 输出检测摘要（AI 比例、各通道分数分布）
+     Step 5: 随机抽 20 条做人工校验对比
+  3. 输出 pilot_summary.json 包含：
+     - crawl_status, post_count, detection_count
+     - ai_ratio, channel_scores_distribution
+     - sample_for_manual_review (20 条的路径)
+     - timestamp, elapsed_seconds
+  4. 使用 logging 模块记录进度
+  5. 所有 sys.path 操作确保能找到共享的 src/clients/llm_client.py

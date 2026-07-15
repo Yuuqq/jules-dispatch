@@ -1,0 +1,26 @@
+title: "P3: 完善事件史重建和崩解点检测"
+source: "sources/github/Yuuqq/llm-privacy-audit"
+branch: "main"
+prompt: |
+  完善 paper3_truth_fragmentation/src/entropy/event_history.py 中的 EventHistoryBuilder。
+
+  要求：
+  1. 事件史重建：
+     - 输入：博文数据（时间戳、内容、AI 标签）+ 检测结果
+     - 按时间对齐 AI 比例、GTE、PTE、情感峰值
+     - 输出：event_timeseries（DataFrame，列：timestamp, ai_ratio, gte, pte_mean, sentiment_mean, post_count）
+  2. 崩解点检测：
+     - 检测"主导叙事崩解点"：GTE 突然升高的时间点
+     - 使用滑动窗口均值 + 2σ 偏差检测
+     - 也用 change point detection（ruptures 库的 Pelt 方法，如果可用；否则用简单差分）
+     - 输出：breakdown_points（list[dict]，每个含 timestamp, gte_before, gte_after, delta）
+  3. 跨事件峰值对齐：
+     - 以事件 peak 时间为 t=0
+     - 将 3 个事件的时间序列对齐到相对时间
+     - 输出：aligned_timeseries（DataFrame，列：relative_hours, event_id, ai_ratio, gte, pte_mean）
+  4. 互相关分析：
+     - 计算 AI 比例与 GTE 的滞后互相关（lag=0 to 24h）
+     - 输出：xcorr_results（dict，含 lags, correlations, max_corr, max_lag）
+  5. 情感分析：
+     - 使用简单情感词典（正面/负面词计数）计算每条博文的情感分
+     - 不依赖外部 API

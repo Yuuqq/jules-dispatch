@@ -1,0 +1,23 @@
+title: "P3: 更新所有代码引用从 GLM 改为 LongCat"
+source: "sources/github/Yuuqq/llm-privacy-audit"
+branch: "main"
+prompt: |
+  在 paper3_truth_fragmentation/ 下搜索所有引用 "glm-4.7" 或 "glm-4.5" 或 "glm5" 或 "GLM" 作为 judge/voting/agent 模型的地方，替换为 LongCat 模型。
+
+  具体替换规则：
+  - AI 检测 C3 投票中的 "glm-4.5" → "longcat_flash"
+  - AI 检测 C3 投票中的 "glm-4.7" → "longcat_thinking"
+  - 信任实验中的 "glm-4.7" → "longcat_agentic"
+  - 任何引用 GLM 作为 agent model 的地方 → "longcat_agentic"
+  - 注释中的说明文字也一并更新
+
+  需要搜索的文件：
+  - paper3_truth_fragmentation/src/detection/ai_detector.py
+  - paper3_truth_fragmentation/src/experiment/trust_experiment.py
+  - paper3_truth_fragmentation/src/run_detection.py
+  - paper3_truth_fragmentation/src/run_trust.py
+  - paper3_truth_fragmentation/src/run_pilot.py
+  - paper3_truth_fragmentation/data/configs/p3_ai_detection_codebook.json
+  - paper3_truth_fragmentation/.planning/ 下的所有文件
+
+  不修改 src/clients/llm_client.py（已处理）。

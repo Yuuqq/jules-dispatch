@@ -1,0 +1,24 @@
+title: "P3: 创建中文情感词典模块"
+source: "sources/github/Yuuqq/llm-privacy-audit"
+branch: "main"
+prompt: |
+  创建 paper3_truth_fragmentation/src/detection/sentiment.py
+
+  实现中文情感分析模块（不依赖外部 API）。
+
+  要求：
+  1. 内置正面词词典（100+ 词）：
+     - 积极情绪：开心、感动、温暖、欣慰、骄傲、感恩、希望、坚强...
+     - 正面评价：好、棒、厉害、优秀、出色、赞、牛...
+     - 团结互助：加油、挺住、一起、互助、关心...
+  2. 内置负面词词典（100+ 词）：
+     - 消极情绪：伤心、愤怒、恐惧、焦虑、绝望、悲痛...
+     - 负面评价：差、烂、糟、假、骗、坑、黑...
+     - 批评质疑：质疑、追责、隐瞒、敷衍、推诿...
+  3. 实现 compute_sentiment(text: str) -> float：
+     - 正面词数 / (正面词数 + 负面词数) * 2 - 1 → 映射到 [-1, 1]
+     - 空文本或无匹配词返回 0.0
+  4. 实现 compute_sentiment_batch(texts: list[str]) -> list[float]
+  5. 使用 jieba 分词匹配（精确模式）
+  6. 支持从外部 JSON 文件加载自定义词典（可选）
+  7. 处理否定词："不""没""无" 翻转后续词的极性

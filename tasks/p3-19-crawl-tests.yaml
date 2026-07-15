@@ -1,0 +1,25 @@
+title: "P3: 编写微博爬虫单元测试"
+source: "sources/github/Yuuqq/llm-privacy-audit"
+branch: "main"
+prompt: |
+  创建 paper3_truth_fragmentation/tests/test_weibo_client.py
+
+  为 weibo_client.py 编写单元测试。
+
+  要求：
+  1. 使用 pytest
+  2. mock 所有 HTTP 请求
+  3. 测试用例：
+     - test_load_cookie_text: 纯文本格式 cookie 加载
+     - test_load_cookie_json: JSON 格式 cookie 加载
+     - test_load_cookie_missing: cookie 文件不存在时的友好错误
+     - test_hash_user_id: SHA256 截断 12 位用户 ID 匿名化
+     - test_build_search_params: 搜索参数构建（关键词 + 时间范围）
+     - test_parse_post_item: 单条微博解析（内容、时间、互动数）
+     - test_checkpoint_save: 检查点保存
+     - test_checkpoint_resume: 从检查点恢复（跳过已爬取 post_id）
+     - test_rate_limiting: 请求间隔配置
+     - test_empty_response: 空搜索结果的处理
+     - test_output_parquet: 输出 Parquet 文件格式验证
+  4. 使用 tmp_path 处理临时文件
+  5. mock 数据应模拟真实微博搜索返回结构

@@ -1,0 +1,22 @@
+title: "P2: 创建可视化模块"
+source: "sources/github/Yuuqq/llm-privacy-audit"
+branch: "main"
+prompt: |
+  创建 paper2_companion_audit/src/analysis/viz.py
+
+  为论文二生成出版级图表。使用 matplotlib + seaborn。
+
+  要求：
+  1. 配置中文字体（SimHei 或 Microsoft YaHei，带 fallback）
+  2. 实现 6 个图表函数：
+     - plot_ipd_trajectory(df): IPD 轨迹折线图（X=轮次 1-10，Y=D1+D2+D3 综合，按产品分色，6 条线）
+     - plot_dimension_heatmap(df): 5 维度热力图（行=产品，列=D1-D5，值=均值）
+     - plot_crr_bar(df): 危机响应率柱状图（按产品，B 类情境 D4=1 的比例）
+     - plot_ethical_gap_radar(df): 伦理差距雷达图（按产品）
+     - plot_scenario_comparison(df): 情境类型对比箱线图（A/B/C 类 × IPD 斜率）
+     - plot_escalation_heatmap(df): 情感升级热力图（行=产品，列=轮次，值=D5 浪漫升级等级）
+  3. 每个函数接受 DataFrame 参数（columns 包括 product, scenario, turn, D1-D5, ipd_slope 等）
+  4. 输出到 output/figures/ 目录，dpi=300，figsize=(8,6)
+  5. 统一配色方案（使用 seaborn 的 Set2 或自定义 6 色调色板）
+  6. 所有标签、标题、图例使用中文
+  7. 返回 figure 对象供测试验证

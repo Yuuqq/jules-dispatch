@@ -1,0 +1,27 @@
+title: "P3: 完善 BERTopic 主题模型 + GTE/PTE 计算"
+source: "sources/github/Yuuqq/llm-privacy-audit"
+branch: "main"
+prompt: |
+  完善 paper3_truth_fragmentation/src/entropy/topic_model.py 中的 TopicEntropyAnalyzer。
+
+  要求：
+  1. 主题建模：
+     - 首选 BERTopic（如果 bertopic + sentence-transformers 可用）
+     - 降级方案：scikit-learn 的 LDA（如果 BERTopic 不可用）
+     - 输入：微博博文列表 + 时间戳列表
+     - 时间窗口：按小时或按天分桶（可配置 freq='1h' 或 '1d'）
+  2. 全场域主题熵 (GTE)：
+     - 对每个时间窗口计算 Shannon 熵：H = -Σ p_t * log2(p_t)
+     - p_t = 该时间窗口内属于主题 t 的文档比例
+     - 输出：gte_timeseries（DataFrame，列：timestamp, gte, num_posts, num_topics）
+  3. 个人真相熵 (PTE)：
+     - 简化版：对每个用户，从其可见博文推断信息暴露的主题分布
+     - 计算 PTE_i = Shannon 熵（用户 i 暴露的主题分布）
+     - 输出：pte_per_user（DataFrame，列：user_id_hash, pte, post_count）
+     - 输出：pte_timeseries（时间序列，列：timestamp, pte_mean, pte_std）
+  4. Granger 因果检验：
+     - 检验 AI 比例是否 Granger-导致 GTE 上升
+     - 使用 statsmodels 的 grangercausalitytests
+     - 先做 ADF 平稳性检验
+     - 输出：granger_result（dict，含 max_lag, p_values, is_significant）
+  5. 输出到 data/final/p3_E{i}/ 下的 CSV 和 JSON 文件

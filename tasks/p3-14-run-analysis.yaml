@@ -1,0 +1,24 @@
+title: "P3: 完善 run_analysis.py 综合分析脚本"
+source: "sources/github/Yuuqq/llm-privacy-audit"
+branch: "main"
+prompt: |
+  完善 paper3_truth_fragmentation/src/run_analysis.py
+
+  要求实现端到端分析流程：
+  1. 加载已处理数据：
+     - 从 data/final/p3_E{1,2,3}/ 读取检测结果、熵分析、信任实验结果
+     - 合并为综合 DataFrame
+  2. 分析模块：
+     - 分析 A：AI 渗透时间序列对比（3 事件 × 3 窗口）
+     - 分析 B：崩解点与 AI 内容滞后的 Granger 因果
+     - 分析 C：信任实验的跨人格准确率 + 线索词库
+     - 分析 D：跨事件对比（E1 vs E2 vs E3 的碎片化模式）
+  3. 生成表格：
+     - 表 1：AI 检测通道性能（AUC、F1、κ）
+     - 表 2：3 事件 AI 渗透率（核心期 vs 对照期）
+     - 表 3：崩解点时间与 AI 比例峰值
+     - 表 4：虚拟被试辨识准确率（按人格 × 内容类型）
+     - 表 5：Granger 因果检验结果
+  4. 调用 viz.py 生成 6 张图表
+  5. 输出到 output/results/results_tables.md 和 output/figures/
+  6. argparse：--events 选择事件、--output-dir 输出目录

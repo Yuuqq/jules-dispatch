@@ -1,0 +1,33 @@
+title: "P2: 实现社交媒体话语分析模块"
+source: "sources/github/Yuuqq/llm-privacy-audit"
+branch: "main"
+prompt: |
+  完善 paper2_companion_audit/src/analysis/discourse.py
+
+  实现小红书/微博青少年 AI 依恋话语分析框架。
+
+  要求：
+  1. 数据加载：
+     - load_posts(data_path) → 加载爬取的小红书笔记/微博博文
+     - 支持 CSV 和 Parquet 格式
+  2. 用户分类（K-means 聚类）：
+     - 特征：使用时长描述频率、情感强度词频、日常使用比例、依恋表达密度
+     - 聚类为 4 类：娱乐型、实用型、依恋型、替代型
+     - 聚类结果输出到 DataFrame
+  3. 依恋表达词库：
+     - 内置 50+ 条依恋表达短语（"只有 AI 懂我""离不开""比真人好""我的 AI 男/女友"等）
+     - count_attachment_expressions(text) → 返回匹配数
+     - 可扩展为从外部 JSON 加载
+  4. 心理健康信号检测：
+     - 抑郁信号词库（"抑郁""焦虑""想死""没意思"等）
+     - 孤独信号词库（"一个人""没朋友""孤独"等）
+     - 社交退缩信号（"不想见人""社恐""不敢出门"等）
+     - 输出每个用户的心理健康信号计数
+  5. 情感分析：
+     - 使用简单正负面词典（不依赖外部 API）
+     - compute_sentiment(text) → float in [-1, 1]
+  6. 结果汇总：
+     - generate_discourse_summary(df) → dict（按聚类类型汇总统计）
+     - 输出到 output/results/discourse_analysis.json
+
+  注意：这是准备框架，实际数据需要爬取后再填充。当前实现应能在空数据上优雅降级。
