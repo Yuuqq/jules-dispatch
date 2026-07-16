@@ -19,7 +19,7 @@
 
 **jules-dispatch** 是 [Google Jules API](https://jules.google.com/) 的 CLI **以及** [MCP 服务器](https://modelcontextprotocol.io/)，它让你可以：
 
-- 用一条命令并发触发 **10–100 个 Jules 编码会话**
+- 可派发任意数量的 Jules 任务，最多同时创建 **50 个会话**，并可控制启动节奏
 - 用简单的 **YAML 文件**定义任务（标题、仓库、分支、提示词）
 - **轮询完成状态**并自动收集生成的 PR 链接
 - 审批计划、追加消息、取消失控会话、实时跟踪活动
@@ -119,7 +119,7 @@ Dispatch all 6 task(s)? [y/N]
 
 | 特性 | 说明 |
 |---|---|
-| ⚡ 并发派发 | 一条命令触发 N 个会话（`--parallel 20`） |
+| ⚡ 有界且可控节奏的派发 | 持续补充 1–50 个 worker，并可用 `--pace-ms` 设置全局启动间隔 |
 | 📋 YAML 任务文件 | 支持多文档 YAML（`---` 分隔符） |
 | 🔄 状态轮询 | 自动检测 PR、计划审批、失败 |
 | 💬 计划与消息控制 | 审批计划、追加消息、取消会话 |
@@ -227,6 +227,10 @@ cp -R skills/jules-dispatch "${CODEX_HOME:-$HOME/.codex}/skills/jules-dispatch"
 | `jules_dispatch` | 从单个任务、任务数组或 YAML/JSON 字符串创建一个或多个会话 |
 | `jules_monitor` | 查询状态；`wait: true` 时等待到终态、需要操作或超时 |
 | `jules_interact` | 一次获取会话详情、派生状态、最新计划、活动记录和 PR 输出 |
+
+`jules_dispatch` 的 `parallel`（1–50，默认 10）限制同时进行的会话创建数，`paceMs`（0–60000 毫秒，默认 0）设置所有 worker 共享的全局最小启动间隔。它采用持续补充的 worker pool，而不是等待一整批任务结束后再启动下一批；返回结果仍保持输入任务顺序。`jules_auto` 支持相同的 `parallel` 和 `paceMs` 参数。
+
+`jules_interact` 会扫描完整的、按最旧到最新分页的活动记录，找出全局最新计划，再按时间正序返回最新的 `activityCount` 条活动，并通过 `activityTotal` 返回完整活动总数。
 
 `jules_monitor` 遇到 `AWAITING_PLAN_APPROVAL`、`AWAITING_USER_FEEDBACK` 或 `PAUSED` 会返回，而不是继续等到完成。此时先用 `jules_interact` 查看上下文，按需调用 `jules_approve_plan` 或 `jules_send_message`，然后再次监控尚未解决的会话。
 
@@ -355,6 +359,10 @@ jules-dispatch batch tasks/ --parallel 10
 | `4` | 部分失败（`batch` 中部分任务失败） |
 | `5` | 超时（`wait` 等待超时） |
 
+### 监控错误行为
+
+`status` 会把会话或活动查询失败明确报告为 `status: "error"` 并返回非零退出码，不会伪造成 Jules 任务失败，也不会盲目信任可能过期的状态。轮询命令只重试网络错误、限流和服务端错误；无效请求、鉴权失败和会话不存在会立即失败，并在错误中带上对应会话 ID。
+
 ### `dispatch` 示例
 
 ```bash
@@ -374,9 +382,12 @@ jules-dispatch dispatch tasks/my-task.yaml --json | jq -r '.sessionId'
 ```bash
 jules-dispatch batch tasks/                       # 默认 tasks/ 目录
 jules-dispatch batch tasks/ --parallel 20         # 20 并发
+jules-dispatch batch tasks/ --parallel 10 --pace-ms 250  # 全局启动间隔至少 250 毫秒
 jules-dispatch batch tasks/ --no-log              # 不写派发日志
 jules-dispatch batch tasks/ --json                # 末尾输出一条 JSON 摘要
 ```
+
+`batch` 和 `auto` 都使用持续补充的 worker pool。`--parallel` 限制同时进行的会话创建数，`--pace-ms` 设置所有 worker 共享的全局最小启动间隔，而不是给每个 worker 分别增加延迟。
 
 ### `wait` 示例
 

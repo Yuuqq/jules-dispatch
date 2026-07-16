@@ -1,5 +1,6 @@
 import { deriveStatus, type JulesClient } from './client.js';
 import type { JulesActivity } from './types.js';
+import { compareActivityPositions, fetchActivityHistory } from './activity-history.js';
 
 export type SessionStatus = ReturnType<typeof deriveStatus>;
 
@@ -24,8 +25,8 @@ export async function summarizeSession(
 ): Promise<SessionSummary> {
   try {
     const session = await client.getSession(sessionId);
-    const { activities } = await client.listActivities(sessionId, 10);
-    const status = deriveStatus(session, activities);
+    const history = await fetchActivityHistory(client, sessionId, { initialLimit: 10 });
+    const status = deriveStatus(session, history.activities, history.cursor);
     const pr = session.outputs?.find(o => o.pullRequest)?.pullRequest;
 
     return {
@@ -34,7 +35,7 @@ export async function summarizeSession(
       state: session.state,
       status,
       prUrl: pr?.url,
-      lastActivity: getLastActivity(status, activities),
+      lastActivity: getLastActivity(status, history.activities),
     };
   } catch (err) {
     return {
@@ -51,8 +52,8 @@ export async function summarizeSessionLegacy(
 ): Promise<LegacySessionSummary> {
   try {
     const session = await client.getSession(sessionId);
-    const { activities } = await client.listActivities(sessionId, 10);
-    const status = deriveStatus(session, activities);
+    const history = await fetchActivityHistory(client, sessionId, { initialLimit: 10 });
+    const status = deriveStatus(session, history.activities, history.cursor);
     const pr = session.outputs?.find(o => o.pullRequest)?.pullRequest;
 
     return {
@@ -62,8 +63,8 @@ export async function summarizeSessionLegacy(
       status,
       prUrl: pr?.url,
       prTitle: pr?.title,
-      lastActivity: getLastActivity(status, activities),
-      activities: activities.length,
+      lastActivity: getLastActivity(status, history.activities),
+      activities: history.totalActivities ?? history.activities.length,
     };
   } catch (err) {
     return { sessionId, status: 'error', error: (err as Error).message };
@@ -71,9 +72,7 @@ export async function summarizeSessionLegacy(
 }
 
 export function getLastActivity(status: SessionStatus, activities: JulesActivity[]): string {
-  const newestFirst = activities.slice().sort((a, b) => (
-    a.createTime > b.createTime ? -1 : a.createTime < b.createTime ? 1 : 0
-  ));
+  const newestFirst = activities.slice().sort((a, b) => compareActivityPositions(b, a));
   const failedAct = newestFirst.find(a => a.sessionFailed);
   const latestAgentMessage = newestFirst.find(a => (
     a.agentMessaged?.agentMessage || a.message?.text

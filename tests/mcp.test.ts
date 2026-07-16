@@ -142,6 +142,35 @@ describe('jules_dispatch', () => {
     expect(data.data.summary.dispatched).toBe(2);
   });
 
+  it('paces consolidated dispatch starts when paceMs is provided', async () => {
+    const starts: number[] = [];
+    vi.mocked(dispatchTaskDefinition).mockImplementation(async (_client, _config, task) => {
+      starts.push(Date.now());
+      return {
+        taskFile: '<mcp>',
+        taskTitle: task.title,
+        sessionId: `sess-${starts.length}`,
+        sessionUrl: `https://jules.google/sess-${starts.length}`,
+        title: task.title,
+        status: 'dispatched',
+      };
+    });
+
+    const { isError, data } = await callTool(server.client, 'jules_dispatch', {
+      tasks: [
+        { title: 'T1', prompt: 'P1', source: 's' },
+        { title: 'T2', prompt: 'P2', source: 's' },
+      ],
+      parallel: 2,
+      paceMs: 40,
+    });
+
+    expect(isError).toBeFalsy();
+    expect(data.data.summary.dispatched).toBe(2);
+    expect(starts).toHaveLength(2);
+    expect(starts[1] - starts[0]).toBeGreaterThanOrEqual(30);
+  });
+
   it('rejects an empty task array', async () => {
     const errorText = await getToolErrorText(server.client, 'jules_dispatch', { tasks: [] });
     expect(errorText).toMatch(/too small|at least 1|tasks/i);

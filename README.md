@@ -22,7 +22,7 @@
 
 **jules-dispatch** is a CLI **and** an [MCP server](https://modelcontextprotocol.io/) for the [Google Jules API](https://jules.google.com/) that lets you:
 
-- Fire off **10–100 Jules coding sessions in parallel** with a single command
+- Dispatch any number of Jules tasks with up to **50 concurrent session creations**, optionally paced
 - Define tasks as simple **YAML files** — title, repo, branch, prompt
 - **Poll for completion** and collect generated PR links
 - Approve plans, send follow-up messages, cancel runaway sessions, tail live activity
@@ -122,7 +122,7 @@ Configure via env vars (`LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL`) or per-invoc
 
 | Feature | Details |
 |---|---|
-| ⚡ Parallel dispatch | Saturate Jules with N sessions at once (`--parallel 20`) |
+| ⚡ Bounded, paced dispatch | Continuously replenish a 1–50 worker pool and optionally space launches with `--pace-ms` |
 | 📋 YAML task files | Multi-document YAML supported (`---` separators) |
 | 🔄 Status polling | Auto-detects PRs, plan approvals, failures |
 | 💬 Plan & message control | Approve plans, send follow-up messages, cancel sessions |
@@ -236,6 +236,7 @@ Accepts a single task object, an array of tasks, or a YAML/JSON string.
 | `tasks` | `object \| object[] \| string` | **Yes** | — | Task definition(s). Objects need `title` + `prompt`. Strings are parsed as YAML/JSON. |
 | `format` | `"yaml" \| "json"` | No | `"yaml"` | Format when `tasks` is a string |
 | `parallel` | `number` | No | `10` | Max concurrent dispatches (1–50) |
+| `paceMs` | `number` | No | `0` | Global minimum delay between session creation starts (0–60000 ms) |
 
 ```json
 {
@@ -243,9 +244,12 @@ Accepts a single task object, an array of tasks, or a YAML/JSON string.
     { "title": "Fix auth bug", "prompt": "Fix the null check in login()" },
     { "title": "Add tests", "prompt": "Add unit tests for auth.ts" }
   ],
-  "parallel": 5
+  "parallel": 5,
+  "paceMs": 250
 }
 ```
+
+Dispatch uses a continuously replenished worker pool rather than fixed waves: whenever one task finishes creating its session, the next queued task can start. `paceMs` applies globally across all workers, so consecutive creation starts are separated by at least that interval while result order still matches task order.
 
 ##### `jules_monitor` — Check status or wait for the next resolution point
 
@@ -271,7 +275,7 @@ Action-required states are `AWAITING_PLAN_APPROVAL`, `AWAITING_USER_FEEDBACK`, a
 
 ##### `jules_interact` — Inspect a session in full context
 
-Returns session details, derived status, latest plan, activity timeline, and PR output in one call.
+Returns session details, derived status, the globally latest plan, activity timeline, and PR output in one call. The server scans the complete oldest-first activity feed, then returns the newest `activityCount` entries in chronological order plus `activityTotal` for the full feed.
 
 **Parameters:**
 
@@ -299,7 +303,7 @@ Returns session details, derived status, latest plan, activity timeline, and PR 
 | Tool | Parameters | Description |
 |---|---|---|
 | `jules_plan_tasks` | `description`, `maxTasks?`, `source?`, `branch?`, `context?` | Plan tasks from a high-level description |
-| `jules_auto` | `description`, `maxTasks?`, `source?`, `branch?`, `parallel?` | Plan + dispatch in one shot |
+| `jules_auto` | `description`, `maxTasks?`, `source?`, `branch?`, `parallel?`, `paceMs?` | Plan + dispatch in one shot |
 
 #### Response format
 
@@ -435,6 +439,10 @@ That's it — 6 steps from install to your first PR.
 | `4` | Partial failure (some `batch` tasks failed) |
 | `5` | Timeout (`wait` ran out of time) |
 
+### Monitoring error behavior
+
+`status` reports session or activity lookup failures explicitly as `status: "error"` and exits nonzero instead of fabricating a Jules failure or trusting a potentially stale state. Polling commands retry only network, rate-limit, and server errors; invalid requests, authentication failures, and missing sessions fail immediately with the affected session ID in the error context.
+
 ### `dispatch` examples
 
 ```bash
@@ -454,9 +462,12 @@ jules-dispatch dispatch tasks/my-task.yaml --json | jq -r '.sessionId'
 ```bash
 jules-dispatch batch tasks/                       # default tasks/ dir
 jules-dispatch batch tasks/ --parallel 20         # 20 concurrent
+jules-dispatch batch tasks/ --parallel 10 --pace-ms 250  # globally space starts by 250 ms
 jules-dispatch batch tasks/ --no-log              # don't write dispatch log
 jules-dispatch batch tasks/ --json                # one JSON summary at the end
 ```
+
+`batch` and `auto` both use the same continuously replenished worker pool. `--parallel` caps in-flight session creation and `--pace-ms` sets the global minimum spacing between creation starts; it does not add a delay separately inside each worker.
 
 ### `wait` example
 

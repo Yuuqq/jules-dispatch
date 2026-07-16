@@ -11,7 +11,17 @@ import { collectStatus, waitForCompletion } from './collector.js';
 import { setOutputMode, isJson, emit, emitError, info, ExitCode } from './output.js';
 import { setVerbose } from './log.js';
 import { translateError, type TranslatedError } from './errors.js';
-import { fetchTailActivities, rememberLatestFailure } from './tail.js';
+import { runBatches } from './batch.js';
+import { compareActivityPositions } from './activity-history.js';
+import {
+  fetchTailActivities,
+  isTailSessionTerminal,
+  rememberLatestFailure,
+  shouldRetryTailError,
+  tailRetryDelay,
+  waitForTailPoll,
+  type TailCursor,
+} from './tail.js';
 import type { JulesActivity } from './types.js';
 
 const program = new Command();
@@ -48,7 +58,7 @@ function getConfig(): { config: ReturnType<typeof loadConfig>; client: JulesClie
 
 function exitCodeForTranslated(error: TranslatedError): number {
   if (error.code === 'AUTH_FAILED' || error.code === 'AUTH_MISSING') return ExitCode.AUTH;
-  if (error.code === 'VALIDATION') return ExitCode.VALIDATION;
+  if (error.code === 'VALIDATION' || error.code === 'INVALID_REQUEST') return ExitCode.VALIDATION;
   return ExitCode.GENERIC;
 }
 
@@ -85,6 +95,18 @@ function reportActionRequired(results: Awaited<ReturnType<typeof collectStatus>>
     const ids = actionRequired.map(result => result.sessionId).join(', ');
     console.log(chalk.yellow(`\nAction required; watch stopped for: ${ids}`));
   }
+  return true;
+}
+
+function reportStatusErrors(results: Awaited<ReturnType<typeof collectStatus>>): boolean {
+  const errors = results.filter(result => result.status === 'error');
+  if (errors.length === 0) return false;
+
+  if (!isJson()) {
+    const ids = errors.map(result => result.sessionId).join(', ');
+    console.error(chalk.red(`\nStatus lookup failed for: ${ids}`));
+  }
+  process.exitCode = ExitCode.GENERIC;
   return true;
 }
 
@@ -154,8 +176,9 @@ program
   .option('-s, --source <source>', 'override source for all tasks')
   .option('-b, --branch <branch>', 'override branch for all tasks')
   .option('-n, --parallel <n>', 'max parallel dispatches', '10')
+  .option('--pace-ms <ms>', 'minimum delay between dispatch starts', '0')
   .option('--no-log', 'do not write dispatch log file')
-  .action(async (taskDir: string | undefined, opts: { source?: string; branch?: string; parallel: string; log: boolean }) => {
+  .action(async (taskDir: string | undefined, opts: { source?: string; branch?: string; parallel: string; paceMs: string; log: boolean }) => {
     const { config, client } = getConfig();
     const projectDir = (program.opts() as { project: string }).project;
     const dir = resolve(taskDir ?? resolve(projectDir, 'tasks'));
@@ -164,6 +187,7 @@ program
       source: opts.source,
       branch: opts.branch,
       parallel: parseIntegerOption(opts.parallel, '--parallel', 1, 50),
+      paceMs: parseIntegerOption(opts.paceMs, '--pace-ms', 0, 60_000),
       logDir: opts.log === false ? false : undefined,
     });
 
@@ -174,7 +198,7 @@ program
   .addHelpText('after', `
 Examples:
   $ jules-dispatch batch
-  $ jules-dispatch batch ./my-tasks --parallel 5
+  $ jules-dispatch batch ./my-tasks --parallel 5 --pace-ms 250
   $ jules-dispatch batch --no-log
 `);
 
@@ -195,8 +219,10 @@ program
       output: opts.output,
       scanLimit: parseIntegerOption(opts.scan, '--scan', 1, 200),
     });
+    const initialHasErrors = reportStatusErrors(initialResults);
 
     if (opts.watch) {
+      if (initialHasErrors) return;
       if (reportActionRequired(initialResults)) return;
       // Watch mode keeps the initial report write, but refreshes only render status.
       const interval = parseIntegerOption(opts.interval, '--interval', 1000);
@@ -221,6 +247,7 @@ program
             scanLimit,
           });
 
+          if (reportStatusErrors(results)) break;
           if (reportActionRequired(results)) break;
 
           // Empty results must NOT count as "all resolved" (Array.every on an
@@ -542,8 +569,9 @@ program
     const { client } = getConfig();
     const interval = parseIntegerOption(opts.interval, '--interval', 1000);
     const seen = new Set<string>();
-    let createTimeCursor: string | undefined;
+    let tailCursor: TailCursor | undefined;
     let lastFailure: string | undefined;
+    let consecutiveErrors = 0;
     const abort = new AbortController();
     const onSigint = () => { abort.abort(); };
     process.on('SIGINT', onSigint);
@@ -552,13 +580,14 @@ program
 
     try {
       while (!abort.signal.aborted) {
+        let pollDelay = interval;
         try {
           const session = await client.getSession(sessionId);
-          const activities = await fetchTailActivities(client, sessionId, createTimeCursor);
+          const batch = await fetchTailActivities(client, sessionId, tailCursor);
+          tailCursor = batch.cursor;
+          const activities = batch.activities;
 
-          const chronological = activities.slice().sort((a, b) => (
-            a.createTime.localeCompare(b.createTime) || a.id.localeCompare(b.id)
-          ));
+          const chronological = activities.slice().sort(compareActivityPositions);
           const newActs = chronological.filter(a => !seen.has(a.id));
           lastFailure = rememberLatestFailure(lastFailure, chronological);
           for (const a of newActs) {
@@ -569,13 +598,10 @@ program
               console.log(formatTailActivity(a));
             }
           }
-          const newestTime = chronological.at(-1)?.createTime;
-          if (newestTime && (!createTimeCursor || newestTime > createTimeCursor)) {
-            createTimeCursor = newestTime;
-          }
+          consecutiveErrors = 0;
 
           const state = (session.state ?? '').toUpperCase();
-          if (['COMPLETED', 'FAILED', 'CANCELLED', 'CANCELED'].includes(state)) {
+          if (isTailSessionTerminal(state, tailCursor)) {
             const pr = session.outputs?.find(output => output.pullRequest)?.pullRequest;
             if (isJson()) {
               process.stdout.write(JSON.stringify({
@@ -595,6 +621,7 @@ program
           }
         } catch (err) {
           const t = translateError(err);
+          consecutiveErrors += 1;
           if (isJson()) {
             // In JSON mode the catch was previously a no-op, which made a
             // persistent API failure look like the command had hung. Emit
@@ -604,8 +631,13 @@ program
             console.error(chalk.red(`Tail error: ${t.problem}`));
             console.error(chalk.dim(`  ${t.fix}`));
           }
+          if (!shouldRetryTailError(t.code, consecutiveErrors)) {
+            process.exitCode = exitCodeForTranslated(t);
+            return;
+          }
+          pollDelay = tailRetryDelay(interval, consecutiveErrors);
         }
-        await new Promise(r => setTimeout(r, interval));
+        await waitForTailPoll(pollDelay, abort.signal);
       }
       // Aborted via Ctrl+C — exit cleanly.
       if (isJson()) {
@@ -748,9 +780,10 @@ program
   .option('--context <text>', 'extra repo context')
   .option('--context-file <path>', 'read extra context from a file')
   .option('--parallel <n>', 'max parallel dispatches', '10')
+  .option('--pace-ms <ms>', 'minimum delay between dispatch starts', '0')
   .option('--dry-run', 'print planned tasks but do not dispatch', false)
   .option('-y, --yes', 'skip confirmation prompt before dispatching', false)
-  .action(async (description: string, opts: { max: string; source?: string; branch?: string; context?: string; contextFile?: string; parallel: string; dryRun: boolean; yes: boolean }) => {
+  .action(async (description: string, opts: { max: string; source?: string; branch?: string; context?: string; contextFile?: string; parallel: string; paceMs: string; dryRun: boolean; yes: boolean }) => {
     const { planTasks, loadPlannerConfig } = await import('./planner.js');
     const programOpts = program.opts() as {
       project: string;
@@ -824,14 +857,13 @@ program
     const { config, client } = getConfig();
     info(chalk.dim('\nDispatching...\n'));
     const parallel = parseIntegerOption(opts.parallel, '--parallel', 1, 50);
-    const results = [];
-    for (let i = 0; i < plan.tasks.length; i += parallel) {
-      const slice = plan.tasks.slice(i, i + parallel);
-      const r = await Promise.all(
-        slice.map(t => dispatchTaskDefinition(client, config, t, '<auto>')),
-      );
-      results.push(...r);
-    }
+    const paceMs = parseIntegerOption(opts.paceMs, '--pace-ms', 0, 60_000);
+    const results = await runBatches(
+      plan.tasks,
+      parallel,
+      task => dispatchTaskDefinition(client, config, task, '<auto>'),
+      { paceMs },
+    );
 
     const dispatched = results.filter(r => r.status === 'dispatched');
     const failed = results.filter(r => r.status === 'failed');
@@ -856,7 +888,7 @@ program
 Examples:
   $ jules-dispatch auto "Fix all lint errors"
   $ jules-dispatch auto "Refactor auth" --dry-run
-  $ jules-dispatch auto "Add tests" --yes --parallel 5
+  $ jules-dispatch auto "Add tests" --yes --parallel 5 --pace-ms 250
 `);
 
 // ---------- mcp server ----------

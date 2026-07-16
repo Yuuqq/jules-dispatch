@@ -73,7 +73,7 @@ describe('collectStatus error handling', () => {
     });
   });
 
-  it('activity fetch error is logged via debug', async () => {
+  it('returns an explicit error when activity history cannot be fetched', async () => {
     const client = mockClient();
     client.getSession.mockResolvedValue(session({ id: 'session-1', state: 'RUNNING' }));
     client.listActivities.mockRejectedValue(new Error('activity API down'));
@@ -83,8 +83,9 @@ describe('collectStatus error handling', () => {
 
     expect(result[0]).toMatchObject({
       sessionId: 'session-1',
-      status: 'running',
-      lastActivity: 'Error fetching activities',
+      status: 'error',
+      error: 'activity API down',
+      lastActivity: 'activity API down',
       activities: 0,
     });
     expect(debugSpy).toHaveBeenCalledWith('activity fetch error', {
@@ -94,7 +95,7 @@ describe('collectStatus error handling', () => {
     expect(client.listSessions).not.toHaveBeenCalled();
   });
 
-  it('session not found fallback', async () => {
+  it('returns an explicit lookup error when a requested session cannot be fetched', async () => {
     const client = mockClient();
     client.getSession.mockRejectedValue(new Error('not found'));
     client.listActivities.mockResolvedValue({ activities: [] });
@@ -103,10 +104,11 @@ describe('collectStatus error handling', () => {
 
     expect(result[0]).toMatchObject({
       sessionId: 'missing-session',
-      state: 'FAILED',
-      status: 'failed',
+      status: 'error',
+      error: 'not found',
+      lastActivity: 'not found',
     });
-    expect(result[0].title).toContain('not found');
+    expect(result[0].title).toContain('missing-session');
     expect(client.listSessions).not.toHaveBeenCalled();
   });
 
@@ -142,10 +144,10 @@ describe('waitForCompletion error handling', () => {
     vi.useFakeTimers();
     const client = mockClient();
     client.getSession
-      .mockRejectedValueOnce(new Error('session poll failed'))
+      .mockRejectedValueOnce(Object.assign(new Error('session poll failed'), { status: 500 }))
       .mockResolvedValue(session({ id: 'session-1', state: 'COMPLETED' }));
     client.listActivities
-      .mockRejectedValueOnce(new Error('activity poll failed'))
+      .mockRejectedValueOnce(Object.assign(new Error('activity poll failed'), { status: 500 }))
       .mockResolvedValue({ activities: [] });
     const debugSpy = vi.spyOn(log, 'debug').mockImplementation(() => undefined);
 

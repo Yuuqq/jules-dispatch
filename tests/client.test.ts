@@ -247,14 +247,16 @@ describe('current Jules REST contract', () => {
     );
   });
 
-  it('passes an activity createTime cursor to the API', async () => {
+  it('uses only supported activity pagination query parameters', async () => {
     const fetchMock = mockFetch().mockResolvedValue(jsonResponse({ activities: [] }));
     const client = new JulesClient({ apiKey: 'test-key' });
 
-    await client.listActivities('session-1', 30, undefined, '2026-07-16T12:00:00Z');
+    await client.listActivities('session-1', 30, 'page-2');
 
     const url = String(fetchMock.mock.calls[0][0]);
-    expect(url).toContain('createTime=2026-07-16T12%3A00%3A00Z');
+    expect(url).toContain('pageSize=30');
+    expect(url).toContain('pageToken=page-2');
+    expect(url).not.toContain('createTime=');
   });
 
   it('normalizes omitted list arrays to empty arrays', async () => {
@@ -316,24 +318,20 @@ describe('current Jules REST contract', () => {
     await expect(collectActivities()).rejects.toThrow(/repeated page token/i);
   });
 
-  it('passes a createTime cursor through every activity iterator page', async () => {
+  it('passes server page tokens through the activity iterator', async () => {
     const fetchMock = mockFetch()
       .mockResolvedValueOnce(jsonResponse({ activities: [], nextPageToken: 'page-2' }))
       .mockResolvedValueOnce(jsonResponse({ activities: [] }));
     const client = new JulesClient({ apiKey: 'test-key' });
 
-    for await (const _activity of client.iterateActivities(
-      'sess-1',
-      100,
-      '2026-07-16T12:00:00Z',
-    )) {
+    for await (const _activity of client.iterateActivities('sess-1', 100)) {
       // No activities are needed; only the generated requests matter.
     }
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
-    for (const call of fetchMock.mock.calls) {
-      expect(String(call[0])).toContain('createTime=2026-07-16T12%3A00%3A00Z');
-    }
+    expect(String(fetchMock.mock.calls[0][0])).not.toContain('pageToken=');
+    expect(String(fetchMock.mock.calls[1][0])).toContain('pageToken=page-2');
+    expect(String(fetchMock.mock.calls[1][0])).not.toContain('createTime=');
   });
 
   it('finds a generated plan on a later activity page', async () => {
@@ -437,6 +435,43 @@ describe('state priority over activities', () => {
 
   it('keeps running when state is RUNNING with a failed activity', () => {
     expect(deriveStatus({ state: 'RUNNING' }, [activity({ sessionFailed: { message: 'error' } })])).toBe('running');
+  });
+
+  it('treats COMPLETED as stale after a newer user message resumes work', () => {
+    expect(deriveStatus({ state: 'COMPLETED' }, [
+      activity({
+        id: 'completed-1',
+        createTime: '2026-01-01T00:01:00Z',
+        sessionCompleted: {},
+      }),
+      activity({
+        id: 'feedback-1',
+        createTime: '2026-01-01T00:02:00Z',
+        originator: 'user',
+        userMessaged: { userMessage: 'Please revise it.' },
+      }),
+    ])).toBe('running');
+  });
+
+  it('returns COMPLETED again after resumed work emits a newer terminal event', () => {
+    expect(deriveStatus({ state: 'COMPLETED' }, [
+      activity({
+        id: 'completed-1',
+        createTime: '2026-01-01T00:01:00Z',
+        sessionCompleted: {},
+      }),
+      activity({
+        id: 'feedback-1',
+        createTime: '2026-01-01T00:02:00Z',
+        originator: 'user',
+        userMessaged: { userMessage: 'Please revise it.' },
+      }),
+      activity({
+        id: 'completed-2',
+        createTime: '2026-01-01T00:03:00Z',
+        sessionCompleted: {},
+      }),
+    ])).toBe('completed');
   });
 });
 

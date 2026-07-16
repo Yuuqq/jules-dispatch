@@ -89,6 +89,23 @@ describe('loadConfig .env parsing', () => {
       rmSync(dir, { recursive: true, force: true });
     }
   });
+
+  it('trims source and falls back to main for a blank branch', () => {
+    for (const key of envKeys) delete process.env[key];
+    process.env.JULES_API_KEY = 'test-key';
+    process.env.JULES_DEFAULT_SOURCE = '  sources/github/owner/repo  ';
+    process.env.JULES_DEFAULT_BRANCH = '   ';
+    const dir = withEnvFile('');
+
+    try {
+      const config = loadConfig(dir);
+
+      expect(config.defaultSource).toBe('sources/github/owner/repo');
+      expect(config.defaultBranch).toBe('main');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
 });
 
 describe('task validation', () => {

@@ -31,6 +31,26 @@ describe('translateError', () => {
       expect(result.fix).toContain('Check the ID');
     });
 
+    it('preserves the affected session ID for contextualized polling errors', () => {
+      const result = translateError(httpError(
+        404,
+        'Failed to poll Jules session sess-123: Jules API 404 at /sessions/sess-123',
+      ));
+
+      expect(result.code).toBe('NOT_FOUND');
+      expect(result.cause).toContain('sess-123');
+    });
+
+    it('does not misclassify an API 400 containing source fields as task validation', () => {
+      const result = translateError(httpError(
+        400,
+        'Unknown name "createTime" in request; source field could not be found',
+      ));
+      expect(result.code).toBe('INVALID_REQUEST');
+      expect(result.problem).toBe('Jules API rejected the request');
+      expect(result.cause).toContain('createTime');
+    });
+
     it('translates 429 to RATE_LIMITED', () => {
       const result = translateError(httpError(429));
       expect(result.code).toBe('RATE_LIMITED');
@@ -60,6 +80,13 @@ describe('translateError', () => {
 
     it('translates TypeError with ECONNREFUSED to NETWORK_ERROR', () => {
       const result = translateError(new TypeError('connect ECONNREFUSED 1.2.3.4:443'));
+      expect(result.code).toBe('NETWORK_ERROR');
+    });
+
+    it('translates Jules request timeouts to NETWORK_ERROR', () => {
+      const result = translateError(new Error(
+        'Jules API request timed out after 30000ms at /sessions/sess-1',
+      ));
       expect(result.code).toBe('NETWORK_ERROR');
     });
   });

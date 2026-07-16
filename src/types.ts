@@ -107,11 +107,12 @@ export interface DispatchResult {
 export interface CollectResult {
   sessionId: string;
   title: string;
-  status: JulesSessionStatus;
+  status: JulesSessionStatus | 'error';
   prUrl?: string;
   prTitle?: string;
   lastActivity?: string;
   activities: number;
   state?: string;
   createTime?: string;
+  error?: string;
 }

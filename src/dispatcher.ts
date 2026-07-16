@@ -6,7 +6,7 @@ import { JulesClient } from './client.js';
 import { loadTask, loadTasksFromDir } from './config.js';
 import { isJson, emit, info } from './output.js';
 import { translateError } from './errors.js';
-import { validateBatchSize } from './batch.js';
+import { runBatches, validateBatchSize, validatePaceMs } from './batch.js';
 
 export async function dispatchTask(
   client: JulesClient,
@@ -77,6 +77,8 @@ export interface DispatchBatchOptions {
   source?: string;
   branch?: string;
   parallel?: number;
+  /** Minimum delay between Jules session creation starts. Default: 0. */
+  paceMs?: number;
   /** Where to write the dispatch log JSON. Default: `<projectDir>/.dispatch-logs`. Pass `false` to disable. */
   logDir?: string | false;
 }
@@ -104,41 +106,39 @@ export async function dispatchBatch(
   info(chalk.bold(`Dispatching ${allTasks.length} task(s) from ${taskFiles.length} file(s)...\n`));
 
   const parallel = options.parallel ?? 10;
+  const paceMs = options.paceMs ?? 0;
   validateBatchSize(parallel);
-  const results: DispatchResult[] = [];
+  validatePaceMs(paceMs);
+  let completedCount = 0;
+  let dispatchedCount = 0;
+  let failedCount = 0;
 
-  for (let i = 0; i < allTasks.length; i += parallel) {
-    const batch = allTasks.slice(i, i + parallel);
+  const results = await runBatches(
+    allTasks,
+    parallel,
+    async ({ file, task }, index) => {
+      const result = await dispatchTaskDefinition(client, config, task, file, options);
+      completedCount += 1;
+      if (result.status === 'dispatched') dispatchedCount += 1;
+      else failedCount += 1;
 
-    const batchResults = await Promise.all(
-      batch.map(({ file, task }) =>
-        dispatchTaskDefinition(client, config, task, file, options),
-      ),
-    );
-    results.push(...batchResults);
-
-    if (!isJson()) {
-      // Pair each prompt line with its own result so the per-task status
-      // aligns under its title (previously all prompts were written without
-      // newlines first, then all results were logged, scrambling alignment).
-      for (let j = 0; j < batch.length; j++) {
-        const idx = i + j + 1;
-        const r = batchResults[j];
-        const tail = r.status === 'dispatched'
+      if (!isJson()) {
+        const tail = result.status === 'dispatched'
           ? chalk.green('dispatched')
-          : chalk.red(`failed (${r.error ?? 'unknown'})`);
-        console.log(`[${idx}/${allTasks.length}] ${batch[j].task.title}... ${tail}`);
+          : chalk.red(`failed (${result.error ?? 'unknown'})`);
+        console.log(`[${index + 1}/${allTasks.length}] ${task.title}... ${tail}`);
+
+        const pending = allTasks.length - completedCount;
+        const parts = [chalk.green(`DONE ${dispatchedCount}`)];
+        if (failedCount > 0) parts.push(chalk.red(`FAILED ${failedCount}`));
+        if (pending > 0) parts.push(chalk.dim(`PENDING ${pending}`));
+        console.log(`  ${parts.join(' | ')}`);
       }
 
-      const done = results.filter(r => r.status === 'dispatched').length;
-      const failed = results.filter(r => r.status === 'failed').length;
-      const pending = allTasks.length - results.length;
-      const parts = [chalk.green(`DONE ${done}`)];
-      if (failed > 0) parts.push(chalk.red(`FAILED ${failed}`));
-      if (pending > 0) parts.push(chalk.dim(`PENDING ${pending}`));
-      console.log(`  ${parts.join(' | ')}`);
-    }
-  }
+      return result;
+    },
+    { paceMs },
+  );
 
   // Write dispatch log under the project dir, not next to taskDir.
   let logFile: string | null = null;

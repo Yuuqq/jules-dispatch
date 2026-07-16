@@ -2,7 +2,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
 import { loadConfig, loadTasksFromString } from './config.js';
-import { JulesClient, deriveStatus, getLatestPlanFromActivities } from './client.js';
+import { JulesClient, deriveStatus } from './client.js';
 import { pollSessions } from './polling.js';
 import { dispatchTaskDefinition } from './dispatcher.js';
 import { planTasks, loadPlannerConfig, isPlannerConfigured } from './planner.js';
@@ -10,6 +10,7 @@ import type { JulesConfig, TaskDefinition, DispatchResult } from './types.js';
 import { ok, fail, computeRecoveryHint } from './mcp-helpers.js';
 import { runBatches } from './batch.js';
 import { summarizeSession, summarizeSessionLegacy } from './session-summary.js';
+import { fetchActivityHistory } from './activity-history.js';
 
 export interface McpServerOptions {
   projectDir: string;
@@ -154,7 +155,7 @@ export function createMcpServer(
 
   tool(
     'jules_dispatch_batch',
-    '[DEPRECATED: Use jules_dispatch instead.] Dispatch multiple independent tasks to Jules in bounded parallel batches.\n\nUse this when an AI agent has decomposed work into separate task definitions or has a YAML/JSON task payload ready to fan out.\n\nReturns: { success: true, data: { summary: { total, dispatched, failed }, results: [{ taskFile, taskTitle, sessionId, sessionUrl, title, status, error? }] } }\n\nSee also: jules_list_sources (find source identifiers), jules_dispatch_task, jules_wait_for_completion, jules_plan_tasks',
+    '[DEPRECATED: Use jules_dispatch instead.] Dispatch multiple independent tasks to Jules through a continuously replenished worker pool with optional global launch pacing.\n\nUse this when an AI agent has decomposed work into separate task definitions or has a YAML/JSON task payload ready to fan out.\n\nReturns: { success: true, data: { summary: { total, dispatched, failed }, results: [{ taskFile, taskTitle, sessionId, sessionUrl, title, status, error? }] } }\n\nSee also: jules_list_sources (find source identifiers), jules_dispatch_task, jules_wait_for_completion, jules_plan_tasks',
     {
       tasks: z.union([
         z.array(z.object({
@@ -169,12 +170,19 @@ export function createMcpServer(
       ]),
       format: z.enum(['yaml', 'json']).optional().describe('Format if `tasks` is a string'),
       parallel: z.number().int().min(1).max(50).optional().default(10),
+      paceMs: z.number().int().min(0).max(60_000).optional().default(0)
+        .describe('Minimum delay in milliseconds between session creation starts across all workers'),
     },
     async (args) => {
       const taskList: TaskDefinition[] = typeof args.tasks === 'string'
         ? loadTasksFromString(args.tasks, args.format ?? 'yaml')
         : args.tasks as TaskDefinition[];
-      return ok(await dispatchConsolidatedTasks(taskList, args.parallel ?? 10, '<mcp>'));
+      return ok(await dispatchConsolidatedTasks(
+        taskList,
+        args.parallel ?? 10,
+        '<mcp>',
+        args.paceMs ?? 0,
+      ));
     },
     mutationAnnotations,
   );
@@ -309,11 +317,13 @@ export function createMcpServer(
     tasks: TaskDefinition[],
     parallel: number,
     taskFile: string,
+    paceMs = 0,
   ): Promise<{ summary: { total: number; dispatched: number; failed: number }; results: DispatchResult[] }> {
     const results = await runBatches(
       tasks,
       parallel,
       task => dispatchTaskDefinition(client, config, task, taskFile),
+      { paceMs },
     );
 
     const dispatched = results.filter(r => r.status === 'dispatched').length;
@@ -327,7 +337,7 @@ export function createMcpServer(
 
   tool(
     'jules_dispatch',
-    'Dispatch one or more Jules tasks through a single consolidated orchestration call.\n\nUse this when an AI agent has a single task object, an array of task objects, or a YAML/JSON task payload and wants bounded parallel dispatch without choosing between single-task and batch tools.\n\nReturns: { success: true, data: { summary: { total, dispatched, failed }, results: [{ taskFile, taskTitle, sessionId, sessionUrl, title, status, error? }] } }\n\nSee also: jules_monitor (track dispatched sessions), jules_interact (inspect one session in context), jules_list_sources (find source identifiers)',
+    'Dispatch one or more Jules tasks through a single consolidated orchestration call.\n\nUse this when an AI agent has a single task object, an array of task objects, or a YAML/JSON task payload and wants a continuously replenished worker pool with bounded concurrency and optional global launch pacing.\n\nReturns: { success: true, data: { summary: { total, dispatched, failed }, results: [{ taskFile, taskTitle, sessionId, sessionUrl, title, status, error? }] } }\n\nSee also: jules_monitor (track dispatched sessions), jules_interact (inspect one session in context), jules_list_sources (find source identifiers)',
     {
       tasks: z.union([
         consolidatedTaskSchema,
@@ -336,6 +346,8 @@ export function createMcpServer(
       ]),
       format: z.enum(['yaml', 'json']).optional().describe('Format if `tasks` is a string'),
       parallel: z.number().int().min(1).max(50).optional().default(10),
+      paceMs: z.number().int().min(0).max(60_000).optional().default(0)
+        .describe('Minimum delay in milliseconds between session creation starts across all workers'),
     },
     async (args) => {
       const taskList: TaskDefinition[] = typeof args.tasks === 'string'
@@ -344,7 +356,12 @@ export function createMcpServer(
           ? args.tasks as TaskDefinition[]
           : [args.tasks as TaskDefinition];
 
-      return ok(await dispatchConsolidatedTasks(taskList, args.parallel ?? 10, '<mcp>'));
+      return ok(await dispatchConsolidatedTasks(
+        taskList,
+        args.parallel ?? 10,
+        '<mcp>',
+        args.paceMs ?? 0,
+      ));
     },
     mutationAnnotations,
   );
@@ -390,21 +407,18 @@ export function createMcpServer(
 
   tool(
     'jules_interact',
-    'Fetch full Jules session interaction context in one call.\n\nUse this when an AI agent needs the session record, derived status, latest plan, compact activity timeline, and PR output together before deciding whether to approve, message, monitor, or collect results.\n\nReturns: { success: true, data: { session: { id, title, state, url, source, branch }, status, plan, activities: [{ id, time, originator, title?, agentMessaged?, userMessaged?, planGenerated?, completed?, failed?, sessionFailed? }], pr? } }\n\nSee also: jules_dispatch (create sessions), jules_monitor (status/wait across sessions), jules_send_message (reply to a session), jules_approve_plan (continue plan-gated work)',
+    'Fetch full Jules session interaction context in one call.\n\nUse this when an AI agent needs the session record, derived status, globally latest plan, newest chronological activity window, total activity count, and PR output together before deciding whether to approve, message, monitor, or collect results.\n\nReturns: { success: true, data: { session: { id, title, state, url, source, branch }, status, plan, activityTotal, activities: [{ id, time, originator, title?, agentMessaged?, userMessaged?, planGenerated?, completed?, failed?, sessionFailed? }], pr? } }\n\nSee also: jules_dispatch (create sessions), jules_monitor (status/wait across sessions), jules_send_message (reply to a session), jules_approve_plan (continue plan-gated work)',
     {
       sessionId: nonEmptyString,
       activityCount: z.number().int().min(1).max(100).optional().default(10),
     },
     async (args) => {
       const activityCount = args.activityCount ?? 10;
-      const [session, activityPage] = await Promise.all([
+      const [session, history] = await Promise.all([
         client.getSession(args.sessionId),
-        client.listActivities(args.sessionId, Math.max(activityCount, 50)),
+        fetchActivityHistory(client, args.sessionId, { initialLimit: activityCount }),
       ]);
-      const allActivities = activityPage.activities ?? [];
-      const activities = allActivities.slice(0, activityCount);
-      const status = deriveStatus(session, allActivities);
-      const plan = getLatestPlanFromActivities(allActivities);
+      const status = deriveStatus(session, history.activities, history.cursor);
       const pr = session.outputs?.find(o => o.pullRequest)?.pullRequest;
 
       return ok({
@@ -417,8 +431,9 @@ export function createMcpServer(
           branch: session.sourceContext?.githubRepoContext.startingBranch,
         },
         status,
-        plan,
-        activities: activities.map(a => ({
+        plan: history.latestPlan,
+        activityTotal: history.totalActivities ?? history.activities.length,
+        activities: history.activities.map(a => ({
           id: a.id,
           time: a.createTime,
           originator: a.originator,
@@ -481,7 +496,7 @@ export function createMcpServer(
 
     tool(
       'jules_auto',
-      'Plan a high-level intent with an OpenAI-compatible LLM and dispatch the resulting Jules tasks in one call.\n\nUse this optional one-shot fan-out tool when an AI agent is ready to create sessions immediately instead of reviewing planned tasks first.\n\nReturns: { success: true, data: { plan: { model, rationale?, tasks, usage? }, summary: { total, dispatched, failed }, results: [{ taskFile, taskTitle, sessionId, sessionUrl, title, status, error? }] } }\n\nSee also: jules_plan_tasks (plan without dispatch), jules_dispatch_batch, jules_wait_for_completion',
+      'Plan a high-level intent with an OpenAI-compatible LLM and dispatch the resulting Jules tasks in one call.\n\nUse this optional one-shot fan-out tool when an AI agent is ready to create sessions immediately instead of reviewing planned tasks first. Dispatch uses the same bounded worker pool and optional global launch pacing as jules_dispatch.\n\nReturns: { success: true, data: { plan: { model, rationale?, tasks, usage? }, summary: { total, dispatched, failed }, results: [{ taskFile, taskTitle, sessionId, sessionUrl, title, status, error? }] } }\n\nSee also: jules_plan_tasks (plan without dispatch), jules_dispatch_batch, jules_wait_for_completion',
       {
         description: nonEmptyString,
         maxTasks: z.number().int().min(1).max(50).optional().default(8),
@@ -491,6 +506,8 @@ export function createMcpServer(
         model: nonEmptyString.optional(),
         baseUrl: nonEmptyString.optional(),
         parallel: z.number().int().min(1).max(50).optional().default(10),
+        paceMs: z.number().int().min(0).max(60_000).optional().default(0)
+          .describe('Minimum delay in milliseconds between session creation starts across all workers'),
       },
       async (args) => {
         const cfg = loadPlannerConfig({
@@ -511,6 +528,7 @@ export function createMcpServer(
           plan.tasks,
           parallel,
           task => dispatchTaskDefinition(client, config, task, '<mcp-auto>'),
+          { paceMs: args.paceMs ?? 0 },
         );
         const dispatched = results.filter(r => r.status === 'dispatched').length;
         return ok({

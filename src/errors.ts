@@ -25,6 +25,11 @@ function getMessage(err: unknown): string {
   return String(err);
 }
 
+function addPollingSessionContext(cause: string, message: string): string {
+  const match = /^Failed to poll Jules session ([^:]+):/.exec(message);
+  return match ? `${cause} (session: ${match[1]})` : cause;
+}
+
 export function translateError(err: unknown): TranslatedError {
   const status = getHttpStatus(err);
   const message = getMessage(err);
@@ -32,7 +37,7 @@ export function translateError(err: unknown): TranslatedError {
   if (status === 401 || status === 403) {
     return {
       problem: 'Authentication failed',
-      cause: 'API key is invalid, expired, or missing',
+      cause: addPollingSessionContext('API key is invalid, expired, or missing', message),
       fix: 'Run `jules-dispatch init` or check `JULES_API_KEY` in `.env`',
       code: 'AUTH_FAILED',
       context: { docsUrl: 'https://github.com/Yuuqq/jules-dispatch#authentication' },
@@ -42,7 +47,7 @@ export function translateError(err: unknown): TranslatedError {
   if (status === 404) {
     return {
       problem: 'Resource not found',
-      cause: 'The session or source ID does not exist',
+      cause: addPollingSessionContext('The session or source ID does not exist', message),
       fix: 'Check the ID and try again',
       code: 'NOT_FOUND',
     };
@@ -66,7 +71,19 @@ export function translateError(err: unknown): TranslatedError {
     };
   }
 
-  if (err instanceof TypeError && /fetch|network|ECONNREFUSED|ENOTFOUND|socket/i.test(message)) {
+  if (status === 400) {
+    return {
+      problem: 'Jules API rejected the request',
+      cause: message,
+      fix: 'Check the command arguments and update jules-dispatch if the API contract changed',
+      code: 'INVALID_REQUEST',
+    };
+  }
+
+  if (
+    /Jules API request timed out/i.test(message) ||
+    (err instanceof TypeError && /fetch|network|ECONNREFUSED|ENOTFOUND|socket/i.test(message))
+  ) {
     return {
       problem: 'Network error',
       cause: 'Cannot reach the Jules API server',

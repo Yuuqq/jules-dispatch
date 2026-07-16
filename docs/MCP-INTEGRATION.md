@@ -214,11 +214,13 @@ The server always registers 15 tools: 3 recommended consolidated tools, 5 utilit
 
 | Tool | Purpose | Key params |
 |------|---------|------------|
-| `jules_dispatch` | Create one or more sessions | `tasks` (object/array/string), `parallel` |
+| `jules_dispatch` | Create one or more sessions | `tasks` (object/array/string), `parallel`, `paceMs` |
 | `jules_monitor` | Check status or wait for terminal/action-required state | `sessionIds`, `wait`, `timeoutMs` |
 | `jules_interact` | Full session context (details + plan + activities) | `sessionId`, `activityCount` |
 
 With `wait: true`, `jules_monitor` returns when all sessions are terminal, when any session enters an action-required state, or when the timeout expires. It does not silently wait through plan approval, user feedback, or paused states.
+
+`jules_dispatch` uses a continuously replenished worker pool. `parallel` caps concurrent session creation at 1–50, while `paceMs` sets a global 0–60000 ms minimum interval between creation starts across all workers. Results remain in input order. `jules_interact` scans the full activity feed, returns the newest requested activities in chronological order, exposes the complete count as `activityTotal`, and selects the globally latest plan.
 
 ### Utility tools
 
@@ -237,7 +239,7 @@ These are registered when a planner key is supplied through `LLM_API_KEY`, `OPEN
 | Tool | Purpose |
 |------|---------|
 | `jules_plan_tasks` | Expand a high-level intent into N task drafts |
-| `jules_auto` | Plan + dispatch in one shot |
+| `jules_auto` | Plan + dispatch in one shot; supports `parallel` and `paceMs` |
 
 ### Deprecated aliases
 

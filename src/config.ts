@@ -48,8 +48,8 @@ export function loadConfig(projectDir: string, options: LoadConfigOptions = {}):
 
   return {
     apiKey,
-    defaultSource: process.env.JULES_DEFAULT_SOURCE ?? '',
-    defaultBranch: process.env.JULES_DEFAULT_BRANCH ?? 'main',
+    defaultSource: (process.env.JULES_DEFAULT_SOURCE ?? '').trim(),
+    defaultBranch: (process.env.JULES_DEFAULT_BRANCH ?? '').trim() || 'main',
     autoMode,
     projectDir,
   };

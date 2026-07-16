@@ -249,7 +249,7 @@ describe('pollSessions', () => {
     let callCount = 0;
     client.getSession.mockImplementation(async () => {
       callCount++;
-      if (callCount <= 2) throw new Error('transient');
+      if (callCount <= 2) throw new TypeError('fetch failed');
       return completedSession('s1');
     });
     client.listActivities.mockResolvedValue(successActivities());
@@ -265,6 +265,71 @@ describe('pollSessions', () => {
     const result = await resultPromise;
     expect(result.completed).toEqual(['s1']);
     expect(result.timedOut).toBe(false);
+  });
+
+  it('rejects permanent polling errors immediately with session context', async () => {
+    const client = mockClient();
+    client.getSession.mockRejectedValue(Object.assign(new Error('not found'), { status: 404 }));
+    const onError = vi.fn();
+
+    const rejection = expect(pollSessions(
+      client as unknown as Parameters<typeof pollSessions>[0],
+      ['missing-session'],
+      { interval: 100, timeout: 5000 },
+      { onError },
+    )).rejects.toThrow('Failed to poll Jules session missing-session: not found');
+
+    await rejection;
+    expect(onError).toHaveBeenCalledWith('missing-session', expect.objectContaining({
+      message: 'not found',
+    }));
+    expect(client.getSession).toHaveBeenCalledTimes(1);
+    expect(client.listActivities).not.toHaveBeenCalled();
+  });
+
+  it('keeps polling a stale COMPLETED state until resumed work completes again', async () => {
+    const client = mockClient();
+    client.getSession.mockResolvedValue(completedSession('s1'));
+    const firstCompletion = {
+      id: 'completed-1',
+      name: 'activities/completed-1',
+      createTime: '2026-01-01T00:01:00Z',
+      originator: 'agent',
+      sessionCompleted: {},
+    } satisfies JulesActivity;
+    const feedback = {
+      id: 'feedback-1',
+      name: 'activities/feedback-1',
+      createTime: '2026-01-01T00:02:00Z',
+      originator: 'user',
+      userMessaged: { userMessage: 'Please revise it.' },
+    } satisfies JulesActivity;
+    const secondCompletion = {
+      id: 'completed-2',
+      name: 'activities/completed-2',
+      createTime: '2026-01-01T00:03:00Z',
+      originator: 'agent',
+      sessionCompleted: {},
+    } satisfies JulesActivity;
+    client.listActivities
+      .mockResolvedValueOnce({ activities: [firstCompletion], nextPageToken: 'page-2' })
+      .mockResolvedValueOnce({ activities: [feedback] })
+      .mockResolvedValueOnce({ activities: [feedback, secondCompletion] });
+
+    const resultPromise = pollSessions(
+      client as unknown as Parameters<typeof pollSessions>[0],
+      ['s1'],
+      { interval: 100, timeout: 5000 },
+    );
+
+    await vi.advanceTimersByTimeAsync(200);
+    await expect(resultPromise).resolves.toMatchObject({
+      completed: ['s1'],
+      stillRunning: [],
+      timedOut: false,
+    });
+    expect(client.getSession).toHaveBeenCalledTimes(2);
+    expect(client.listActivities).toHaveBeenNthCalledWith(3, 's1', 100, 'page-2');
   });
 
   it('does not re-poll sessions already terminal via pre-seeded state', async () => {

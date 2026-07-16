@@ -40,11 +40,11 @@ describe('checkNodeVersion', () => {
     expect(check.message).toContain('20.11.0');
   });
 
-  it('returns warn for Node.js < 20', () => {
+  it('returns fail for Node.js < 20', () => {
     const check = checkNodeVersion('v18.17.0');
-    expect(check.status).toBe('warn');
+    expect(check.status).toBe('fail');
     expect(check.message).toContain('18');
-    expect(check.message).toContain('>= 20 recommended');
+    expect(check.message).toContain('requires >= 20');
   });
 });
 

@@ -61,7 +61,7 @@ jules-dispatch --project /path/to/project mcp
 2. Include `title` and a detailed `prompt` for every task. Add `source`, `branch`, `autoMode`, or `requirePlanApproval` only when needed.
 3. Confirm every prerequisite local change is committed and pushed to the remote target branch.
 4. Use `jules_list_sources` first if the source identifier is unknown.
-5. Dispatch with `jules_dispatch`, not deprecated aliases, unless only legacy tools are available.
+5. Dispatch with `jules_dispatch`, not deprecated aliases, unless only legacy tools are available. Set `parallel` for the concurrency cap and `paceMs` when launches must be globally spaced; the worker pool continuously starts queued tasks as capacity becomes available.
 6. Monitor with `jules_monitor` using `wait: true` when the user asked for completion, PR URLs, or end-to-end orchestration. Waiting returns when all sessions are terminal, any session requires action, or the timeout expires.
 7. When `actionRequired` contains sessions, inspect each with `jules_interact`. Review and approve plans with `jules_approve_plan`, or answer feedback requests and paused sessions with `jules_send_message` when appropriate.
 8. Call `jules_monitor` again for the action-required and still-running session IDs. Repeat the inspect, act, monitor loop until every session is terminal or the user must decide the next action.
@@ -69,9 +69,9 @@ jules-dispatch --project /path/to/project mcp
 
 ## Preferred MCP Tools
 
-- `jules_dispatch`: create one or more sessions from a task object, task array, or YAML/JSON payload.
+- `jules_dispatch`: create one or more sessions from a task object, task array, or YAML/JSON payload; supports `parallel` (1–50) and global `paceMs` (0–60000).
 - `jules_monitor`: check sessions or wait until terminal/action-required state; monitor again after handling requested actions.
-- `jules_interact`: fetch session details, status, latest plan, activities, and PR output.
+- `jules_interact`: fetch session details, status, globally latest plan, newest chronological activities, full `activityTotal`, and PR output.
 - `jules_list_sources`: discover connected GitHub source identifiers.
 - `jules_approve_plan`: approve a plan-gated session after review.
 - `jules_send_message`: send follow-up instructions to a session.
@@ -87,7 +87,7 @@ Use CLI commands when MCP tools are unavailable:
 ```bash
 jules-dispatch sources
 jules-dispatch dispatch tasks/my-task.yaml
-jules-dispatch batch tasks/ --parallel 10
+jules-dispatch batch tasks/ --parallel 10 --pace-ms 250
 jules-dispatch status --ids <session-id>
 jules-dispatch wait <session-id> --timeout 1800000
 jules-dispatch get <session-id>

@@ -1,6 +1,11 @@
 import { deriveStatus } from './client.js';
 import type { JulesClient } from './client.js';
 import type { JulesSessionStatus } from './types.js';
+import {
+  fetchActivityHistory,
+  type ActivityHistoryCursor,
+} from './activity-history.js';
+import { translateError } from './errors.js';
 
 type ActionRequiredStatus = Extract<
   JulesSessionStatus,
@@ -63,6 +68,7 @@ export async function pollSessions(
   const awaitingPlan = new Set<string>();
   const awaitingUserFeedback = new Set<string>();
   const paused = new Set<string>();
+  const activityCursors = new Map<string, ActivityHistoryCursor>();
   let stoppedByFailFast = false;
 
   const markTerminal = (id: string, status: 'completed' | 'failed' | 'cancelled'): void => {
@@ -107,8 +113,12 @@ export async function pollSessions(
       await Promise.all(chunk.map(async (id) => {
         try {
           const session = await client.getSession(id);
-          const { activities } = await client.listActivities(id, 10);
-          const status = deriveStatus(session, activities);
+          const history = await fetchActivityHistory(client, id, {
+            cursor: activityCursors.get(id),
+            initialLimit: 10,
+          });
+          activityCursors.set(id, history.cursor);
+          const status = deriveStatus(session, history.activities, history.cursor);
 
           if (status === 'completed') markTerminal(id, 'completed');
           else if (status === 'failed') markTerminal(id, 'failed');
@@ -119,7 +129,11 @@ export async function pollSessions(
             status === 'paused'
           ) markActionRequired(id, status);
         } catch (err) {
-          callbacks?.onError?.(id, err as Error);
+          const error = toError(err);
+          callbacks?.onError?.(id, error);
+          if (!isTransientPollingError(error)) {
+            throw contextualizePollingError(id, error);
+          }
         }
       }));
 
@@ -177,4 +191,28 @@ export async function pollSessions(
 
 function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function isTransientPollingError(err: Error): boolean {
+  const code = translateError(err).code;
+  return code === 'NETWORK_ERROR' || code === 'RATE_LIMITED' || code === 'SERVER_ERROR';
+}
+
+function contextualizePollingError(sessionId: string, err: Error): Error {
+  const wrapped = new Error(`Failed to poll Jules session ${sessionId}: ${err.message}`, {
+    cause: err,
+  }) as Error & { status?: number };
+  const status = getHttpStatus(err);
+  if (status !== undefined) wrapped.status = status;
+  return wrapped;
+}
+
+function getHttpStatus(err: Error): number | undefined {
+  if (!('status' in err)) return undefined;
+  const status = (err as Error & { status?: unknown }).status;
+  return typeof status === 'number' ? status : undefined;
+}
+
+function toError(err: unknown): Error {
+  return err instanceof Error ? err : new Error(String(err));
 }

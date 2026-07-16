@@ -21,7 +21,7 @@ export function checkNodeVersion(version: string = process.version): DoctorCheck
   if (major >= 20) {
     return { name: 'node_version', status: 'pass', message: `Node.js ${version} (meets >= 20 requirement)` };
   }
-  return { name: 'node_version', status: 'warn', message: `Node.js ${version} (>= 20 recommended)` };
+  return { name: 'node_version', status: 'fail', message: `Node.js ${version} (requires >= 20)` };
 }
 
 import type { ExecSyncOptionsWithStringEncoding } from 'node:child_process';

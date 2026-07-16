@@ -6,6 +6,12 @@ import type {
   JulesPlan,
   JulesSessionStatus,
 } from './types.js';
+import {
+  compareActivityPositions,
+  deriveActivityLifecycle,
+  hasResumedAfterTerminal,
+  type ActivityHistoryCursor,
+} from './activity-history.js';
 
 const BASE_URL = 'https://jules.googleapis.com/v1alpha';
 const MAX_RETRIES = 4;
@@ -188,11 +194,9 @@ export class JulesClient {
     sessionId: string,
     pageSize = 30,
     pageToken?: string,
-    createTime?: string,
   ): Promise<{ activities: JulesActivity[]; nextPageToken?: string }> {
     const q = new URLSearchParams({ pageSize: String(normalizePageSize(pageSize)) });
     if (pageToken) q.set('pageToken', pageToken);
-    if (createTime) q.set('createTime', createTime);
     const page = await this.request<{ activities?: JulesActivity[]; nextPageToken?: string }>(
       `/sessions/${encodeURIComponent(sessionId)}/activities?${q.toString()}`,
     );
@@ -205,13 +209,12 @@ export class JulesClient {
   async *iterateActivities(
     sessionId: string,
     pageSize = 30,
-    createTime?: string,
   ): AsyncGenerator<JulesActivity> {
     let token: string | undefined;
     const seenTokens = new Set<string>();
     do {
       guardPageToken(token, seenTokens, `activities for session ${sessionId}`);
-      const page = await this.listActivities(sessionId, pageSize, token, createTime);
+      const page = await this.listActivities(sessionId, pageSize, token);
       for (const a of page.activities) yield a;
       token = page.nextPageToken;
     } while (token);
@@ -222,7 +225,7 @@ export class JulesClient {
     let latest: JulesActivity | undefined;
     for await (const activity of this.iterateActivities(sessionId, MAX_PAGE_SIZE)) {
       if (!activity.planGenerated?.plan) continue;
-      if (!latest || activity.createTime > latest.createTime) latest = activity;
+      if (!latest || compareActivityPositions(activity, latest) > 0) latest = activity;
     }
     return latest?.planGenerated?.plan ?? null;
   }
@@ -297,10 +300,15 @@ export function parseRetryAfterMs(value: string | null): number | undefined {
 export function deriveStatus(
   session: Pick<JulesSession, 'state' | 'outputs'>,
   activities: JulesActivity[] = [],
+  lifecycle?: ActivityHistoryCursor,
 ): JulesSessionStatus {
+  const activityLifecycle = lifecycle ?? deriveActivityLifecycle(activities);
+
   // Prefer explicit state field.
   const s = (session.state ?? '').toUpperCase();
-  if (s === 'COMPLETED') return 'completed';
+  if (s === 'COMPLETED') {
+    return hasResumedAfterTerminal(activityLifecycle) ? 'running' : 'completed';
+  }
   if (s === 'FAILED') return 'failed';
   if (s === 'CANCELLED' || s === 'CANCELED') return 'cancelled';
   if (s === 'AWAITING_PLAN_APPROVAL') return 'awaiting_plan';
@@ -314,8 +322,9 @@ export function deriveStatus(
     s === 'PENDING'
   ) return 'running';
 
-  // Fallback: scan activities.
-  if (activities.some(a => a.sessionFailed)) return 'failed';
-  if (activities.some(a => a.sessionCompleted)) return 'completed';
+  // Fallback: use the newest lifecycle event, accounting for resumed work.
+  if (activityLifecycle.latestTerminal && !hasResumedAfterTerminal(activityLifecycle)) {
+    return activityLifecycle.latestTerminal.kind === 'failed' ? 'failed' : 'completed';
+  }
   return 'running';
 }

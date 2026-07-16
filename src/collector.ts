@@ -9,6 +9,7 @@ import { isJson, emit, info } from './output.js';
 import { pollSessions, type PollResult } from './polling.js';
 import { runBatches } from './batch.js';
 import { getLastActivity } from './session-summary.js';
+import { fetchActivityHistory } from './activity-history.js';
 
 export interface CollectStatusOptions {
   sessionIds?: string[];
@@ -24,15 +25,16 @@ export async function collectStatus(
 ): Promise<CollectResult[]> {
   const targetIds = options.sessionIds;
   const sessionsToCheck: JulesSession[] = [];
+  let results: CollectResult[];
 
   if (targetIds && targetIds.length > 0) {
-    // Fetch each requested session directly so we don't depend on it
-    // being in the first page of /sessions.
-    sessionsToCheck.push(...await runBatches(
+    // Fetch requested sessions directly so status does not depend on the
+    // recent-session listing. Lookup failures remain explicit error results.
+    results = await runBatches(
       targetIds,
       10,
-      id => fetchSessionForStatus(client, id),
-    ));
+      id => summarizeCollectSessionId(client, id),
+    );
   } else {
     // Paginate until we hit scanLimit. A single listSessions() call only
     // returns one server page (capped well below our scanLimit for large
@@ -44,13 +46,13 @@ export async function collectStatus(
       fetched += 1;
       if (fetched >= scanLimit) break;
     }
-  }
 
-  const results = await runBatches(
-    sessionsToCheck,
-    10,
-    session => summarizeCollectResult(client, session),
-  );
+    results = await runBatches(
+      sessionsToCheck,
+      10,
+      session => summarizeCollectResult(client, session),
+    );
+  }
 
   emit(
     () => printStatusText(results),
@@ -64,6 +66,7 @@ export async function collectStatus(
         awaiting_user_feedback: results.filter(r => r.status === 'awaiting_user_feedback').length,
         paused: results.filter(r => r.status === 'paused').length,
         cancelled: results.filter(r => r.status === 'cancelled').length,
+        errors: results.filter(r => r.status === 'error').length,
       },
       results,
     },
@@ -79,21 +82,24 @@ export async function collectStatus(
   return results;
 }
 
-async function fetchSessionForStatus(client: JulesClient, id: string): Promise<JulesSession> {
+async function summarizeCollectSessionId(
+  client: JulesClient,
+  id: string,
+): Promise<CollectResult> {
   try {
-    return await client.getSession(id);
+    const session = await client.getSession(id);
+    return summarizeCollectResult(client, session);
   } catch (err) {
-    // Surface the error in text mode for visibility.
-    if (!isJson()) console.error(chalk.red(`Failed to fetch session ${id}: ${(err as Error).message}`));
+    const message = (err as Error).message;
+    if (!isJson()) console.error(chalk.red(`Failed to fetch session ${id}: ${message}`));
     return {
-      id,
-      name: `sessions/${id}`,
-      title: `<not found: ${id}>`,
-      prompt: '',
-      url: '',
-      sourceContext: { source: '', githubRepoContext: { startingBranch: '' } },
-      state: 'FAILED',
-    } as JulesSession;
+      sessionId: id,
+      title: `<error: ${id}>`,
+      status: 'error',
+      lastActivity: message,
+      activities: 0,
+      error: message,
+    };
   }
 }
 
@@ -101,17 +107,19 @@ async function summarizeCollectResult(client: JulesClient, session: JulesSession
   let lastActivity = '';
   let activityCount = 0;
   let status: CollectResult['status'] = 'running';
+  let activityError: string | undefined;
 
   try {
-    const { activities } = await client.listActivities(session.id, 10);
-    activityCount = activities.length;
+    const history = await fetchActivityHistory(client, session.id, { initialLimit: 10 });
+    activityCount = history.totalActivities ?? history.activities.length;
 
-    status = deriveStatus(session, activities);
-    lastActivity = getLastActivity(status, activities);
+    status = deriveStatus(session, history.activities, history.cursor);
+    lastActivity = getLastActivity(status, history.activities);
   } catch (err) {
-    debug('activity fetch error', { sessionId: session.id, error: (err as Error).message });
-    lastActivity = 'Error fetching activities';
-    status = deriveStatus(session, []);
+    activityError = (err as Error).message;
+    debug('activity fetch error', { sessionId: session.id, error: activityError });
+    lastActivity = activityError;
+    status = 'error';
   }
 
   const pr = session.outputs?.find(o => o.pullRequest);
@@ -126,6 +134,7 @@ async function summarizeCollectResult(client: JulesClient, session: JulesSession
     activities: activityCount,
     state: session.state,
     createTime: session.createTime,
+    ...(activityError ? { error: activityError } : {}),
   };
 }
 
@@ -144,6 +153,7 @@ function printStatusText(results: CollectResult[]): void {
     'completed',
     'failed',
     'cancelled',
+    'error',
   ];
   const sorted = [...results].sort((a, b) => {
     const ai = groupOrder.indexOf(a.status);
@@ -160,6 +170,7 @@ function printStatusText(results: CollectResult[]): void {
     completed: { icon: '✓', label: 'Done', color: chalk.blue },
     failed: { icon: '✗', label: 'Failed', color: chalk.red },
     cancelled: { icon: '⊘', label: 'Cancelled', color: chalk.gray },
+    error: { icon: '!', label: 'Error', color: chalk.red },
   };
 
   const table = new Table({
