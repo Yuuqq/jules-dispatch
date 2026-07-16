@@ -3,6 +3,7 @@ import {
   checkNodeVersion,
   checkNpm,
   checkApiKey,
+  checkConfiguration,
   checkApiConnectivity,
   checkTaskFile,
   runDoctor,
@@ -89,6 +90,24 @@ describe('checkApiKey', () => {
     } finally {
       if (original === undefined) delete process.env.JULES_API_KEY;
       else process.env.JULES_API_KEY = original;
+    }
+  });
+
+  it('does not mistake invalid non-auth configuration for a missing API key', () => {
+    const originalKey = process.env.JULES_API_KEY;
+    const originalAutoMode = process.env.JULES_AUTO_MODE;
+    process.env.JULES_API_KEY = 'test-key';
+    process.env.JULES_AUTO_MODE = 'invalid';
+    try {
+      expect(checkApiKey('/fake/project').status).toBe('pass');
+      const configuration = checkConfiguration('/fake/project');
+      expect(configuration.status).toBe('fail');
+      expect(configuration.message).toContain('JULES_AUTO_MODE');
+    } finally {
+      if (originalKey === undefined) delete process.env.JULES_API_KEY;
+      else process.env.JULES_API_KEY = originalKey;
+      if (originalAutoMode === undefined) delete process.env.JULES_AUTO_MODE;
+      else process.env.JULES_AUTO_MODE = originalAutoMode;
     }
   });
 });
@@ -186,6 +205,7 @@ describe('runDoctor', () => {
       expect(names).toContain('node_version');
       expect(names).toContain('npm');
       expect(names).toContain('api_key');
+      expect(names).toContain('configuration');
       expect(names).toContain('api_connectivity');
 
       const apiKeyCheck = result.checks.find(c => c.name === 'api_key');
@@ -213,6 +233,47 @@ describe('runDoctor', () => {
       expect(connectivityCheck).toBeUndefined();
 
       expect(result.exitCode).toBe(2);
+    } finally {
+      if (original === undefined) delete process.env.JULES_API_KEY;
+      else process.env.JULES_API_KEY = original;
+    }
+  });
+
+  it('reports invalid Jules configuration separately and skips connectivity', async () => {
+    const originalKey = process.env.JULES_API_KEY;
+    const originalAutoMode = process.env.JULES_AUTO_MODE;
+    process.env.JULES_API_KEY = 'test-key';
+    process.env.JULES_AUTO_MODE = 'invalid';
+    try {
+      const result = await runDoctor('/fake/project');
+
+      expect(result.checks.find(c => c.name === 'api_key')?.status).toBe('pass');
+      expect(result.checks.find(c => c.name === 'configuration')?.status).toBe('fail');
+      expect(result.checks.find(c => c.name === 'api_connectivity')).toBeUndefined();
+      expect(result.exitCode).toBe(3);
+    } finally {
+      if (originalKey === undefined) delete process.env.JULES_API_KEY;
+      else process.env.JULES_API_KEY = originalKey;
+      if (originalAutoMode === undefined) delete process.env.JULES_AUTO_MODE;
+      else process.env.JULES_AUTO_MODE = originalAutoMode;
+    }
+  });
+
+  it('uses apiKeyOverride for both the key check and connectivity check', async () => {
+    mockFetch().mockResolvedValue(
+      jsonResponse({ sources: [], nextPageToken: undefined }),
+    );
+    const original = process.env.JULES_API_KEY;
+    delete process.env.JULES_API_KEY;
+    try {
+      const result = await runDoctor('/fake/project', { apiKeyOverride: 'override-key' });
+
+      expect(result.checks.find(c => c.name === 'api_key')?.status).toBe('pass');
+      expect(result.checks.find(c => c.name === 'api_connectivity')?.status).toBe('pass');
+      expect(result.exitCode).toBe(0);
+      expect(vi.mocked(fetch).mock.calls[0][1]).toMatchObject({
+        headers: expect.objectContaining({ 'X-Goog-Api-Key': 'override-key' }),
+      });
     } finally {
       if (original === undefined) delete process.env.JULES_API_KEY;
       else process.env.JULES_API_KEY = original;

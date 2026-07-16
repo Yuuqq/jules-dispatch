@@ -142,13 +142,19 @@ export async function dispatchBatch(
 
   // Write dispatch log under the project dir, not next to taskDir.
   let logFile: string | null = null;
+  let logWarning: string | undefined;
   if (options.logDir !== false) {
-    const projectRoot = config.projectDir ?? process.cwd();
-    const logDir = options.logDir ?? resolve(projectRoot, '.dispatch-logs');
-    if (!existsSync(logDir)) mkdirSync(logDir, { recursive: true });
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    logFile = resolve(logDir, `dispatch-${timestamp}.json`);
-    writeFileSync(logFile, JSON.stringify(results, null, 2));
+    try {
+      const projectRoot = config.projectDir ?? process.cwd();
+      const logDir = options.logDir ?? resolve(projectRoot, '.dispatch-logs');
+      if (!existsSync(logDir)) mkdirSync(logDir, { recursive: true });
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      logFile = resolve(logDir, `dispatch-${timestamp}.json`);
+      writeFileSync(logFile, JSON.stringify(results, null, 2));
+    } catch (err) {
+      logFile = null;
+      logWarning = `Dispatch succeeded, but the log could not be written: ${(err as Error).message}`;
+    }
   }
 
   const dispatched = results.filter(r => r.status === 'dispatched');
@@ -164,11 +170,13 @@ export async function dispatchBatch(
       );
       console.log(`${chalk.dim('━'.repeat(36))}`);
       if (logFile) console.log(chalk.dim(`\nDispatch log: ${logFile}`));
+      if (logWarning) console.warn(chalk.yellow(`\nWarning: ${logWarning}`));
     },
     {
       summary: { total: results.length, dispatched: dispatched.length, failed: failed.length },
       results,
       logFile,
+      ...(logWarning ? { warning: logWarning } : {}),
     },
   );
 

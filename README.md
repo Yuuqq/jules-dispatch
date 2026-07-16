@@ -105,7 +105,7 @@ Configure via env vars (`LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL`) or per-invoc
 
 ## ✨ What's New in 1.1
 
-- 🧰 **MCP server** (`jules-dispatch mcp`) — 12 tools exposed to Claude Code, Codex, or any MCP-compatible client
+- 🧰 **MCP server** (`jules-dispatch mcp`) — 15 always-registered tools, plus 2 optional planning tools when an LLM key is configured
 - 🤖 **`--json` mode** — machine-readable output on every command for AI agents and shell pipelines
 - ✅ **Plan approval workflow** — `plan`, `approve` commands + `requirePlanApproval: true` task option
 - 📡 **Live tailing** — `tail <id>` streams activity events as they happen
@@ -145,20 +145,27 @@ sequenceDiagram
     participant J as ☁️ Google Jules
 
     U->>CC: "Add tests to 5 modules"
-    CC->>MCP: jules_dispatch_batch(tasks)
+    CC->>MCP: jules_dispatch(tasks)
     MCP->>J: POST /sessions × 5
     J-->>MCP: 5 session IDs
     MCP-->>CC: {dispatched: 5}
 
-    CC->>MCP: jules_wait_for_completion(ids)
-    loop poll until done
+    CC->>MCP: jules_monitor(ids, wait=true)
+    loop until terminal or action required
         MCP->>J: GET /sessions/{id}
     end
-    MCP-->>CC: {completed: [...]}
+    MCP-->>CC: {sessions, wait: {completed, actionRequired, ...}}
 
-    CC->>MCP: jules_status(ids)
-    MCP-->>CC: {prUrls: [...]}
-    CC-->>U: ✅ "Done. PRs: #42, #43, #44, #45, #46"
+    opt a session requires action
+        CC->>MCP: jules_interact(id)
+        MCP-->>CC: state + plan + activities
+        CC->>MCP: jules_approve_plan(id) or jules_send_message(id, text)
+        CC->>MCP: jules_monitor(ids, wait=true)
+    end
+
+    CC->>MCP: jules_interact(id)
+    MCP-->>CC: terminal status + PR output
+    CC-->>U: "Done. PRs: #42, #43, #44, #45, #46"
 ```
 
 ### Install for Claude Code
@@ -187,7 +194,7 @@ Add to `~/.config/claude-code/mcp.json` (or use `claude mcp add`):
 }
 ```
 
-Then in Claude Code: *"Dispatch 5 Jules tasks to add tests to the auth, payments, users, sessions, and audit modules."* — Claude calls `jules_dispatch_batch` and reports back the session IDs.
+Then in Claude Code: *"Dispatch 5 Jules tasks to add tests to the auth, payments, users, sessions, and audit modules."* Claude calls `jules_dispatch`, monitors them with `jules_monitor`, and uses `jules_interact` when it needs full context or PR output.
 
 ### Install for OpenAI Codex CLI
 
@@ -216,7 +223,7 @@ For Agent Skills-compatible hosts that use a shared skills directory, copy the s
 
 #### Consolidated tools (recommended)
 
-These 3 tools handle all common workflows. Legacy tools (12 aliases) still work but are deprecated.
+The server always registers 15 tools: 3 recommended consolidated tools, 5 utility tools, and 7 deprecated aliases. Two additional planning tools are registered when an LLM key is configured.
 
 ##### `jules_dispatch` — Create one or more sessions
 
@@ -240,14 +247,14 @@ Accepts a single task object, an array of tasks, or a YAML/JSON string.
 }
 ```
 
-##### `jules_monitor` — Check status or wait for completion
+##### `jules_monitor` — Check status or wait for the next resolution point
 
 **Parameters:**
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
 | `sessionIds` | `string[]` | **Yes** | — | Session IDs to monitor |
-| `wait` | `boolean` | No | `false` | If true, poll until all sessions reach a terminal state |
+| `wait` | `boolean` | No | `false` | If true, poll until all sessions are terminal, any session requires action, or the timeout expires |
 | `intervalMs` | `number` | No | `10000` | Poll interval in ms (min 1000) |
 | `timeoutMs` | `number` | No | `600000` | Max wait time in ms (min 1000) |
 | `failFast` | `boolean` | No | `false` | Exit immediately on first failure |
@@ -259,6 +266,8 @@ Accepts a single task object, an array of tasks, or a YAML/JSON string.
   "timeoutMs": 300000
 }
 ```
+
+Action-required states are `AWAITING_PLAN_APPROVAL`, `AWAITING_USER_FEEDBACK`, and `PAUSED`. When the result includes `actionRequired`, inspect those sessions with `jules_interact`, approve the plan or send feedback as appropriate, then call `jules_monitor` again for the unresolved IDs.
 
 ##### `jules_interact` — Inspect a session in full context
 
@@ -314,7 +323,7 @@ Errors return:
 
 #### Legacy tools (deprecated aliases)
 
-`jules_dispatch_task`, `jules_dispatch_batch`, `jules_get_session`, `jules_list_activities`, `jules_get_plan`, `jules_status`, `jules_wait_for_completion` — all still functional, redirect to consolidated tools internally.
+`jules_dispatch_task`, `jules_dispatch_batch`, `jules_get_session`, `jules_list_activities`, `jules_get_plan`, `jules_status`, and `jules_wait_for_completion` remain functional for compatibility. New integrations should use the consolidated tools.
 
 ---
 
@@ -404,7 +413,7 @@ That's it — 6 steps from install to your first PR.
 | `plan-tasks <description>` | Use LLM to expand an intent into N task drafts (no dispatch) |
 | `status` | Summary of recent sessions (or specific `--ids`) |
 | `get <sessionId>` | Full details of one session |
-| `wait <ids...>` | Poll until sessions finish (or timeout) |
+| `wait <ids...>` | Poll until sessions are terminal, require action, or time out |
 | `tail <sessionId>` | Live-stream activity events for a session |
 | `plan <sessionId>` | Show the most recent generated plan |
 | `approve <sessionId>` | Approve a pending plan |
@@ -420,8 +429,8 @@ That's it — 6 steps from install to your first PR.
 |---|---|---|
 | `0` | Success |
 | `1` | Generic error |
-| `2` | Auth / config error (missing API key) |
-| `3` | Validation error (bad task file, bad args) |
+| `2` | Authentication error (missing or rejected API key) |
+| `3` | Validation or configuration error (bad task file, args, or Jules settings) |
 | `4` | Partial failure (some `batch` tasks failed) |
 | `5` | Timeout (`wait` ran out of time) |
 
@@ -471,25 +480,32 @@ jules-dispatch tracks every Jules session through its full lifecycle and surface
 
 ```mermaid
 stateDiagram-v2
-    [*] --> PENDING
-    PENDING --> RUNNING
-    RUNNING --> AWAITING_PLAN_APPROVAL: requirePlanApproval = true
-    AWAITING_PLAN_APPROVAL --> RUNNING: approve
-    AWAITING_PLAN_APPROVAL --> CANCELLED: cancel
-    RUNNING --> COMPLETED: success ✓
-    RUNNING --> FAILED: error ✗
-    RUNNING --> CANCELLED: cancel
+    [*] --> QUEUED
+    QUEUED --> PLANNING
+    PLANNING --> IN_PROGRESS
+    PLANNING --> AWAITING_PLAN_APPROVAL: approval required
+    AWAITING_PLAN_APPROVAL --> IN_PROGRESS: approve plan
+    IN_PROGRESS --> AWAITING_USER_FEEDBACK: input required
+    AWAITING_USER_FEEDBACK --> IN_PROGRESS: send feedback
+    IN_PROGRESS --> PAUSED: execution paused
+    PAUSED --> IN_PROGRESS: execution resumes
+    IN_PROGRESS --> COMPLETED: success
+    IN_PROGRESS --> FAILED: error
     COMPLETED --> [*]
     FAILED --> [*]
-    CANCELLED --> [*]
 ```
 
-| State | CLI command | MCP tool |
+| Official state | Meaning | Recommended action |
 |---|---|---|
-| `AWAITING_PLAN_APPROVAL` | `plan` / `approve` | `jules_get_plan` / `jules_approve_plan` |
-| `RUNNING` | `tail` / `message` | `jules_list_activities` / `jules_send_message` |
-| `COMPLETED` | `get` / `status` | `jules_get_session` / `jules_status` |
-| `FAILED` / `CANCELLED` | `cancel` | `jules_cancel_session` |
+| `STATE_UNSPECIFIED` | No specific state was supplied | Recheck with `jules_monitor` or inspect with `jules_interact` |
+| `QUEUED` / `PLANNING` / `IN_PROGRESS` | Jules is actively progressing | Continue monitoring; use `tail` for live activity |
+| `AWAITING_PLAN_APPROVAL` | The generated plan needs approval | Review with `jules_interact`, then use `approve` / `jules_approve_plan` |
+| `AWAITING_USER_FEEDBACK` | Jules needs clarification or input | Inspect context, then use `message` / `jules_send_message` |
+| `PAUSED` | Execution is paused and needs attention | Inspect context, provide guidance if appropriate, then monitor again |
+| `COMPLETED` | Terminal success | Inspect the session and collect PR output |
+| `FAILED` | Terminal failure | Inspect the newest failure activity and decide whether to retry or replace the task |
+
+For compatibility, jules-dispatch also normalizes legacy API states: `PENDING`, `RUNNING`, `AWAITING_USER_INPUT`, `CANCELLED`, and `CANCELED`. Cancellation is sent with the Jules `DELETE /sessions/{id}` operation.
 
 ---
 
@@ -567,9 +583,10 @@ The killer use case: combine jules-dispatch with **Claude Code** or **Codex**.
 With the MCP server installed, your assistant will:
 
 1. Analyse your codebase
-2. Call `jules_dispatch_batch` with N task definitions
-3. Call `jules_wait_for_completion` to block until they finish
-4. Call `jules_status` to extract the PR URLs
+2. Commit and push the target branch, because Jules works from the remote source branch rather than unpushed local changes
+3. Call `jules_dispatch` with N task definitions
+4. Call `jules_monitor` with `wait: true`; if action is required, inspect with `jules_interact`, approve or send feedback, and monitor again
+5. Use `jules_interact` to collect terminal context and PR URLs
 
 You get **N parallel coding agents** orchestrated by **one strategic agent**, hands-free.
 
@@ -589,9 +606,10 @@ jules-dispatch/
 │   ├── output.ts       Text vs JSON output mode, color detection
 │   ├── init.ts         Interactive init wizard
 │   ├── doctor.ts       Environment validation (doctor command)
-│   ├── mcp.ts          MCP server (stdio transport, 14 tools)
+│   ├── mcp.ts          MCP server (15 tools + 2 optional planner tools)
 │   ├── mcp-helpers.ts  MCP response helpers (ok/fail/recovery hints)
 │   ├── polling.ts      Shared poll-with-callback engine
+│   ├── tail.ts         Bounded, cursor-aware activity tailing
 │   ├── planner.ts      Optional LLM task planner
 │   ├── log.ts          Verbose logging
 │   └── types.ts        TypeScript types

@@ -1,9 +1,25 @@
 import { deriveStatus } from './client.js';
 import type { JulesClient } from './client.js';
+import type { JulesSessionStatus } from './types.js';
+
+type ActionRequiredStatus = Extract<
+  JulesSessionStatus,
+  'awaiting_plan' | 'awaiting_user_feedback' | 'paused'
+>;
 
 export interface PollCallbacks {
-  onPoll?: (info: { completed: number; failed: number; cancelled: number; remaining: number }) => void;
+  onPoll?: (info: {
+    completed: number;
+    failed: number;
+    cancelled: number;
+    awaitingPlan: number;
+    awaitingUserFeedback: number;
+    paused: number;
+    actionRequired: number;
+    remaining: number;
+  }) => void;
   onTerminal?: (sessionId: string, status: 'completed' | 'failed' | 'cancelled') => void;
+  onActionRequired?: (sessionId: string, status: ActionRequiredStatus) => void;
   onError?: (sessionId: string, error: Error) => void;
 }
 
@@ -11,6 +27,10 @@ export interface PollResult {
   completed: string[];
   failed: string[];
   cancelled: string[];
+  awaitingPlan: string[];
+  awaitingUserFeedback: string[];
+  paused: string[];
+  actionRequired: string[];
   stillRunning: string[];
   timedOut: boolean;
 }
@@ -19,6 +39,7 @@ export interface PollOptions {
   interval?: number;   // default 10000
   timeout?: number;    // default 600000
   failFast?: boolean;  // default false
+  concurrency?: number; // default 10
 }
 
 export async function pollSessions(
@@ -30,11 +51,18 @@ export async function pollSessions(
   const interval = options?.interval ?? 10000;
   const timeout = options?.timeout ?? 600000;
   const failFast = options?.failFast ?? false;
+  const concurrency = options?.concurrency ?? 10;
+  if (!Number.isInteger(concurrency) || concurrency < 1 || concurrency > 50) {
+    throw new Error('Invalid polling concurrency. Expected an integer between 1 and 50.');
+  }
   const start = Date.now();
 
   const completed = new Set<string>();
   const failed = new Set<string>();
   const cancelled = new Set<string>();
+  const awaitingPlan = new Set<string>();
+  const awaitingUserFeedback = new Set<string>();
+  const paused = new Set<string>();
   let stoppedByFailFast = false;
 
   const markTerminal = (id: string, status: 'completed' | 'failed' | 'cancelled'): void => {
@@ -44,65 +72,106 @@ export async function pollSessions(
     callbacks?.onTerminal?.(id, status);
   };
 
-  while (Date.now() - start < timeout && !(failFast && failed.size > 0)) {
-    const remaining = sessionIds.filter(id =>
-      !completed.has(id) && !failed.has(id) && !cancelled.has(id),
-    );
+  const markActionRequired = (id: string, status: ActionRequiredStatus): void => {
+    if (status === 'awaiting_plan') awaitingPlan.add(id);
+    else if (status === 'awaiting_user_feedback') awaitingUserFeedback.add(id);
+    else paused.add(id);
+    callbacks?.onActionRequired?.(id, status);
+  };
+
+  const isResolved = (id: string): boolean => (
+    completed.has(id) ||
+    failed.has(id) ||
+    cancelled.has(id) ||
+    awaitingPlan.has(id) ||
+    awaitingUserFeedback.has(id) ||
+    paused.has(id)
+  );
+
+  const hasActionRequired = (): boolean => (
+    awaitingPlan.size + awaitingUserFeedback.size + paused.size > 0
+  );
+
+  const getStillRunning = (): string[] => sessionIds.filter(id => !isResolved(id));
+
+  while (
+    Date.now() - start < timeout &&
+    !(failFast && failed.size > 0) &&
+    !hasActionRequired()
+  ) {
+    const remaining = getStillRunning();
     if (remaining.length === 0) break;
 
-    // Poll all remaining sessions concurrently rather than serially; with N
-    // sessions this turns ~2N sequential requests into 2 parallel waves,
-    // keeping the effective per-tick latency close to a single round-trip
-    // instead of growing linearly with the session count.
-    await Promise.all(remaining.map(async (id) => {
-      // Once failFast has triggered mid-batch, skip the remaining work in
-      // this wave — the loop condition will exit on the next iteration.
-      if (failFast && failed.size > 0) return;
-      try {
-        const session = await client.getSession(id);
-        const { activities } = await client.listActivities(id, 10);
-        const status = deriveStatus(session, activities);
+    for (let i = 0; i < remaining.length; i += concurrency) {
+      const chunk = remaining.slice(i, i + concurrency);
+      await Promise.all(chunk.map(async (id) => {
+        try {
+          const session = await client.getSession(id);
+          const { activities } = await client.listActivities(id, 10);
+          const status = deriveStatus(session, activities);
 
-        if (status === 'completed') markTerminal(id, 'completed');
-        else if (status === 'failed') markTerminal(id, 'failed');
-        else if (status === 'cancelled') markTerminal(id, 'cancelled');
-      } catch (err) {
-        callbacks?.onError?.(id, err as Error);
+          if (status === 'completed') markTerminal(id, 'completed');
+          else if (status === 'failed') markTerminal(id, 'failed');
+          else if (status === 'cancelled') markTerminal(id, 'cancelled');
+          else if (
+            status === 'awaiting_plan' ||
+            status === 'awaiting_user_feedback' ||
+            status === 'paused'
+          ) markActionRequired(id, status);
+        } catch (err) {
+          callbacks?.onError?.(id, err as Error);
+        }
+      }));
+
+      if (hasActionRequired()) break;
+      if (failFast && failed.size > 0) {
+        stoppedByFailFast = true;
+        break;
       }
-    }));
+    }
 
     callbacks?.onPoll?.({
       completed: completed.size,
       failed: failed.size,
       cancelled: cancelled.size,
-      remaining: sessionIds.filter(id =>
-        !completed.has(id) && !failed.has(id) && !cancelled.has(id),
-      ).length,
+      awaitingPlan: awaitingPlan.size,
+      awaitingUserFeedback: awaitingUserFeedback.size,
+      paused: paused.size,
+      actionRequired: awaitingPlan.size + awaitingUserFeedback.size + paused.size,
+      remaining: getStillRunning().length,
     });
 
-    if (failFast && failed.size > 0) {
-      stoppedByFailFast = true;
-      break;
-    }
+    if (hasActionRequired()) break;
 
-    const stillRunning = sessionIds.filter(id =>
-      !completed.has(id) && !failed.has(id) && !cancelled.has(id),
-    );
+    if (failFast && failed.size > 0) break;
+
+    const stillRunning = getStillRunning();
     if (stillRunning.length === 0) break;
 
     await sleep(interval);
   }
 
-  const stillRunning = sessionIds.filter(id =>
-    !completed.has(id) && !failed.has(id) && !cancelled.has(id),
-  );
+  const stillRunning = getStillRunning();
+  const inInputOrder = (set: Set<string>): string[] => sessionIds.filter(id => set.has(id));
+  const actionRequired = sessionIds.filter(id => (
+    awaitingPlan.has(id) || awaitingUserFeedback.has(id) || paused.has(id)
+  ));
 
   return {
-    completed: [...completed],
-    failed: [...failed],
-    cancelled: [...cancelled],
+    completed: inInputOrder(completed),
+    failed: inInputOrder(failed),
+    cancelled: inInputOrder(cancelled),
+    awaitingPlan: inInputOrder(awaitingPlan),
+    awaitingUserFeedback: inInputOrder(awaitingUserFeedback),
+    paused: inInputOrder(paused),
+    actionRequired,
     stillRunning,
-    timedOut: stillRunning.length > 0 && !stoppedByFailFast && Date.now() - start >= timeout,
+    timedOut: (
+      stillRunning.length > 0 &&
+      actionRequired.length === 0 &&
+      !stoppedByFailFast &&
+      Date.now() - start >= timeout
+    ),
   };
 }
 

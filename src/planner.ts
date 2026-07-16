@@ -25,6 +25,7 @@ export interface PlannerConfig {
   appTitle?: string;
   /** Optional referer sent as `HTTP-Referer` (OpenRouter convention; ignored by others). */
   appReferer?: string;
+  requestTimeoutMs?: number;
 }
 
 export interface PlannerOptions {
@@ -46,13 +47,13 @@ export interface PlannerOptions {
  * Throws if no API key is found anywhere.
  */
 export function loadPlannerConfig(opts: PlannerOptions = {}): PlannerConfig {
-  const apiKey =
-    opts.apiKeyOverride ??
-    process.env.LLM_API_KEY ??
-    process.env.OPENAI_API_KEY ??
-    process.env.OPENROUTER_API_KEY ??
-    process.env.AI_INTEGRATIONS_OPENROUTER_API_KEY ??
-    '';
+  const apiKey = firstNonEmpty(
+    opts.apiKeyOverride,
+    process.env.LLM_API_KEY,
+    process.env.OPENAI_API_KEY,
+    process.env.OPENROUTER_API_KEY,
+    process.env.AI_INTEGRATIONS_OPENROUTER_API_KEY,
+  );
 
   if (!apiKey) {
     throw new Error(
@@ -68,24 +69,24 @@ export function loadPlannerConfig(opts: PlannerOptions = {}): PlannerConfig {
     );
   }
 
-  const baseUrl =
-    opts.baseUrlOverride ??
-    process.env.LLM_BASE_URL ??
-    process.env.OPENAI_BASE_URL ??
-    process.env.OPENROUTER_BASE_URL ??
-    process.env.AI_INTEGRATIONS_OPENROUTER_BASE_URL ??
-    'https://api.openai.com/v1';
+  const baseUrl = firstNonEmpty(
+    opts.baseUrlOverride,
+    process.env.LLM_BASE_URL,
+    process.env.OPENAI_BASE_URL,
+    process.env.OPENROUTER_BASE_URL,
+    process.env.AI_INTEGRATIONS_OPENROUTER_BASE_URL,
+  ) ?? 'https://api.openai.com/v1';
 
-  const model =
-    opts.modelOverride ??
-    process.env.LLM_MODEL ??
-    process.env.OPENAI_MODEL ??
-    process.env.OPENROUTER_MODEL ??
-    'gpt-4o-mini';
+  const model = firstNonEmpty(
+    opts.modelOverride,
+    process.env.LLM_MODEL,
+    process.env.OPENAI_MODEL,
+    process.env.OPENROUTER_MODEL,
+  ) ?? 'gpt-4o-mini';
 
   return {
     apiKey,
-    baseUrl: baseUrl.replace(/\/$/, ''),
+    baseUrl: baseUrl.replace(/\/+$/, ''),
     model,
     defaultSource: process.env.JULES_DEFAULT_SOURCE,
     defaultBranch: process.env.JULES_DEFAULT_BRANCH,
@@ -96,12 +97,12 @@ export function loadPlannerConfig(opts: PlannerOptions = {}): PlannerConfig {
 
 /** Returns true if a planner-capable API key is present (without throwing). */
 export function isPlannerConfigured(): boolean {
-  return Boolean(
-    process.env.LLM_API_KEY ||
-    process.env.OPENAI_API_KEY ||
-    process.env.OPENROUTER_API_KEY ||
+  return Boolean(firstNonEmpty(
+    process.env.LLM_API_KEY,
+    process.env.OPENAI_API_KEY,
+    process.env.OPENROUTER_API_KEY,
     process.env.AI_INTEGRATIONS_OPENROUTER_API_KEY,
-  );
+  ));
 }
 
 export interface PlanRequest {
@@ -151,7 +152,8 @@ export async function planTasks(
   cfg: PlannerConfig,
   req: PlanRequest,
 ): Promise<PlanResult> {
-  const userPrompt = buildUserPrompt(req);
+  const normalizedRequest = validatePlanRequest(req);
+  const userPrompt = buildUserPrompt(normalizedRequest);
 
   // Try with response_format json_object first; fall back to a plain call if
   // the provider rejects the field (some Ollama / vLLM models do).
@@ -172,11 +174,11 @@ export async function planTasks(
   if (cfg.appReferer) headers['HTTP-Referer'] = cfg.appReferer;
   if (cfg.appTitle) headers['X-Title'] = cfg.appTitle;
 
-  let resp = await fetch(`${cfg.baseUrl}/chat/completions`, {
-    method: 'POST',
+  let resp = await requestCompletion(
+    cfg,
     headers,
-    body: JSON.stringify({ ...baseBody, response_format: { type: 'json_object' } }),
-  });
+    JSON.stringify({ ...baseBody, response_format: { type: 'json_object' } }),
+  );
 
   // Retry without response_format ONLY when the provider explicitly rejects
   // that field. Some Ollama / vLLM models 400 on it. Retrying on any other
@@ -185,11 +187,7 @@ export async function planTasks(
   if (resp.status === 400) {
     const firstBody = await resp.text().catch(() => '');
     if (/response_format/i.test(firstBody)) {
-      resp = await fetch(`${cfg.baseUrl}/chat/completions`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(baseBody),
-      });
+      resp = await requestCompletion(cfg, headers, JSON.stringify(baseBody));
     } else {
       throw new Error(`LLM request failed (400) at ${cfg.baseUrl}: ${firstBody.slice(0, 500)}`);
     }
@@ -207,13 +205,16 @@ export async function planTasks(
   if (!content) throw new Error('LLM returned an empty completion');
 
   const parsed = parsePlanJson(content);
-  const enriched = parsed.tasks.map(t => ({
+  const plannedTasks = normalizedRequest.maxTasks === undefined
+    ? parsed.tasks
+    : parsed.tasks.slice(0, normalizedRequest.maxTasks);
+  const enriched = plannedTasks.map(t => ({
     title: t.title,
     prompt: t.prompt,
-    source: req.source ?? cfg.defaultSource,
-    branch: req.branch ?? cfg.defaultBranch,
-    autoMode: req.autoMode,
-    requirePlanApproval: req.requirePlanApproval,
+    source: normalizedRequest.source ?? cfg.defaultSource,
+    branch: normalizedRequest.branch ?? cfg.defaultBranch,
+    autoMode: normalizedRequest.autoMode,
+    requirePlanApproval: normalizedRequest.requirePlanApproval,
   } as TaskDefinition));
 
   return {
@@ -226,6 +227,30 @@ export async function planTasks(
       totalTokens: data.usage?.total_tokens,
     },
   };
+}
+
+async function requestCompletion(
+  cfg: PlannerConfig,
+  headers: Record<string, string>,
+  body: string,
+): Promise<Response> {
+  const timeoutMs = Number.isFinite(cfg.requestTimeoutMs) && cfg.requestTimeoutMs! > 0
+    ? Math.trunc(cfg.requestTimeoutMs!)
+    : 60000;
+  const signal = AbortSignal.timeout(timeoutMs);
+  try {
+    return await fetch(`${cfg.baseUrl}/chat/completions`, {
+      method: 'POST',
+      headers,
+      body,
+      signal,
+    });
+  } catch (err) {
+    if (signal.aborted) {
+      throw new Error(`LLM request timed out after ${timeoutMs}ms at ${cfg.baseUrl}`);
+    }
+    throw err;
+  }
 }
 
 function buildUserPrompt(req: PlanRequest): string {
@@ -277,9 +302,12 @@ function parsePlanJson(raw: string): RawPlan {
     throw new Error(`Planner JSON missing "tasks" array. Got: ${JSON.stringify(parsed).slice(0, 400)}`);
   }
   const tasks: Array<{ title: string; prompt: string }> = [];
-  for (const [i, t] of (obj.tasks as Array<Record<string, unknown>>).entries()) {
-    const title = typeof t.title === 'string' ? t.title.trim() : '';
-    const prompt = typeof t.prompt === 'string' ? t.prompt.trim() : '';
+  for (const [i, task] of obj.tasks.entries()) {
+    const t = task && typeof task === 'object' && !Array.isArray(task)
+      ? task as Record<string, unknown>
+      : undefined;
+    const title = typeof t?.title === 'string' ? t.title.trim() : '';
+    const prompt = typeof t?.prompt === 'string' ? t.prompt.trim() : '';
     if (!title || !prompt) {
       throw new Error(`Planner task #${i + 1} missing title or prompt`);
     }
@@ -287,4 +315,62 @@ function parsePlanJson(raw: string): RawPlan {
   }
   if (tasks.length === 0) throw new Error('Planner returned zero tasks');
   return { rationale: typeof obj.rationale === 'string' ? obj.rationale : undefined, tasks };
+}
+
+function firstNonEmpty(...values: Array<string | undefined>): string | undefined {
+  for (const value of values) {
+    const trimmed = value?.trim();
+    if (trimmed) return trimmed;
+  }
+  return undefined;
+}
+
+function validatePlanRequest(req: PlanRequest): PlanRequest {
+  if (!req || typeof req !== 'object') {
+    throw new Error('Planner request must be an object');
+  }
+
+  const description = requiredPlanString(req.description, 'description');
+  const source = optionalPlanString(req.source, 'source');
+  const branch = optionalPlanString(req.branch, 'branch');
+  const context = optionalPlanString(req.context, 'context');
+
+  let maxTasks: number | undefined;
+  if (req.maxTasks !== undefined) {
+    if (!Number.isInteger(req.maxTasks) || req.maxTasks < 1 || req.maxTasks > 50) {
+      throw new Error('Planner maxTasks must be an integer between 1 and 50');
+    }
+    maxTasks = req.maxTasks;
+  }
+
+  if (req.autoMode !== undefined && req.autoMode !== 'AUTO_CREATE_PR' && req.autoMode !== 'NONE') {
+    throw new Error('Planner autoMode must be "AUTO_CREATE_PR" or "NONE"');
+  }
+  if (req.requirePlanApproval !== undefined && typeof req.requirePlanApproval !== 'boolean') {
+    throw new Error('Planner requirePlanApproval must be a boolean');
+  }
+
+  return {
+    description,
+    ...(source !== undefined ? { source } : {}),
+    ...(branch !== undefined ? { branch } : {}),
+    ...(maxTasks !== undefined ? { maxTasks } : {}),
+    ...(context !== undefined ? { context } : {}),
+    ...(req.autoMode !== undefined ? { autoMode: req.autoMode } : {}),
+    ...(req.requirePlanApproval !== undefined
+      ? { requirePlanApproval: req.requirePlanApproval }
+      : {}),
+  };
+}
+
+function requiredPlanString(value: unknown, field: string): string {
+  if (typeof value !== 'string' || !value.trim()) {
+    throw new Error(`Planner ${field} must be a non-empty string`);
+  }
+  return value.trim();
+}
+
+function optionalPlanString(value: unknown, field: string): string | undefined {
+  if (value === undefined) return undefined;
+  return requiredPlanString(value, field);
 }

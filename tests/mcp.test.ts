@@ -53,7 +53,13 @@ function createMockClient(overrides: Partial<JulesClient> = {}): JulesClient {
       outputs: [],
     }),
     listActivities: vi.fn().mockResolvedValue({
-      activities: [{ id: 'act-1', createTime: '2026-01-01T00:00:00Z', originator: 'agent', progressUpdated: { title: 'Working' } }],
+      activities: [{
+        id: 'act-1',
+        createTime: '2026-01-01T00:00:00Z',
+        originator: 'agent',
+        progressUpdated: { title: 'Working' },
+        planGenerated: { plan: { id: 'plan-1', steps: [{ id: 'step-1', title: 'Step 1' }] } },
+      }],
     }),
     createSession: vi.fn().mockResolvedValue({
       id: 'sess-1',
@@ -81,11 +87,23 @@ async function callTool(client: Client, name: string, args: Record<string, unkno
   return { isError: result.isError ?? false, data: JSON.parse(text) };
 }
 
+async function getToolErrorText(client: Client, name: string, args: Record<string, unknown>): Promise<string> {
+  try {
+    const result = await client.callTool({ name, arguments: args }, undefined, { timeout: 30000 });
+    return result.content
+      .map(item => item.type === 'text' ? item.text : '')
+      .join('\n');
+  } catch (err) {
+    return err instanceof Error ? err.message : String(err);
+  }
+}
+
 describe('jules_dispatch', () => {
   let server: { client: Client; cleanup: () => Promise<void> };
   let mockClient: JulesClient;
 
   beforeEach(async () => {
+    vi.clearAllMocks();
     vi.mocked(dispatchTaskDefinition).mockResolvedValue({
       taskFile: '<mcp>',
       taskTitle: 'Test',
@@ -122,6 +140,20 @@ describe('jules_dispatch', () => {
     expect(isError).toBeFalsy();
     expect(data.data.summary.total).toBe(2);
     expect(data.data.summary.dispatched).toBe(2);
+  });
+
+  it('rejects an empty task array', async () => {
+    const errorText = await getToolErrorText(server.client, 'jules_dispatch', { tasks: [] });
+    expect(errorText).toMatch(/too small|at least 1|tasks/i);
+    expect(dispatchTaskDefinition).not.toHaveBeenCalled();
+  });
+
+  it('rejects whitespace-only task fields', async () => {
+    const errorText = await getToolErrorText(server.client, 'jules_dispatch', {
+      tasks: { title: '   ', prompt: 'Do work' },
+    });
+    expect(errorText).toMatch(/too small|at least 1|title/i);
+    expect(dispatchTaskDefinition).not.toHaveBeenCalled();
   });
 
   it('parses YAML string and dispatches tasks', async () => {
@@ -195,6 +227,28 @@ describe('planner tool registration', () => {
   });
 });
 
+describe('tool annotations', () => {
+  it('marks external tools as open-world and wait-for-completion as read-only', async () => {
+    const server = await createTestServer(createMockClient());
+
+    try {
+      const { tools } = await server.client.listTools();
+      expect(tools.length).toBe(15);
+      expect(tools.every(tool => tool.annotations?.openWorldHint === true)).toBe(true);
+
+      const waitTool = tools.find(tool => tool.name === 'jules_wait_for_completion');
+      expect(waitTool?.annotations).toMatchObject({
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true,
+      });
+    } finally {
+      await server.cleanup();
+    }
+  });
+});
+
 describe('jules_monitor', () => {
   let server: { client: Client; cleanup: () => Promise<void> };
   let mockClient: JulesClient;
@@ -234,6 +288,66 @@ describe('jules_monitor', () => {
       timeoutMs: 5000,
     });
     expect(data.data.wait.completed).toContain('sess-1');
+  });
+
+  it('returns control when a session needs user feedback', async () => {
+    vi.mocked(mockClient.getSession).mockResolvedValue({
+      id: 'sess-1',
+      title: 'Needs input',
+      url: 'https://jules.google/sess-1',
+      state: 'AWAITING_USER_FEEDBACK',
+      sourceContext: { source: 'sources/github/owner/repo', githubRepoContext: { startingBranch: 'main' } },
+      outputs: [],
+    } as Awaited<ReturnType<JulesClient['getSession']>>);
+    vi.mocked(mockClient.listActivities).mockResolvedValue({
+      activities: [{
+        id: 'question',
+        createTime: '2026-01-01T00:00:00Z',
+        originator: 'agent',
+        agentMessaged: { agentMessage: 'Which database should I use?' },
+      }],
+    });
+
+    const { data } = await callTool(server.client, 'jules_monitor', {
+      sessionIds: ['sess-1'],
+      wait: true,
+      timeoutMs: 1000,
+      intervalMs: 1000,
+    });
+
+    expect(data.data.wait.awaitingUserFeedback).toEqual(['sess-1']);
+    expect(data.data.wait.actionRequired).toEqual(['sess-1']);
+    expect(data.data.wait.timedOut).toBe(false);
+    expect(data.data.sessions[0].lastActivity).toBe('Which database should I use?');
+  });
+
+  it('bounds summary concurrency for large session lists', async () => {
+    let inFlight = 0;
+    let maxInFlight = 0;
+    vi.mocked(mockClient.getSession).mockImplementation(async (id: string) => {
+      inFlight += 1;
+      maxInFlight = Math.max(maxInFlight, inFlight);
+      await new Promise(resolve => setTimeout(resolve, 5));
+      inFlight -= 1;
+      return {
+        id,
+        title: id,
+        url: `https://jules.google/${id}`,
+        state: 'IN_PROGRESS',
+        sourceContext: { source: 'sources/github/owner/repo', githubRepoContext: { startingBranch: 'main' } },
+        outputs: [],
+      } as Awaited<ReturnType<JulesClient['getSession']>>;
+    });
+
+    const ids = Array.from({ length: 25 }, (_, i) => `sess-${i + 1}`);
+    const { isError, data } = await callTool(server.client, 'jules_monitor', {
+      sessionIds: ids,
+      wait: false,
+    });
+
+    expect(isError).toBeFalsy();
+    expect(data.data.sessions).toHaveLength(25);
+    expect(maxInFlight).toBe(10);
   });
 
   it('returns timedOut=true when timeout expires before terminal state', async () => {
@@ -309,8 +423,56 @@ describe('jules_interact', () => {
     expect(data.data.activities).toBeInstanceOf(Array);
   });
 
-  it('handles missing plan gracefully (getLatestPlan rejects)', async () => {
-    vi.mocked(mockClient.getLatestPlan).mockRejectedValue(new Error('Not found'));
+  it('handles repoless sessions without dereferencing sourceContext', async () => {
+    vi.mocked(mockClient.getSession).mockResolvedValue({
+      id: 'sess-repoless',
+      name: 'sessions/sess-repoless',
+      title: 'Repoless Session',
+      prompt: 'Research the question',
+      url: 'https://jules.google/sess-repoless',
+      state: 'IN_PROGRESS',
+      outputs: [],
+    });
+
+    const { isError, data } = await callTool(server.client, 'jules_interact', {
+      sessionId: 'sess-repoless',
+    });
+
+    expect(isError).toBeFalsy();
+    expect(data.data.session.id).toBe('sess-repoless');
+    expect(data.data.session).not.toHaveProperty('source');
+    expect(data.data.session).not.toHaveProperty('branch');
+  });
+
+  it('includes official activity descriptions in the compact timeline', async () => {
+    vi.mocked(mockClient.listActivities).mockResolvedValue({
+      activities: [{
+        id: 'act-description',
+        createTime: '2026-01-01T00:00:00Z',
+        originator: 'agent',
+        description: 'Checked the repository structure.',
+      }],
+    });
+
+    const { isError, data } = await callTool(server.client, 'jules_interact', {
+      sessionId: 'sess-1',
+    });
+
+    expect(isError).toBeFalsy();
+    expect(data.data.activities).toContainEqual(expect.objectContaining({
+      description: 'Checked the repository structure.',
+    }));
+  });
+
+  it('handles an activity page with no generated plan gracefully', async () => {
+    vi.mocked(mockClient.listActivities).mockResolvedValue({
+      activities: [{
+        id: 'act-1',
+        createTime: '2026-01-01T00:00:00Z',
+        originator: 'agent',
+        progressUpdated: { title: 'Working' },
+      }],
+    });
 
     const { isError, data } = await callTool(server.client, 'jules_interact', {
       sessionId: 'sess-1',
@@ -319,6 +481,7 @@ describe('jules_interact', () => {
     expect(data.data.plan).toBeNull();
     expect(data.data.session.id).toBe('sess-1');
     expect(data.data.status).toBe('running');
+    expect(mockClient.getLatestPlan).not.toHaveBeenCalled();
   });
 
   it('returns error with recovery_hint when getSession fails', async () => {
@@ -361,6 +524,55 @@ describe('jules_interact', () => {
         expect.objectContaining({ planGenerated: { steps: 2 } }),
       ]),
     );
+  });
+
+  it('returns messages and terminal events without a duplicate activity request', async () => {
+    const activities = [
+      {
+        id: 'act-plan',
+        createTime: '2026-01-01T00:00:00Z',
+        originator: 'agent' as const,
+        planGenerated: { plan: { id: 'plan-from-activity', steps: [{ id: 'step-1', title: 'Step 1' }] } },
+      },
+      {
+        id: 'act-agent-message',
+        createTime: '2026-01-01T00:01:00Z',
+        originator: 'agent' as const,
+        agentMessaged: { agentMessage: 'Please choose an option.' },
+      },
+      {
+        id: 'act-user-message',
+        createTime: '2026-01-01T00:02:00Z',
+        originator: 'user' as const,
+        userMessaged: { userMessage: 'Use option A.' },
+      },
+      {
+        id: 'act-completed',
+        createTime: '2026-01-01T00:03:00Z',
+        originator: 'agent' as const,
+        sessionCompleted: {},
+      },
+    ];
+    vi.mocked(mockClient.listActivities).mockResolvedValue({ activities });
+    vi.mocked(mockClient.getLatestPlan).mockImplementation(async (sessionId: string) => {
+      await mockClient.listActivities(sessionId, 50);
+      return activities[0].planGenerated!.plan;
+    });
+
+    const { isError, data } = await callTool(server.client, 'jules_interact', {
+      sessionId: 'sess-1',
+      activityCount: 10,
+    });
+
+    expect(isError).toBeFalsy();
+    expect(data.data.plan.id).toBe('plan-from-activity');
+    expect(data.data.activities).toEqual(expect.arrayContaining([
+      expect.objectContaining({ agentMessaged: 'Please choose an option.' }),
+      expect.objectContaining({ userMessaged: 'Use option A.' }),
+      expect.objectContaining({ completed: true }),
+    ]));
+    expect(mockClient.listActivities).toHaveBeenCalledTimes(1);
+    expect(mockClient.getLatestPlan).not.toHaveBeenCalled();
   });
 });
 
@@ -550,6 +762,70 @@ describe('jules_status', () => {
     expect(data.data.results[0].sessionId).toBe('sess-1');
     expect(data.data.results[0].status).toBe('running');
     expect(data.data.results[0].activities).toEqual(expect.any(Number));
+  });
+
+  it('surfaces the latest Jules question in legacy status', async () => {
+    vi.mocked(mockClient.getSession).mockResolvedValue({
+      id: 'sess-1',
+      title: 'Needs input',
+      url: 'https://jules.google/sess-1',
+      state: 'AWAITING_USER_FEEDBACK',
+      sourceContext: { source: 'sources/github/owner/repo', githubRepoContext: { startingBranch: 'main' } },
+      outputs: [],
+    } as Awaited<ReturnType<JulesClient['getSession']>>);
+    vi.mocked(mockClient.listActivities).mockResolvedValue({
+      activities: [{
+        id: 'question',
+        createTime: '2026-01-01T00:00:00Z',
+        originator: 'agent',
+        agentMessaged: { agentMessage: 'Which database should I use?' },
+      }],
+    });
+
+    const { data } = await callTool(server.client, 'jules_status', {
+      sessionIds: ['sess-1'],
+    });
+
+    expect(data.data.results[0]).toMatchObject({
+      status: 'awaiting_user_feedback',
+      lastActivity: 'Which database should I use?',
+    });
+  });
+
+  it('bounds legacy status concurrency for large session lists', async () => {
+    let inFlight = 0;
+    let maxInFlight = 0;
+    vi.mocked(mockClient.getSession).mockImplementation(async (id: string) => {
+      inFlight += 1;
+      maxInFlight = Math.max(maxInFlight, inFlight);
+      await new Promise(resolve => setTimeout(resolve, 5));
+      inFlight -= 1;
+      return {
+        id,
+        title: id,
+        url: `https://jules.google/${id}`,
+        state: 'IN_PROGRESS',
+        sourceContext: { source: 'sources/github/owner/repo', githubRepoContext: { startingBranch: 'main' } },
+        outputs: [],
+      } as Awaited<ReturnType<JulesClient['getSession']>>;
+    });
+
+    const ids = Array.from({ length: 25 }, (_, i) => `sess-${i + 1}`);
+    const { isError, data } = await callTool(server.client, 'jules_status', {
+      sessionIds: ids,
+    });
+
+    expect(isError).toBeFalsy();
+    expect(data.data.results).toHaveLength(25);
+    expect(maxInFlight).toBe(10);
+  });
+
+  it('rejects blank session IDs', async () => {
+    const errorText = await getToolErrorText(server.client, 'jules_status', {
+      sessionIds: ['   '],
+    });
+    expect(errorText).toMatch(/too small|at least 1|sessionIds/i);
+    expect(mockClient.getSession).not.toHaveBeenCalled();
   });
 
   it('returns error status when session lookup fails', async () => {

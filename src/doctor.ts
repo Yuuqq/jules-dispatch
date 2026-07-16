@@ -1,6 +1,6 @@
 import { execSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
-import { loadConfig, loadTasks } from './config.js';
+import { loadConfig, loadProjectEnv, loadTasks } from './config.js';
 import { JulesClient } from './client.js';
 import type { JulesConfig } from './types.js';
 
@@ -35,12 +35,23 @@ export function checkNpm(execFn: (cmd: string, opts: ExecSyncOptionsWithStringEn
   }
 }
 
-export function checkApiKey(projectDir: string): DoctorCheck {
+export function checkApiKey(projectDir: string, apiKeyOverride?: string): DoctorCheck {
   try {
-    loadConfig(projectDir, { noExit: true });
+    loadProjectEnv(projectDir);
+    const apiKey = (apiKeyOverride ?? process.env.JULES_API_KEY ?? '').trim();
+    if (!apiKey) throw new Error('missing API key');
     return { name: 'api_key', status: 'pass', message: 'JULES_API_KEY is set' };
   } catch {
     return { name: 'api_key', status: 'fail', message: 'JULES_API_KEY not set (set in .env, environment, or pass --api-key)' };
+  }
+}
+
+export function checkConfiguration(projectDir: string, apiKeyOverride?: string): DoctorCheck {
+  try {
+    loadConfig(projectDir, { apiKeyOverride, noExit: true });
+    return { name: 'configuration', status: 'pass', message: 'Jules configuration is valid' };
+  } catch (err) {
+    return { name: 'configuration', status: 'fail', message: (err as Error).message };
   }
 }
 
@@ -79,12 +90,16 @@ export async function runDoctor(
   checks.push(checkNodeVersion());
   checks.push(checkNpm());
 
-  const apiKeyCheck = checkApiKey(projectDir);
+  const apiKeyCheck = checkApiKey(projectDir, options?.apiKeyOverride);
   checks.push(apiKeyCheck);
 
   if (apiKeyCheck.status === 'pass') {
-    const config = loadConfig(projectDir, { apiKeyOverride: options?.apiKeyOverride });
-    checks.push(await checkApiConnectivity(config));
+    const configurationCheck = checkConfiguration(projectDir, options?.apiKeyOverride);
+    checks.push(configurationCheck);
+    if (configurationCheck.status === 'pass') {
+      const config = loadConfig(projectDir, { apiKeyOverride: options?.apiKeyOverride });
+      checks.push(await checkApiConnectivity(config));
+    }
   }
 
   if (options?.taskFile) {
@@ -92,7 +107,9 @@ export async function runDoctor(
   }
 
   const hasAuthFail = checks.some(c => c.status === 'fail' && (c.name === 'api_key' || c.name === 'api_connectivity'));
-  const hasValidationFail = checks.some(c => c.status === 'fail' && c.name === 'task_file');
+  const hasValidationFail = checks.some(c => (
+    c.status === 'fail' && (c.name === 'configuration' || c.name === 'task_file')
+  ));
   const hasAnyFail = checks.some(c => c.status === 'fail');
 
   let exitCode = 0;

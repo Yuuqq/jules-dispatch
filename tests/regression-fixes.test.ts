@@ -357,6 +357,23 @@ describe('Fix R2-4: planner retries 400 only for response_format', () => {
     expect(result.tasks).toHaveLength(1);
     expect(result.tasks[0].title).toBe('T');
   });
+
+  it('aborts a planner request after the configured timeout', async () => {
+    const { planTasks } = await import('../src/planner.js');
+    const fetchMock = vi.fn().mockImplementation((_url, init: RequestInit) => (
+      new Promise((_resolve, reject) => {
+        init.signal?.addEventListener('abort', () => reject(init.signal?.reason), { once: true });
+      })
+    ));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(planTasks(
+      { apiKey: 'k', baseUrl: 'https://example.test/v1', model: 'm', requestTimeoutMs: 5 },
+      { description: 'do thing' },
+    )).rejects.toThrow('timed out after 5ms');
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
 });
 
 // ---------- Fix R2-5: loadConfig gives a Fix hint on missing API key ----------

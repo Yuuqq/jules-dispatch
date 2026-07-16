@@ -50,6 +50,13 @@ function cancelledSession(id: string): JulesSession {
   };
 }
 
+function sessionWithState(id: string, state: string): JulesSession {
+  return {
+    ...runningSession(id),
+    state,
+  };
+}
+
 function successActivities(): { activities: JulesActivity[] } {
   return { activities: [] };
 }
@@ -77,6 +84,30 @@ afterEach(() => {
 });
 
 describe('pollSessions', () => {
+  it('bounds per-wave polling concurrency to 10 by default', async () => {
+    const client = mockClient();
+    let inFlight = 0;
+    let maxInFlight = 0;
+    client.getSession.mockImplementation(async (id: string) => {
+      inFlight += 1;
+      maxInFlight = Math.max(maxInFlight, inFlight);
+      await Promise.resolve();
+      inFlight -= 1;
+      return completedSession(id);
+    });
+    client.listActivities.mockResolvedValue(successActivities());
+
+    const ids = Array.from({ length: 25 }, (_, i) => `s${i + 1}`);
+    const result = await pollSessions(
+      client as unknown as Parameters<typeof pollSessions>[0],
+      ids,
+      { interval: 100, timeout: 5000 },
+    );
+
+    expect(result.completed).toEqual(ids);
+    expect(maxInFlight).toBe(10);
+  });
+
   it('returns timedOut when timeout elapses with session still running', async () => {
     const client = mockClient();
     client.getSession.mockResolvedValue(runningSession('s1'));
@@ -95,9 +126,55 @@ describe('pollSessions', () => {
       completed: [],
       failed: [],
       cancelled: [],
+      awaitingPlan: [],
+      awaitingUserFeedback: [],
+      paused: [],
+      actionRequired: [],
       stillRunning: ['s1'],
       timedOut: true,
     });
+  });
+
+  it.each([
+    ['AWAITING_PLAN_APPROVAL', 'awaitingPlan'],
+    ['AWAITING_USER_FEEDBACK', 'awaitingUserFeedback'],
+    ['PAUSED', 'paused'],
+  ] as const)('returns immediately when a session reaches %s', async (state, bucket) => {
+    const client = mockClient();
+    client.getSession.mockResolvedValue(sessionWithState('s1', state));
+    client.listActivities.mockResolvedValue(successActivities());
+
+    const result = await pollSessions(
+      client as unknown as Parameters<typeof pollSessions>[0],
+      ['s1'],
+      { interval: 100, timeout: 5000 },
+    );
+
+    expect(result[bucket]).toEqual(['s1']);
+    expect(result.actionRequired).toEqual(['s1']);
+    expect(result.stillRunning).toEqual([]);
+    expect(result.timedOut).toBe(false);
+  });
+
+  it('returns active sessions separately when another session needs feedback', async () => {
+    const client = mockClient();
+    client.getSession.mockImplementation(async (id: string) => (
+      id === 's1'
+        ? sessionWithState(id, 'AWAITING_USER_FEEDBACK')
+        : sessionWithState(id, 'IN_PROGRESS')
+    ));
+    client.listActivities.mockResolvedValue(successActivities());
+
+    const result = await pollSessions(
+      client as unknown as Parameters<typeof pollSessions>[0],
+      ['s1', 's2'],
+      { interval: 100, timeout: 5000 },
+    );
+
+    expect(result.awaitingUserFeedback).toEqual(['s1']);
+    expect(result.actionRequired).toEqual(['s1']);
+    expect(result.stillRunning).toEqual(['s2']);
+    expect(result.timedOut).toBe(false);
   });
 
   it('returns completed sessions when all reach COMPLETED', async () => {

@@ -171,4 +171,31 @@ describe('waitForCompletion error handling', () => {
       error: 'activity poll failed',
     });
   });
+
+  it('does not claim every session resolved when fail-fast leaves work running', async () => {
+    vi.useFakeTimers();
+    const client = mockClient();
+    client.getSession.mockImplementation(async (id: string) => (
+      id === 'failed'
+        ? session({ id, state: 'FAILED' })
+        : session({ id, state: 'IN_PROGRESS' })
+    ));
+    client.listActivities.mockResolvedValue({ activities: [] });
+
+    const resultPromise = waitForCompletion(
+      client as unknown as JulesClient,
+      config,
+      ['failed', 'running'],
+      { interval: 100, timeout: 5000, failFast: true },
+    );
+
+    await vi.advanceTimersByTimeAsync(200);
+    const result = await resultPromise;
+    const output = vi.mocked(console.log).mock.calls.flat().join('\n');
+
+    expect(result.failed).toEqual(['failed']);
+    expect(result.stillRunning).toEqual(['running']);
+    expect(output).not.toContain('All sessions resolved');
+    expect(output).toContain('Stopped after failure');
+  });
 });

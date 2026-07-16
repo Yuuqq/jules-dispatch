@@ -8,6 +8,7 @@ import { debug } from './log.js';
 import { isJson, emit, info } from './output.js';
 import { pollSessions, type PollResult } from './polling.js';
 import { runBatches } from './batch.js';
+import { getLastActivity } from './session-summary.js';
 
 export interface CollectStatusOptions {
   sessionIds?: string[];
@@ -38,7 +39,7 @@ export async function collectStatus(
     // fleets), so we walk forward through pages and stop once we have enough.
     const scanLimit = options.scanLimit ?? 100;
     let fetched = 0;
-    for await (const s of client.iterateSessions(Math.min(scanLimit, 200))) {
+    for await (const s of client.iterateSessions(Math.min(scanLimit, 100))) {
       sessionsToCheck.push(s);
       fetched += 1;
       if (fetched >= scanLimit) break;
@@ -60,6 +61,8 @@ export async function collectStatus(
         running: results.filter(r => r.status === 'running').length,
         failed: results.filter(r => r.status === 'failed').length,
         awaiting_plan: results.filter(r => r.status === 'awaiting_plan').length,
+        awaiting_user_feedback: results.filter(r => r.status === 'awaiting_user_feedback').length,
+        paused: results.filter(r => r.status === 'paused').length,
         cancelled: results.filter(r => r.status === 'cancelled').length,
       },
       results,
@@ -103,24 +106,8 @@ async function summarizeCollectResult(client: JulesClient, session: JulesSession
     const { activities } = await client.listActivities(session.id, 10);
     activityCount = activities.length;
 
-    const failedAct = activities.find(a => a.sessionFailed);
-    const latestProgress = activities
-      .filter(a => a.progressUpdated)
-      .sort((a, b) => (a.createTime > b.createTime ? -1 : a.createTime < b.createTime ? 1 : 0))[0];
-
     status = deriveStatus(session, activities);
-
-    if (status === 'failed') {
-      lastActivity = failedAct?.sessionFailed?.message ?? failedAct?.sessionFailed?.reason ?? 'Failed';
-    } else if (status === 'completed') {
-      lastActivity = 'Completed';
-    } else if (status === 'awaiting_plan') {
-      lastActivity = 'Awaiting plan approval';
-    } else if (status === 'cancelled') {
-      lastActivity = 'Cancelled';
-    } else {
-      lastActivity = latestProgress?.progressUpdated?.title ?? 'In progress';
-    }
+    lastActivity = getLastActivity(status, activities);
   } catch (err) {
     debug('activity fetch error', { sessionId: session.id, error: (err as Error).message });
     lastActivity = 'Error fetching activities';
@@ -148,7 +135,16 @@ function printStatusText(results: CollectResult[]): void {
     return;
   }
 
-  const groupOrder = ['running', 'pending', 'awaiting_plan', 'completed', 'failed', 'cancelled'];
+  const groupOrder = [
+    'running',
+    'pending',
+    'awaiting_plan',
+    'awaiting_user_feedback',
+    'paused',
+    'completed',
+    'failed',
+    'cancelled',
+  ];
   const sorted = [...results].sort((a, b) => {
     const ai = groupOrder.indexOf(a.status);
     const bi = groupOrder.indexOf(b.status);
@@ -159,6 +155,8 @@ function printStatusText(results: CollectResult[]): void {
     running: { icon: '●', label: 'Running', color: chalk.green },
     pending: { icon: '●', label: 'Pending', color: chalk.yellow },
     awaiting_plan: { icon: '⏸', label: 'Await Plan', color: chalk.magenta },
+    awaiting_user_feedback: { icon: '!', label: 'Needs Input', color: chalk.yellow },
+    paused: { icon: '⏸', label: 'Paused', color: chalk.yellow },
     completed: { icon: '✓', label: 'Done', color: chalk.blue },
     failed: { icon: '✗', label: 'Failed', color: chalk.red },
     cancelled: { icon: '⊘', label: 'Cancelled', color: chalk.gray },
@@ -230,7 +228,7 @@ export async function waitForCompletion(
 ): Promise<PollResult> {
   const timeout = options.timeout ?? 600000;
 
-  info(chalk.bold(`\nWaiting for ${sessionIds.length} session(s) to complete (timeout: ${timeout / 1000}s)...\n`));
+  info(chalk.bold(`\nMonitoring ${sessionIds.length} session(s) until resolved or action is required (timeout: ${timeout / 1000}s)...\n`));
 
   const result = await pollSessions(client, sessionIds, {
     interval: options.interval ?? 30000,
@@ -252,12 +250,24 @@ export async function waitForCompletion(
 
   emit(
     () => {
-      if (!result.timedOut) console.log(chalk.green.bold(`✓ All sessions resolved.`));
-      else console.log(chalk.yellow(`Timeout reached. ${result.stillRunning.length} session(s) may still be running.`));
+      if (result.actionRequired.length > 0) {
+        console.log(chalk.yellow.bold(`Action required for ${result.actionRequired.length} session(s).`));
+      } else if (result.timedOut) {
+        console.log(chalk.yellow(`Timeout reached. ${result.stillRunning.length} session(s) may still be running.`));
+      } else if (result.stillRunning.length > 0 && result.failed.length > 0) {
+        console.log(chalk.red(`Stopped after failure. ${result.stillRunning.length} session(s) still running.`));
+      } else if (result.stillRunning.length > 0) {
+        console.log(chalk.yellow(`Stopped with ${result.stillRunning.length} session(s) still running.`));
+      } else {
+        console.log(chalk.green.bold(`✓ All sessions resolved.`));
+      }
       console.log(
         `  ${chalk.green(`completed: ${result.completed.length}`)}` +
         (result.failed.length > 0 ? `, ${chalk.red(`failed: ${result.failed.length}`)}` : '') +
-        (result.cancelled.length > 0 ? `, ${chalk.dim(`cancelled: ${result.cancelled.length}`)}` : ''),
+        (result.cancelled.length > 0 ? `, ${chalk.dim(`cancelled: ${result.cancelled.length}`)}` : '') +
+        (result.awaitingPlan.length > 0 ? `, ${chalk.yellow(`awaiting plan: ${result.awaitingPlan.length}`)}` : '') +
+        (result.awaitingUserFeedback.length > 0 ? `, ${chalk.yellow(`needs input: ${result.awaitingUserFeedback.length}`)}` : '') +
+        (result.paused.length > 0 ? `, ${chalk.yellow(`paused: ${result.paused.length}`)}` : ''),
       );
     },
     { event: 'final', ...result },

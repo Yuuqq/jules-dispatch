@@ -10,18 +10,21 @@ export interface LoadConfigOptions {
   noExit?: boolean;
 }
 
-export function loadConfig(projectDir: string, options: LoadConfigOptions = {}): JulesConfig {
+export function loadProjectEnv(projectDir: string): Record<string, string> {
   const envPath = resolve(projectDir, '.env');
+  if (!existsSync(envPath)) return {};
 
-  if (existsSync(envPath)) {
-    const envContent = readFileSync(envPath, 'utf8');
-    const parsed = parseDotenv(envContent);
-    for (const [key, value] of Object.entries(parsed)) {
-      if (!process.env[key]) process.env[key] = value;
-    }
+  const parsed = parseDotenv(readFileSync(envPath, 'utf8'));
+  for (const [key, value] of Object.entries(parsed)) {
+    if (process.env[key] === undefined) process.env[key] = value;
   }
+  return parsed;
+}
 
-  const apiKey = options.apiKeyOverride ?? process.env.JULES_API_KEY ?? '';
+export function loadConfig(projectDir: string, options: LoadConfigOptions = {}): JulesConfig {
+  loadProjectEnv(projectDir);
+
+  const apiKey = (options.apiKeyOverride ?? process.env.JULES_API_KEY ?? '').trim();
   if (!apiKey) {
     const msg = 'JULES_API_KEY is required. Set it in .env, pass --api-key, or set the JULES_API_KEY environment variable.';
     if (options.noExit) throw new Error(msg);
@@ -36,7 +39,12 @@ export function loadConfig(projectDir: string, options: LoadConfigOptions = {}):
   // users can write `JULES_AUTO_MODE=none` or `None` and still match the
   // 'AUTO_CREATE_PR' | 'NONE' union the API expects.
   const rawAuto = (process.env.JULES_AUTO_MODE ?? '').trim().toUpperCase();
-  const autoMode = (rawAuto === '' ? 'AUTO_CREATE_PR' : rawAuto) as JulesConfig['autoMode'];
+  if (rawAuto !== '' && rawAuto !== 'AUTO_CREATE_PR' && rawAuto !== 'NONE') {
+    throw new Error(
+      'Invalid JULES_AUTO_MODE: expected AUTO_CREATE_PR or NONE',
+    );
+  }
+  const autoMode: JulesConfig['autoMode'] = rawAuto === '' ? 'AUTO_CREATE_PR' : rawAuto;
 
   return {
     apiKey,
@@ -82,6 +90,7 @@ export function loadTasksFromString(content: string, format: 'yaml' | 'json' = '
   }
   const parsed = JSON.parse(content) as TaskDefinition | TaskDefinition[];
   const tasks = Array.isArray(parsed) ? parsed : [parsed];
+  if (tasks.length === 0) throw new Error('No tasks found in input');
   return tasks.map(t => validateTask(t, '<stdin>'));
 }
 
@@ -110,9 +119,59 @@ export function loadTasksFromDir(dir: string): Array<{ file: string; tasks: Task
   }));
 }
 
-export function validateTask(task: TaskDefinition, filePath: string): TaskDefinition {
-  if (!task || typeof task !== 'object') throw new Error(`Invalid task definition in ${filePath}`);
-  if (!task.title) throw new Error(`Missing "title" in ${filePath}`);
-  if (!task.prompt) throw new Error(`Missing "prompt" in ${filePath}`);
-  return task;
+export function validateTask(task: unknown, filePath: string): TaskDefinition {
+  if (!task || typeof task !== 'object' || Array.isArray(task)) {
+    throw new Error(`Invalid task definition in ${filePath}: expected an object`);
+  }
+
+  const input = task as Record<string, unknown>;
+  const title = requiredTaskString(input.title, 'title', filePath);
+  const prompt = requiredTaskString(input.prompt, 'prompt', filePath);
+  const source = optionalTaskString(input.source, 'source', filePath);
+  const branch = optionalTaskString(input.branch, 'branch', filePath);
+
+  let autoMode: TaskDefinition['autoMode'];
+  if (input.autoMode !== undefined) {
+    if (input.autoMode !== 'AUTO_CREATE_PR' && input.autoMode !== 'NONE') {
+      throw new Error(
+        `Invalid "autoMode" in ${filePath}: expected "AUTO_CREATE_PR" or "NONE"`,
+      );
+    }
+    autoMode = input.autoMode;
+  }
+
+  let requirePlanApproval: boolean | undefined;
+  if (input.requirePlanApproval !== undefined) {
+    if (typeof input.requirePlanApproval !== 'boolean') {
+      throw new Error(`Invalid "requirePlanApproval" in ${filePath}: expected a boolean`);
+    }
+    requirePlanApproval = input.requirePlanApproval;
+  }
+
+  return {
+    title,
+    prompt,
+    ...(source !== undefined ? { source } : {}),
+    ...(branch !== undefined ? { branch } : {}),
+    ...(autoMode !== undefined ? { autoMode } : {}),
+    ...(requirePlanApproval !== undefined ? { requirePlanApproval } : {}),
+  };
+}
+
+function requiredTaskString(value: unknown, field: string, filePath: string): string {
+  if (typeof value !== 'string') {
+    throw new Error(`Invalid "${field}" in ${filePath}: expected a string`);
+  }
+  const normalized = value.trim();
+  if (!normalized) throw new Error(`Invalid "${field}" in ${filePath}: value cannot be blank`);
+  return normalized;
+}
+
+function optionalTaskString(
+  value: unknown,
+  field: string,
+  filePath: string,
+): string | undefined {
+  if (value === undefined) return undefined;
+  return requiredTaskString(value, field, filePath);
 }

@@ -99,6 +99,12 @@ describe('translateError', () => {
   });
 
   describe('unknown errors', () => {
+    it('does not mistake words containing "source" for task validation failures', () => {
+      const result = translateError(new Error('Remote resource is temporarily unavailable'));
+
+      expect(result.code).toBe('UNKNOWN');
+    });
+
     it('falls back to UNKNOWN for unrecognized errors', () => {
       const result = translateError(new Error('something unexpected'));
       expect(result.code).toBe('UNKNOWN');

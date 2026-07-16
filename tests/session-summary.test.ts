@@ -26,9 +26,12 @@ function activity(overrides: Partial<JulesActivity> = {}): JulesActivity {
   };
 }
 
-function mockClient(activities: JulesActivity[]): Pick<JulesClient, 'getSession' | 'listActivities'> {
+function mockClient(
+  activities: JulesActivity[],
+  sessionOverrides: Partial<JulesSession> = {},
+): Pick<JulesClient, 'getSession' | 'listActivities'> {
   return {
-    getSession: vi.fn().mockResolvedValue(session()),
+    getSession: vi.fn().mockResolvedValue(session(sessionOverrides)),
     listActivities: vi.fn().mockResolvedValue({ activities }),
   };
 }
@@ -54,5 +57,51 @@ describe('summarizeSession', () => {
     );
 
     expect(result.lastActivity).toBe('explicit failure');
+  });
+
+  it('selects the newest failure when activities are not already sorted', async () => {
+    const result = await summarizeSession(
+      mockClient([
+        activity({
+          id: 'older-failure',
+          createTime: '2026-01-01T00:00:00Z',
+          sessionFailed: { message: 'old failure' },
+        }),
+        activity({
+          id: 'newer-failure',
+          createTime: '2026-01-01T00:05:00Z',
+          sessionFailed: { message: 'new failure' },
+        }),
+      ]),
+      'sess-1',
+    );
+
+    expect(result.lastActivity).toBe('new failure');
+  });
+
+  it('surfaces the latest Jules message when user feedback is required', async () => {
+    const result = await summarizeSession(
+      mockClient([
+        activity({
+          createTime: '2026-01-01T00:02:00Z',
+          agentMessaged: { agentMessage: 'Which database should I target?' },
+        }),
+      ], { state: 'AWAITING_USER_FEEDBACK' }),
+      'sess-1',
+    );
+
+    expect(result).toMatchObject({
+      status: 'awaiting_user_feedback',
+      lastActivity: 'Which database should I target?',
+    });
+  });
+
+  it('reports paused sessions as action required', async () => {
+    const result = await summarizeSession(
+      mockClient([], { state: 'PAUSED' }),
+      'sess-1',
+    );
+
+    expect(result).toMatchObject({ status: 'paused', lastActivity: 'Paused' });
   });
 });

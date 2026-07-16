@@ -2,8 +2,9 @@ export interface JulesConfig {
   apiKey: string;
   defaultSource: string;
   defaultBranch: string;
-  autoMode: 'AUTO_CREATE_PR' | 'NONE' | '';
+  autoMode: 'AUTO_CREATE_PR' | 'NONE';
   projectDir?: string;
+  requestTimeoutMs?: number;
 }
 
 export interface TaskDefinition {
@@ -11,7 +12,7 @@ export interface TaskDefinition {
   prompt: string;
   source?: string;
   branch?: string;
-  autoMode?: 'AUTO_CREATE_PR' | 'NONE' | '';
+  autoMode?: 'AUTO_CREATE_PR' | 'NONE';
   requirePlanApproval?: boolean;
 }
 
@@ -21,7 +22,7 @@ export interface JulesSession {
   title: string;
   prompt: string;
   url: string;
-  sourceContext: {
+  sourceContext?: {
     source: string;
     githubRepoContext: {
       startingBranch: string;
@@ -36,8 +37,33 @@ export interface JulesSession {
     };
   }>;
   createTime?: string;
-  state?: 'STATE_UNSPECIFIED' | 'PENDING' | 'RUNNING' | 'AWAITING_PLAN_APPROVAL' | 'AWAITING_USER_INPUT' | 'COMPLETED' | 'FAILED' | 'CANCELLED' | string;
+  state?:
+    | 'STATE_UNSPECIFIED'
+    | 'QUEUED'
+    | 'PLANNING'
+    | 'AWAITING_PLAN_APPROVAL'
+    | 'AWAITING_USER_FEEDBACK'
+    | 'IN_PROGRESS'
+    | 'PAUSED'
+    | 'COMPLETED'
+    | 'FAILED'
+    // Legacy values retained for compatibility with older API responses.
+    | 'PENDING'
+    | 'RUNNING'
+    | 'AWAITING_USER_INPUT'
+    | 'CANCELLED'
+    | 'CANCELED'
+    | string;
 }
+
+export type JulesSessionStatus =
+  | 'running'
+  | 'completed'
+  | 'failed'
+  | 'awaiting_plan'
+  | 'awaiting_user_feedback'
+  | 'paused'
+  | 'cancelled';
 
 export interface JulesPlanStep {
   id: string;
@@ -55,12 +81,16 @@ export interface JulesActivity {
   name: string;
   id: string;
   createTime: string;
-  originator: 'user' | 'agent';
+  originator: 'user' | 'agent' | 'system';
+  description?: string;
   planGenerated?: { plan: JulesPlan };
   progressUpdated?: { title: string; description?: string };
   sessionCompleted?: Record<string, unknown>;
   sessionFailed?: { reason?: string; message?: string };
   artifacts?: Array<Record<string, unknown>>;
+  agentMessaged?: { agentMessage?: string };
+  userMessaged?: { userMessage?: string };
+  /** Legacy activity shape retained for older API responses. */
   message?: { text?: string };
 }
 
@@ -77,7 +107,7 @@ export interface DispatchResult {
 export interface CollectResult {
   sessionId: string;
   title: string;
-  status: 'running' | 'completed' | 'failed' | 'awaiting_plan' | 'cancelled';
+  status: JulesSessionStatus;
   prUrl?: string;
   prTitle?: string;
   lastActivity?: string;

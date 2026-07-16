@@ -1,4 +1,5 @@
 import { deriveStatus, type JulesClient } from './client.js';
+import type { JulesActivity } from './types.js';
 
 export type SessionStatus = ReturnType<typeof deriveStatus>;
 
@@ -61,6 +62,7 @@ export async function summarizeSessionLegacy(
       status,
       prUrl: pr?.url,
       prTitle: pr?.title,
+      lastActivity: getLastActivity(status, activities),
       activities: activities.length,
     };
   } catch (err) {
@@ -68,15 +70,33 @@ export async function summarizeSessionLegacy(
   }
 }
 
-function getLastActivity(status: SessionStatus, activities: Awaited<ReturnType<JulesClient['listActivities']>>['activities']): string {
-  const failedAct = activities.find(a => a.sessionFailed);
-  const latestProgress = activities
-    .filter(a => a.progressUpdated)
-    .sort((a, b) => (a.createTime > b.createTime ? -1 : a.createTime < b.createTime ? 1 : 0))[0];
+export function getLastActivity(status: SessionStatus, activities: JulesActivity[]): string {
+  const newestFirst = activities.slice().sort((a, b) => (
+    a.createTime > b.createTime ? -1 : a.createTime < b.createTime ? 1 : 0
+  ));
+  const failedAct = newestFirst.find(a => a.sessionFailed);
+  const latestAgentMessage = newestFirst.find(a => (
+    a.agentMessaged?.agentMessage || a.message?.text
+  ));
+  const latestMeaningful = newestFirst.find(a => activityText(a));
 
   if (status === 'failed') return failedAct?.sessionFailed?.message ?? failedAct?.sessionFailed?.reason ?? 'Failed';
   if (status === 'completed') return 'Completed';
   if (status === 'awaiting_plan') return 'Awaiting plan approval';
+  if (status === 'awaiting_user_feedback') {
+    return latestAgentMessage?.agentMessaged?.agentMessage ??
+      latestAgentMessage?.message?.text ??
+      'Awaiting user feedback';
+  }
+  if (status === 'paused') return latestMeaningful ? activityText(latestMeaningful)! : 'Paused';
   if (status === 'cancelled') return 'Cancelled';
-  return latestProgress?.progressUpdated?.title ?? 'In progress';
+  return latestMeaningful ? activityText(latestMeaningful)! : 'In progress';
+}
+
+function activityText(activity: JulesActivity): string | undefined {
+  return activity.agentMessaged?.agentMessage ??
+    activity.userMessaged?.userMessage ??
+    activity.message?.text ??
+    activity.description ??
+    activity.progressUpdated?.title;
 }

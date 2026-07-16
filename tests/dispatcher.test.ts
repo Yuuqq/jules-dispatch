@@ -1,4 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
 import { dispatchBatch, dispatchTaskDefinition } from '../src/dispatcher.js';
 import type { JulesClient } from '../src/client.js';
 import * as taskConfig from '../src/config.js';
@@ -200,5 +203,27 @@ describe('error aggregation', () => {
     });
     expect(result.error).toContain('No source');
     expect(client.createSession).not.toHaveBeenCalled();
+  });
+
+  it('keeps successful dispatch results when the log cannot be written', async () => {
+    loadTasks(makeTask('one'), makeTask('two'));
+    const client = mockClient(params => successfulSession(params.title));
+    const dir = mkdtempSync(join(tmpdir(), 'dispatch-log-test-'));
+    const notADirectory = join(dir, 'blocked-log-dir');
+    writeFileSync(notADirectory, 'not a directory');
+
+    try {
+      await expect(dispatchBatch(
+        client,
+        { ...baseConfig, projectDir: dir },
+        'task-dir',
+        { parallel: 2, logDir: notADirectory },
+      )).resolves.toMatchObject([
+        { taskTitle: 'one', status: 'dispatched' },
+        { taskTitle: 'two', status: 'dispatched' },
+      ]);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });

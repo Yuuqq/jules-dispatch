@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtempSync, existsSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { parseEnv, runInit } from '../src/init.js';
+import { buildPromptText, parseEnv, runInit } from '../src/init.js';
 
 describe('parseEnv', () => {
   it('returns empty object for non-existent file', () => {
@@ -25,6 +25,24 @@ describe('parseEnv', () => {
     writeFileSync(envPath, 'KEY="value with spaces"\n');
     const result = parseEnv(envPath);
     expect(result.KEY).toBe('value with spaces');
+    rmSync(dir, { recursive: true });
+  });
+
+  it('decodes values written by init', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'init-test-'));
+    const expected = 'sk-"quoted"\\path';
+    await runInit({
+      apiKey: expected,
+      source: 'sources/github/owner/repo # retained',
+      branch: 'feature=a',
+      interactive: false,
+      projectDir: dir,
+    });
+
+    const result = parseEnv(join(dir, '.env'));
+    expect(result.JULES_API_KEY).toBe(expected);
+    expect(result.JULES_DEFAULT_SOURCE).toBe('sources/github/owner/repo # retained');
+    expect(result.JULES_DEFAULT_BRANCH).toBe('feature=a');
     rmSync(dir, { recursive: true });
   });
 
@@ -78,6 +96,16 @@ describe('runInit (non-interactive)', () => {
     ).rejects.toThrow('Non-interactive mode requires --api-key');
   });
 
+  it('rejects a whitespace-only API key before writing configuration', async () => {
+    await expect(runInit({
+      apiKey: '   ',
+      interactive: false,
+      projectDir: dir,
+    })).rejects.toThrow(/API key cannot be blank/i);
+
+    expect(existsSync(join(dir, '.env'))).toBe(false);
+  });
+
   it('defaults branch to main when not provided', async () => {
     const result = await runInit({
       apiKey: 'sk-key',
@@ -104,6 +132,32 @@ describe('runInit (non-interactive)', () => {
     expect(backup).toContain('old-key');
   });
 
+  it('preserves unrelated .env entries and comments', async () => {
+    const envPath = join(dir, '.env');
+    writeFileSync(envPath, [
+      '# Keep this application setting',
+      'APP_PORT=4310',
+      'JULES_API_KEY=old-key',
+      'FEATURE_FLAG="alpha # one"',
+      '',
+    ].join('\n'));
+
+    await runInit({
+      apiKey: 'new-key',
+      source: 'sources/github/owner/repo',
+      branch: 'main',
+      interactive: false,
+      projectDir: dir,
+    });
+
+    const content = readFileSync(envPath, 'utf8');
+    expect(content).toContain('# Keep this application setting');
+    expect(content).toContain('APP_PORT=4310');
+    expect(content).toContain('FEATURE_FLAG="alpha # one"');
+    expect(content).toContain('JULES_API_KEY=new-key');
+    expect(content).not.toContain('JULES_API_KEY=old-key');
+  });
+
   it('new .env contains correct content', async () => {
     await runInit({
       apiKey: 'sk-abc',
@@ -119,6 +173,14 @@ describe('runInit (non-interactive)', () => {
     expect(lines[0]).toBe('JULES_API_KEY=sk-abc');
     expect(lines[1]).toBe('JULES_DEFAULT_SOURCE=my-source');
     expect(lines[2]).toBe('JULES_DEFAULT_BRANCH=dev');
+  });
+});
+
+describe('interactive prompt rendering', () => {
+  it('does not expose an existing API key in the prompt', () => {
+    const text = buildPromptText('Jules API key', 'secret-existing-key', false);
+    expect(text).toContain('keep existing');
+    expect(text).not.toContain('secret-existing-key');
   });
 });
 

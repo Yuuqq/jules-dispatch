@@ -10,6 +10,7 @@
 - **jules-dispatch** installed globally: `npm install -g jules-dispatch`
 - A **Google Jules** account with an API key
 - A GitHub repo connected to Jules
+- Any local changes that Jules depends on committed and pushed to the target branch; Jules reads the remote branch, not your unpushed worktree
 
 Validate your setup:
 
@@ -128,7 +129,10 @@ User: "Implement feature X"
   │     └─► Each creates a PR
   │
   ├─► Claude Code: calls jules_monitor (wait=true)
-  │     └─► Blocks until all sessions complete
+  │     └─► Returns when all sessions are terminal or any session requires action
+  │
+  ├─► If action is required: calls jules_interact
+  │     └─► Approves the plan or sends feedback, then monitors again
   │
   └─► GSD: /gsd-verify-work
         └─► Reviews PRs, checks test results
@@ -150,14 +154,18 @@ Once the plan is ready, tell Claude:
 
 ```
 Read the PLAN.md and dispatch each task to Jules using the jules_dispatch MCP tool.
-Wait for all sessions to complete, then report the PR URLs.
+First confirm the target branch is committed and pushed. Monitor every session,
+handle any plan approval or feedback request, then report terminal states and PR URLs.
 ```
 
 Claude will:
 - Read each task from the plan
+- Confirm the remote target branch contains every prerequisite change
 - Call `jules_dispatch` with the task details
-- Call `jules_monitor` with `wait: true` to block until done
-- Report back with PR links
+- Call `jules_monitor` with `wait: true` until all sessions are terminal or one requires action
+- Use `jules_interact`, then `jules_approve_plan` or `jules_send_message`, when action is required
+- Call `jules_monitor` again for unresolved sessions and repeat until terminal
+- Report terminal states and PR links
 
 #### 3. Verify results
 
@@ -194,17 +202,23 @@ All 5 sessions completed. PRs:
 - middleware tests: github.com/owner/repo/pull/46
 ```
 
+If `jules_monitor` returns an `actionRequired` bucket instead, inspect each listed session with `jules_interact`, take the requested action, and monitor the unresolved IDs again.
+
 ---
 
 ## 4. MCP Tools Reference
+
+The server always registers 15 tools: 3 recommended consolidated tools, 5 utility tools, and 7 deprecated aliases. When an LLM key is configured, it also registers 2 optional planning tools.
 
 ### Core tools (use these)
 
 | Tool | Purpose | Key params |
 |------|---------|------------|
 | `jules_dispatch` | Create one or more sessions | `tasks` (object/array/string), `parallel` |
-| `jules_monitor` | Check status or wait for completion | `sessionIds`, `wait`, `timeoutMs` |
+| `jules_monitor` | Check status or wait for terminal/action-required state | `sessionIds`, `wait`, `timeoutMs` |
 | `jules_interact` | Full session context (details + plan + activities) | `sessionId`, `activityCount` |
+
+With `wait: true`, `jules_monitor` returns when all sessions are terminal, when any session enters an action-required state, or when the timeout expires. It does not silently wait through plan approval, user feedback, or paused states.
 
 ### Utility tools
 
@@ -216,12 +230,32 @@ All 5 sessions completed. PRs:
 | `jules_send_message` | Send follow-up message to a session |
 | `jules_cancel_session` | Cancel a running session |
 
-### Optional LLM tools (requires `LLM_API_KEY`)
+### Optional LLM tools
+
+These are registered when a planner key is supplied through `LLM_API_KEY`, `OPENAI_API_KEY`, `OPENROUTER_API_KEY`, or the MCP server's LLM key override. Planning works with OpenAI-compatible chat-completions endpoints.
 
 | Tool | Purpose |
 |------|---------|
 | `jules_plan_tasks` | Expand a high-level intent into N task drafts |
 | `jules_auto` | Plan + dispatch in one shot |
+
+### Deprecated aliases
+
+`jules_dispatch_task`, `jules_dispatch_batch`, `jules_get_session`, `jules_list_activities`, `jules_get_plan`, `jules_status`, and `jules_wait_for_completion` remain available for compatibility. New integrations should use `jules_dispatch`, `jules_monitor`, and `jules_interact`.
+
+### Monitoring states
+
+The current Jules states are `STATE_UNSPECIFIED`, `QUEUED`, `PLANNING`, `AWAITING_PLAN_APPROVAL`, `AWAITING_USER_FEEDBACK`, `IN_PROGRESS`, `PAUSED`, `COMPLETED`, and `FAILED`.
+
+| State group | Treatment |
+|------|---------|
+| `QUEUED`, `PLANNING`, `IN_PROGRESS`, `STATE_UNSPECIFIED` | Continue monitoring |
+| `AWAITING_PLAN_APPROVAL` | Inspect the plan, approve it if appropriate, then monitor again |
+| `AWAITING_USER_FEEDBACK` | Inspect activities, send the requested feedback, then monitor again |
+| `PAUSED` | Inspect the session, provide guidance if appropriate, then monitor again |
+| `COMPLETED`, `FAILED` | Terminal |
+
+For compatibility, jules-dispatch also normalizes the legacy states `PENDING`, `RUNNING`, `AWAITING_USER_INPUT`, `CANCELLED`, and `CANCELED`.
 
 ### Response format
 

@@ -1,6 +1,15 @@
 import { existsSync, readFileSync, writeFileSync, copyFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { createInterface } from 'node:readline';
+import { parse as parseDotenv } from 'dotenv';
+
+const MANAGED_ENV_KEYS = [
+  'JULES_API_KEY',
+  'JULES_DEFAULT_SOURCE',
+  'JULES_DEFAULT_BRANCH',
+] as const;
+
+type ManagedEnvKey = typeof MANAGED_ENV_KEYS[number];
 
 export interface InitOptions {
   apiKey?: string;
@@ -34,9 +43,14 @@ export async function runInit(options: InitOptions): Promise<InitResult> {
   }
 
   if (options.interactive) {
-    apiKey = await promptFor('Jules API key', existingValues.JULES_API_KEY ?? apiKey);
+    apiKey = await promptFor('Jules API key', existingValues.JULES_API_KEY ?? apiKey, false);
     source = await promptFor('Default source (e.g. sources/github/owner/repo)', source);
     branch = await promptFor('Default branch', branch || 'main');
+  }
+
+  apiKey = apiKey.trim();
+  if (!apiKey) {
+    throw new Error('Jules API key cannot be blank. Enter a key or pass --api-key.');
   }
 
   let backed = false;
@@ -47,12 +61,13 @@ export async function runInit(options: InitOptions): Promise<InitResult> {
     backed = true;
   }
 
-  const lines = [
-    `JULES_API_KEY=${formatEnvValue(apiKey)}`,
-    `JULES_DEFAULT_SOURCE=${formatEnvValue(source)}`,
-    `JULES_DEFAULT_BRANCH=${formatEnvValue(branch || 'main')}`,
-  ];
-  writeFileSync(envPath, lines.join('\n') + '\n');
+  const managedValues: Record<ManagedEnvKey, string> = {
+    JULES_API_KEY: apiKey,
+    JULES_DEFAULT_SOURCE: source,
+    JULES_DEFAULT_BRANCH: branch || 'main',
+  };
+  const existingContent = existsSync(envPath) ? readFileSync(envPath, 'utf8') : '';
+  writeFileSync(envPath, updateManagedEnv(existingContent, managedValues));
 
   return {
     envPath,
@@ -86,19 +101,67 @@ function nextAvailableBackupPath(projectDir: string): string {
  */
 function formatEnvValue(value: string): string {
   if (value === '') return '""';
-  // Quote if: leading/trailing whitespace, or any of #, =, ", ', or newline.
-  if (/[#="'\n\r]/.test(value) || /^\s|\s$/.test(value)) {
-    const escaped = value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-    return `"${escaped}"`;
+  if (!/[#="'`\s\n\r]/.test(value)) return value;
+  if (value.includes('\n') || value.includes('\r')) {
+    throw new Error('Environment values cannot contain newline characters');
   }
-  return value;
+  // Dotenv does not unescape an embedded quote delimiter, so choose one that
+  // is absent from the value. Prefer double quotes for conventional .env
+  // output, then fall back to the literal single-quote/backtick forms.
+  if (!value.includes('"')) return `"${value}"`;
+  if (!value.includes("'")) return `'${value}'`;
+  if (!value.includes('`')) return `\`${value}\``;
+  throw new Error('Environment value cannot contain single, double, and backtick quotes together');
 }
 
-export async function promptFor(label: string, defaultVal: string): Promise<string> {
+function updateManagedEnv(
+  existingContent: string,
+  values: Record<ManagedEnvKey, string>,
+): string {
+  if (!existingContent) {
+    return MANAGED_ENV_KEYS
+      .map(key => `${key}=${formatEnvValue(values[key])}`)
+      .join('\n') + '\n';
+  }
+
+  const eol = existingContent.includes('\r\n') ? '\r\n' : '\n';
+  const lines = existingContent.split(/\r?\n/);
+  if (lines.at(-1) === '') lines.pop();
+  const written = new Set<ManagedEnvKey>();
+  const output: string[] = [];
+
+  for (const line of lines) {
+    const match = /^\s*(?:export\s+)?(JULES_API_KEY|JULES_DEFAULT_SOURCE|JULES_DEFAULT_BRANCH)\s*=/.exec(line);
+    if (!match) {
+      output.push(line);
+      continue;
+    }
+
+    const key = match[1] as ManagedEnvKey;
+    if (written.has(key)) continue;
+    output.push(`${key}=${formatEnvValue(values[key])}`);
+    written.add(key);
+  }
+
+  for (const key of MANAGED_ENV_KEYS) {
+    if (!written.has(key)) output.push(`${key}=${formatEnvValue(values[key])}`);
+  }
+  return output.join(eol) + eol;
+}
+
+export function buildPromptText(label: string, defaultVal: string, revealDefault = true): string {
+  if (!defaultVal) return `${label}: `;
+  return `${label} [${revealDefault ? defaultVal : 'keep existing'}]: `;
+}
+
+export async function promptFor(
+  label: string,
+  defaultVal: string,
+  revealDefault = true,
+): Promise<string> {
   const rl = createInterface({ input: process.stdin, output: process.stdout });
   return new Promise((resolve) => {
-    const suffix = defaultVal ? ` [${defaultVal}]` : '';
-    rl.question(`${label}${suffix}: `, (answer) => {
+    rl.question(buildPromptText(label, defaultVal, revealDefault), (answer) => {
       rl.close();
       resolve(answer.trim() || defaultVal);
     });
@@ -107,19 +170,5 @@ export async function promptFor(label: string, defaultVal: string): Promise<stri
 
 export function parseEnv(path: string): Record<string, string> {
   if (!existsSync(path)) return {};
-  const content = readFileSync(path, 'utf8');
-  const result: Record<string, string> = {};
-  for (const rawLine of content.split('\n')) {
-    let line = rawLine.trim();
-    if (!line || line.startsWith('#')) continue;
-    const eq = line.indexOf('=');
-    if (eq === -1) continue;
-    const key = line.slice(0, eq).trim();
-    let value = line.slice(eq + 1).trim();
-    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
-      value = value.slice(1, -1);
-    }
-    result[key] = value;
-  }
-  return result;
+  return parseDotenv(readFileSync(path, 'utf8'));
 }

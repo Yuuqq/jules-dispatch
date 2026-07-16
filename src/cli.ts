@@ -4,13 +4,15 @@ import { Command } from 'commander';
 import { resolve } from 'node:path';
 import { readFileSync } from 'node:fs';
 import chalk from 'chalk';
-import { loadConfig, loadTasksFromString } from './config.js';
+import { loadConfig, loadProjectEnv, loadTasksFromString } from './config.js';
 import { JulesClient } from './client.js';
 import { dispatchTask, dispatchBatch, dispatchTaskDefinition } from './dispatcher.js';
 import { collectStatus, waitForCompletion } from './collector.js';
 import { setOutputMode, isJson, emit, emitError, info, ExitCode } from './output.js';
 import { setVerbose } from './log.js';
 import { translateError, type TranslatedError } from './errors.js';
+import { fetchTailActivities, rememberLatestFailure } from './tail.js';
+import type { JulesActivity } from './types.js';
 
 const program = new Command();
 
@@ -37,19 +39,29 @@ program
 
 function getConfig(): { config: ReturnType<typeof loadConfig>; client: JulesClient } {
   const opts = program.opts() as { project: string; apiKey?: string };
-  const config = loadConfig(resolve(opts.project), { apiKeyOverride: opts.apiKey });
+  const config = loadConfig(resolve(opts.project), {
+    apiKeyOverride: opts.apiKey,
+    noExit: true,
+  });
   return { config, client: new JulesClient(config) };
 }
 
-function fail(input: string | TranslatedError | unknown, code: number = ExitCode.GENERIC, errCode?: string): never {
+function exitCodeForTranslated(error: TranslatedError): number {
+  if (error.code === 'AUTH_FAILED' || error.code === 'AUTH_MISSING') return ExitCode.AUTH;
+  if (error.code === 'VALIDATION') return ExitCode.VALIDATION;
+  return ExitCode.GENERIC;
+}
+
+function fail(input: string | TranslatedError | unknown, code?: number, errCode?: string): never {
   if (typeof input === 'string') {
     emitError(input, errCode);
   } else {
     const translated = translateError(input);
     const { problem, cause, fix, code: tCode, context } = translated;
     emitError(problem, tCode, `Cause: ${cause}\nFix: ${fix}`, context);
+    code ??= exitCodeForTranslated(translated);
   }
-  process.exit(code);
+  process.exit(code ?? ExitCode.GENERIC);
 }
 
 function parseIntegerOption(value: string, name: string, min: number, max?: number): number {
@@ -61,6 +73,21 @@ function parseIntegerOption(value: string, name: string, min: number, max?: numb
   return parsed;
 }
 
+function reportActionRequired(results: Awaited<ReturnType<typeof collectStatus>>): boolean {
+  const actionRequired = results.filter(result => (
+    result.status === 'awaiting_plan' ||
+    result.status === 'awaiting_user_feedback' ||
+    result.status === 'paused'
+  ));
+  if (actionRequired.length === 0) return false;
+
+  if (!isJson()) {
+    const ids = actionRequired.map(result => result.sessionId).join(', ');
+    console.log(chalk.yellow(`\nAction required; watch stopped for: ${ids}`));
+  }
+  return true;
+}
+
 // ---------- dispatch ----------
 
 program
@@ -70,12 +97,19 @@ program
   .option('-b, --branch <branch>', 'override branch')
   .option('--format <fmt>', 'stdin format: yaml|json', 'yaml')
   .action(async (taskFile: string, opts: { source?: string; branch?: string; format: string }) => {
+    if (opts.format !== 'yaml' && opts.format !== 'json') {
+      fail(
+        `Unsupported input format "${opts.format}". Expected "yaml" or "json".`,
+        ExitCode.VALIDATION,
+        'INVALID_FORMAT',
+      );
+    }
     const { config, client } = getConfig();
 
     let result;
     if (taskFile === '-') {
       const content = readFileSync(0, 'utf8');
-      const tasks = loadTasksFromString(content, opts.format as 'yaml' | 'json');
+      const tasks = loadTasksFromString(content, opts.format);
       if (tasks.length === 0) fail('No tasks found in stdin', ExitCode.VALIDATION, 'NO_TASKS');
       info(chalk.dim('Dispatching from stdin\n'));
       result = await dispatchTaskDefinition(client, config, tasks[0], '<stdin>', {
@@ -156,13 +190,14 @@ program
   .option('--interval <ms>', 'refresh interval in milliseconds (default: 5000)', '5000')
   .action(async (opts: { ids?: string[]; output?: string; scan: string; watch?: boolean; interval: string }) => {
     const { config, client } = getConfig();
-    await collectStatus(client, config, {
+    const initialResults = await collectStatus(client, config, {
       sessionIds: opts.ids,
       output: opts.output,
       scanLimit: parseIntegerOption(opts.scan, '--scan', 1, 200),
     });
 
     if (opts.watch) {
+      if (reportActionRequired(initialResults)) return;
       // Watch mode keeps the initial report write, but refreshes only render status.
       const interval = parseIntegerOption(opts.interval, '--interval', 1000);
       // Parse once outside the loop so a bad value fails fast instead of
@@ -185,6 +220,8 @@ program
             output: undefined,
             scanLimit,
           });
+
+          if (reportActionRequired(results)) break;
 
           // Empty results must NOT count as "all resolved" (Array.every on an
           // empty array returns true), otherwise an API hiccup or a filtered-out
@@ -246,7 +283,7 @@ Examples:
 
 program
   .command('wait [ids...]')
-  .description('Poll until the specified sessions finish')
+  .description('Poll until sessions are terminal, require action, or time out')
   .option('--interval <ms>', 'poll interval in ms', '30000')
   .option('--timeout <ms>', 'max wait time in ms', '600000')
   .option('--fail-fast', 'exit immediately on first failed session', false)
@@ -408,7 +445,7 @@ Examples:
 
 program
   .command('doctor')
-  .description('Validate environment: Node.js, npm, JULES_API_KEY, API connectivity, task file')
+  .description('Validate Node.js, npm, Jules configuration, API connectivity, and task files')
   .option('--task-file <path>', 'validate a task file (YAML or JSON)')
   .action(async (opts: { taskFile?: string }) => {
     const { runDoctor } = await import('./doctor.js');
@@ -505,6 +542,8 @@ program
     const { client } = getConfig();
     const interval = parseIntegerOption(opts.interval, '--interval', 1000);
     const seen = new Set<string>();
+    let createTimeCursor: string | undefined;
+    let lastFailure: string | undefined;
     const abort = new AbortController();
     const onSigint = () => { abort.abort(); };
     process.on('SIGINT', onSigint);
@@ -515,34 +554,44 @@ program
       while (!abort.signal.aborted) {
         try {
           const session = await client.getSession(sessionId);
-          const { activities } = await client.listActivities(sessionId, 30);
+          const activities = await fetchTailActivities(client, sessionId, createTimeCursor);
 
-          const newActs = activities.slice().reverse().filter(a => !seen.has(a.id));
+          const chronological = activities.slice().sort((a, b) => (
+            a.createTime.localeCompare(b.createTime) || a.id.localeCompare(b.id)
+          ));
+          const newActs = chronological.filter(a => !seen.has(a.id));
+          lastFailure = rememberLatestFailure(lastFailure, chronological);
           for (const a of newActs) {
             seen.add(a.id);
             if (isJson()) {
               process.stdout.write(JSON.stringify({ event: 'activity', activity: a }) + '\n');
             } else {
-              const ts = a.createTime?.slice(11, 19) ?? '';
-              const who = a.originator === 'agent' ? chalk.cyan('agent') : chalk.magenta('user ');
-              let line = `${chalk.dim(ts)} ${who}`;
-              if (a.planGenerated) line += ` ${chalk.bold('plan generated')} (${a.planGenerated.plan.steps.length} steps)`;
-              else if (a.progressUpdated) line += ` ${a.progressUpdated.title}`;
-              else if (a.sessionCompleted) line += ` ${chalk.green('session completed')}`;
-              else if (a.sessionFailed) line += ` ${chalk.red('session failed:')} ${a.sessionFailed.message ?? ''}`;
-              else if (a.message?.text) line += ` ${chalk.dim(a.message.text.slice(0, 200))}`;
-              console.log(line);
+              console.log(formatTailActivity(a));
             }
+          }
+          const newestTime = chronological.at(-1)?.createTime;
+          if (newestTime && (!createTimeCursor || newestTime > createTimeCursor)) {
+            createTimeCursor = newestTime;
           }
 
           const state = (session.state ?? '').toUpperCase();
           if (['COMPLETED', 'FAILED', 'CANCELLED', 'CANCELED'].includes(state)) {
+            const pr = session.outputs?.find(output => output.pullRequest)?.pullRequest;
             if (isJson()) {
-              process.stdout.write(JSON.stringify({ event: 'ended', state }) + '\n');
+              process.stdout.write(JSON.stringify({
+                event: 'ended',
+                state,
+                session: { id: session.id, title: session.title, url: session.url },
+                ...(lastFailure ? { failure: lastFailure } : {}),
+                ...(pr ? { pr } : {}),
+              }) + '\n');
             } else {
               info(chalk.bold(`\nSession ended: ${state}`));
+              if (lastFailure) console.error(chalk.red(`Failure: ${lastFailure}`));
+              if (pr) console.log(`${chalk.cyan('PR:')} ${pr.url}${pr.title ? ` (${pr.title})` : ''}`);
             }
-            process.exit(state === 'COMPLETED' ? ExitCode.OK : ExitCode.GENERIC);
+            process.exitCode = state === 'COMPLETED' ? ExitCode.OK : ExitCode.GENERIC;
+            return;
           }
         } catch (err) {
           const t = translateError(err);
@@ -574,6 +623,35 @@ Examples:
   $ jules-dispatch tail abc123 --interval 2000
 `);
 
+function formatTailActivity(activity: JulesActivity): string {
+  const ts = activity.createTime?.slice(11, 19) ?? '';
+  const who = activity.originator === 'agent'
+    ? chalk.cyan('agent ')
+    : activity.originator === 'user'
+      ? chalk.magenta('user  ')
+      : chalk.dim('system');
+  let detail = activity.agentMessaged?.agentMessage ??
+    activity.userMessaged?.userMessage ??
+    activity.message?.text ??
+    activity.description;
+
+  if (activity.planGenerated) {
+    detail = `${chalk.bold('plan generated')} (${activity.planGenerated.plan.steps.length} steps)`;
+  } else if (activity.progressUpdated) {
+    detail = activity.progressUpdated.description
+      ? `${activity.progressUpdated.title}: ${activity.progressUpdated.description}`
+      : activity.progressUpdated.title;
+  } else if (activity.sessionCompleted) {
+    detail = chalk.green('session completed');
+  } else if (activity.sessionFailed) {
+    detail = `${chalk.red('session failed:')} ${activity.sessionFailed.reason ?? activity.sessionFailed.message ?? 'unknown failure'}`;
+  } else if (!detail && activity.artifacts?.length) {
+    detail = `${activity.artifacts.length} artifact(s) produced`;
+  }
+
+  return `${chalk.dim(ts)} ${who} ${detail?.slice(0, 500) ?? chalk.dim('activity')}`;
+}
+
 // ---------- plan-tasks (optional LLM planner) ----------
 
 program
@@ -593,8 +671,7 @@ program
     const programOpts = program.opts() as { project: string; llmKey?: string; llmBaseUrl?: string; llmModel?: string };
     const projectDir = resolve(programOpts.project);
 
-    // Side-effect: load .env so LLM_* vars are populated when not set in shell.
-    try { loadConfig(projectDir, { noExit: true }); } catch { /* JULES_API_KEY missing is ok for planning-only */ }
+    loadProjectEnv(projectDir);
 
     const desc = description === '-' ? readFileSync(0, 'utf8').trim() : description;
     if (!desc) fail('Empty description', ExitCode.VALIDATION, 'EMPTY_DESC');
@@ -675,8 +752,13 @@ program
   .option('-y, --yes', 'skip confirmation prompt before dispatching', false)
   .action(async (description: string, opts: { max: string; source?: string; branch?: string; context?: string; contextFile?: string; parallel: string; dryRun: boolean; yes: boolean }) => {
     const { planTasks, loadPlannerConfig } = await import('./planner.js');
-    const { config, client } = getConfig();
-    const programOpts = program.opts() as { llmKey?: string; llmBaseUrl?: string; llmModel?: string };
+    const programOpts = program.opts() as {
+      project: string;
+      llmKey?: string;
+      llmBaseUrl?: string;
+      llmModel?: string;
+    };
+    loadProjectEnv(resolve(programOpts.project));
 
     const desc = description === '-' ? readFileSync(0, 'utf8').trim() : description;
     if (!desc) fail('Empty description', ExitCode.VALIDATION, 'EMPTY_DESC');
@@ -701,8 +783,8 @@ program
     try {
       plan = await planTasks(plannerCfg, {
         description: desc,
-        source: opts.source ?? config.defaultSource,
-        branch: opts.branch ?? config.defaultBranch,
+        source: opts.source ?? process.env.JULES_DEFAULT_SOURCE,
+        branch: opts.branch ?? process.env.JULES_DEFAULT_BRANCH ?? 'main',
         maxTasks: parseIntegerOption(opts.max, '--max', 1, 50),
         context,
       });
@@ -720,7 +802,15 @@ program
       return;
     }
 
-    if (!opts.yes && !isJson() && process.stdin.isTTY) {
+    if (!opts.yes && (isJson() || !process.stdin.isTTY)) {
+      fail(
+        'Non-interactive auto dispatch requires --yes. Use --dry-run to review tasks without dispatching.',
+        ExitCode.VALIDATION,
+        'CONFIRMATION_REQUIRED',
+      );
+    }
+
+    if (!opts.yes) {
       info(chalk.yellow(`\nDispatch all ${plan.tasks.length} task(s)? [y/N] `));
       const answer = await new Promise<string>(r => {
         process.stdin.once('data', d => r(d.toString().trim().toLowerCase()));
@@ -731,6 +821,7 @@ program
       }
     }
 
+    const { config, client } = getConfig();
     info(chalk.dim('\nDispatching...\n'));
     const parallel = parseIntegerOption(opts.parallel, '--parallel', 1, 50);
     const results = [];
@@ -819,11 +910,11 @@ process.on('unhandledRejection', (err) => {
   // error on stderr for visibility.
   const t = translateError(err);
   emitError(t.problem, t.code, `Cause: ${t.cause}\nFix: ${t.fix}`, t.context);
-  if (!isLongRunning) process.exit(ExitCode.GENERIC);
+  if (!isLongRunning) process.exit(exitCodeForTranslated(t));
 });
 
 program.parseAsync(process.argv).catch((err) => {
   const t = translateError(err);
   emitError(t.problem, t.code, `Cause: ${t.cause}\nFix: ${t.fix}`, t.context);
-  process.exit(ExitCode.GENERIC);
+  process.exit(exitCodeForTranslated(t));
 });

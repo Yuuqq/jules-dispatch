@@ -85,7 +85,9 @@ export function translateError(err: unknown): TranslatedError {
     };
   }
 
-  if (/YAML|JSON|title|prompt|Invalid task|No (tasks|YAML|documents)|Task directory (not found|is empty)/i.test(message)) {
+  if (
+    /\b(?:YAML|JSON|title|prompt|source|branch|autoMode|requirePlanApproval)\b|JULES_AUTO_MODE|Invalid task|No (tasks|YAML|documents)|Task directory (not found|is empty)|Expected a directory/i.test(message)
+  ) {
     return {
       problem: 'Task file validation failed',
       cause: message,
