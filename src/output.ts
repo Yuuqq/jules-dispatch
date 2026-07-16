@@ -8,12 +8,15 @@ if (process.env.NO_COLOR || process.env.TERM === 'dumb' || !isatty(1)) {
   chalk.level = 0;
 }
 
+const initialChalkLevel = chalk.level;
 let mode: OutputMode = 'text';
 
 export function setOutputMode(m: OutputMode): void {
   mode = m;
   if (m === 'json') {
     chalk.level = 0;
+  } else {
+    chalk.level = initialChalkLevel;
   }
 }
 
