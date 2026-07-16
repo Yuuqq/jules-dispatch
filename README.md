@@ -121,7 +121,7 @@ Configure via env vars (`LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL`) or per-invoc
 ## ✨ Key Features
 
 | Feature | Details |
-|---|---|---|
+|---|---|
 | ⚡ Parallel dispatch | Saturate Jules with N sessions at once (`--parallel 20`) |
 | 📋 YAML task files | Multi-document YAML supported (`---` separators) |
 | 🔄 Status polling | Auto-detects PRs, plan approvals, failures |
@@ -366,7 +366,8 @@ jules-dispatch doctor
 # tasks/add-dark-mode.yaml
 title: "Add Dark Mode Support"
 prompt: |
-  Add a ThemeContext with light/dark state
+  Add a dark mode toggle to the React app:
+  1. Add a ThemeContext with light/dark state
   2. Wrap App with ThemeProvider
   3. Add a toggle button in the Header
   4. Persist preference in localStorage
@@ -405,7 +406,7 @@ That's it — 6 steps from install to your first PR.
 ### Commands
 
 | Command | What it does |
-|---|---|---|
+|---|---|
 | `init` | Interactive first-run wizard (API key, source, branch) |
 | `dispatch <taskFile>` | Dispatch a single task. Use `-` to read from stdin. |
 | `batch [taskDir]` | Dispatch all `.yaml`/`.yml`/`.json` files in a directory |
@@ -426,7 +427,7 @@ That's it — 6 steps from install to your first PR.
 ### Exit codes (for shell scripts and agents)
 
 | Code | Meaning |
-|---|---|---|
+|---|---|
 | `0` | Success |
 | `1` | Generic error |
 | `2` | Authentication error (missing or rejected API key) |
@@ -445,7 +446,7 @@ jules-dispatch dispatch tasks/my-task.yaml \
 echo 'title: Quick fix\nprompt: Fix typo in README' | jules-dispatch dispatch -
 
 # JSON output (great for piping)
-jules-dispatch dispatch tasks/my-task.yaml --json | jq -r('.sessionId')
+jules-dispatch dispatch tasks/my-task.yaml --json | jq -r '.sessionId'
 ```
 
 ### `batch` examples
@@ -461,7 +462,7 @@ jules-dispatch batch tasks/ --json                # one JSON summary at the end
 
 ```bash
 # Chain dispatch → wait via JSON output:
-ID=$(jules-dispatch dispatch tasks/x.yaml --json | jq -r('.sessionId')
+ID=$(jules-dispatch dispatch tasks/x.yaml --json | jq -r '.sessionId')
 jules-dispatch wait "$ID" --interval 10000 --timeout 1800000
 ```
 
