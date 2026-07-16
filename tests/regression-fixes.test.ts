@@ -187,7 +187,7 @@ describe('Fix #3: getLatestPlan returns a deterministic plan for equal timestamp
 
 describe('Fix R2-1: gitignore covers env backup files', () => {
   it('ignores .env.backup, .env.bak, and numbered variants', () => {
-    const gitignore = readFileSync('.gitignore', 'utf8');
+    const gitignore = readFileSync('.gitignore', 'utf8').replace(/\r\n/g, '\n');
     // Without these, `init` writes the API key to .env.backup and git would
     // happily track it — a real key-leak footgun.
     expect(gitignore).toMatch(/(^|\n)\.env\.backup(\n|$)/);
