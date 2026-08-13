@@ -88,11 +88,14 @@ npm publish          # prepublishOnly 会自动构建；publishConfig 已设 acc
 
 ## 5. 内容营销（长尾流量）
 
-一篇实战长文（英文发 dev.to / Hacker Noon，中文发掘金）：
-
+✅ 实战长文草稿已写好：`.planning/marketing/article-parallel-jules-agents.md`
+- 英文发 dev.to / Hacker Noon，中文发掘金
 - 标题方向：*"Orchestrating 10 parallel AI coding agents: what worked, what broke"*
-- 必须有：真实任务拆解、成功率数字、失败案例、成本、结论清单
+- 真实数字、真实失败案例、结论清单
 - 文末自然链接到 repo
+
+✅ Show HN 帖子文案已写好：`.planning/marketing/show-hn-post.md`
+✅ Reddit / V2EX 帖子文案已写好：`.planning/marketing/reddit-posts.md`
 
 ## 6. 持续运营节奏
 
