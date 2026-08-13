@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 
 import { Command } from 'commander';
-import { resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import chalk from 'chalk';
 import { loadConfig, loadProjectEnv, loadTasksFromString } from './config.js';
 import { JulesClient } from './client.js';
@@ -24,6 +25,12 @@ import {
 } from './tail.js';
 import type { JulesActivity } from './types.js';
 
+// Both src/cli.ts (dev) and dist/cli.js (published) sit one level below the
+// directory containing package.json, so this resolves in both layouts.
+const { version: packageVersion } = JSON.parse(
+  readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'package.json'), 'utf8'),
+) as { version: string };
+
 const program = new Command();
 
 // Set to true by long-lived subcommands (currently `mcp`) so the global
@@ -33,7 +40,7 @@ let isLongRunning = false;
 program
   .name('jules-dispatch')
   .description('Batch-dispatch tasks to Google Jules + MCP server for Claude Code / Codex')
-  .version('1.2.0')
+  .version(packageVersion)
   .option('-p, --project <dir>', 'project directory with .env', '.')
   .option('--api-key <key>', 'Jules API key (overrides JULES_API_KEY env var)')
   .option('--llm-key <key>', '[optional planner] LLM API key (overrides LLM_API_KEY / OPENAI_API_KEY)')

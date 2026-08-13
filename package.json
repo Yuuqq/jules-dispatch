@@ -1,10 +1,43 @@
 {
-  "name": "jules-dispatch",
-  "version": "1.2.0",
-  "description": "Batch dispatch to Google Jules + MCP server for Claude Code & Codex, with optional OpenAI-compatible task planning",
+  "name": "@yuuqq/jules-dispatch",
+  "version": "1.3.0",
+  "description": "Turn Google Jules into a massively parallel AI coding workforce — batch-dispatch CLI + MCP server for Claude Code & Codex, with optional OpenAI-compatible task planning",
   "type": "module",
+  "license": "MIT",
+  "author": "Yuuqq",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Yuuqq/jules-dispatch.git"
+  },
+  "homepage": "https://yuuqq.github.io/jules-dispatch/",
+  "bugs": {
+    "url": "https://github.com/Yuuqq/jules-dispatch/issues"
+  },
+  "keywords": [
+    "jules",
+    "google-jules",
+    "mcp",
+    "mcp-server",
+    "claude-code",
+    "codex",
+    "ai-agents",
+    "coding-agent",
+    "parallel",
+    "batch",
+    "dispatch",
+    "cli",
+    "automation",
+    "llm"
+  ],
   "bin": {
-    "jules-dispatch": "./dist/cli.js"
+    "jules-dispatch": "dist/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
   },
   "engines": {
     "node": ">=20"
@@ -15,7 +48,8 @@
     "lint": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run build"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",

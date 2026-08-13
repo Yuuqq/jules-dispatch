@@ -1,0 +1,61 @@
+name: Bug report
+description: Something broke or behaved unexpectedly
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug!
+        **Please redact your `JULES_API_KEY` and any LLM keys from all logs and commands before submitting.**
+  - type: input
+    id: version
+    attributes:
+      label: jules-dispatch version
+      description: Output of `jules-dispatch --version` (or the npm package version)
+      placeholder: "1.2.0"
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: OS and Node version
+      placeholder: "Windows 11 / Node 22.5.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Where did it happen?
+      options:
+        - CLI
+        - MCP server (Claude Code)
+        - MCP server (Codex)
+        - MCP server (other host)
+        - LLM planner (auto / plan-tasks)
+        - Not sure
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: The exact command(s) or MCP tool call(s), plus the task YAML if relevant
+      placeholder: |
+        1. Run `jules-dispatch batch tasks/ --parallel 10`
+        2. ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior (with redacted output/logs)
+      description: Include the exit code if the CLI failed. Remember to redact API keys.
+    validations:
+      required: true

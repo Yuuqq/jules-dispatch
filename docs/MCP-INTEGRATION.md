@@ -7,7 +7,7 @@
 ## Prerequisites
 
 - **Node.js 20+** installed
-- **jules-dispatch** installed globally: `npm install -g jules-dispatch`
+- **jules-dispatch** installed globally: `npm install -g @yuuqq/jules-dispatch`
 - A **Google Jules** account with an API key
 - A GitHub repo connected to Jules
 - Any local changes that Jules depends on committed and pushed to the target branch; Jules reads the remote branch, not your unpushed worktree

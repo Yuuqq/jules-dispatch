@@ -2,7 +2,8 @@
 
 > **Batch-dispatch tasks to [Google Jules](https://jules.google.com/) in parallel — and use it as an MCP tool inside [Claude Code](https://docs.anthropic.com/en/docs/claude-code) or [OpenAI Codex CLI](https://github.com/openai/codex).**
 
-[![npm version](https://img.shields.io/badge/npm-1.2.0-blue)](https://www.npmjs.com/package/jules-dispatch)
+[![npm version](https://img.shields.io/npm/v/%40yuuqq%2Fjules-dispatch?logo=npm&color=cb3837)](https://www.npmjs.com/package/@yuuqq/jules-dispatch)
+[![CI](https://github.com/Yuuqq/jules-dispatch/actions/workflows/ci.yml/badge.svg)](https://github.com/Yuuqq/jules-dispatch/actions/workflows/ci.yml)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue?logo=typescript)](https://www.typescriptlang.org/)
 [![MCP](https://img.shields.io/badge/MCP-server-purple)](https://modelcontextprotocol.io/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
@@ -13,8 +14,8 @@
   <img src="docs/banner.png" alt="jules-dispatch banner — one orchestrator AI fanning out tasks to many parallel Jules workers, each producing a PR" width="100%" />
 </p>
 
-> **🌐 精美落地页 & 交互式文档**  
-> [https://yuuqq.github.io/jules-dispatch/](https://yuuqq.github.io/jules-dispatch/) — 专业设计、完整上手指南、MCP 集成示例
+> **🌐 Landing page & interactive docs**  
+> [https://yuuqq.github.io/jules-dispatch/](https://yuuqq.github.io/jules-dispatch/) — full onboarding guide and MCP integration examples
 
 ---
 
@@ -132,6 +133,93 @@ Configure via env vars (`LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL`) or per-invoc
 
 ---
 
+## 💡 Five Common Use Cases
+
+`jules-dispatch` works best when a change can be split into independent, PR-sized tasks. If tasks edit the same files or depend on earlier output, dispatch them in separate waves instead of running them concurrently.
+
+### 1. Add test coverage across several modules
+
+Suppose the auth, billing, users, and audit modules all need tests. Put one self-contained task file per module in a dedicated directory, then dispatch the directory as a batch:
+
+```bash
+jules-dispatch batch tasks/add-tests --parallel 4
+```
+
+Each Jules session owns one module. With `AUTO_CREATE_PR` enabled, the result is a set of focused PRs that can be reviewed and merged independently. A failed task can be retried without restarting the rest.
+
+**Why it helps:** independent test work runs at the same time without turning into one large, hard-to-review change.
+
+### 2. Break a large migration into executable tasks
+
+For a goal such as migrating an Express API to Fastify, use the optional LLM planner to identify independent routes, middleware, startup code, and test work:
+
+```bash
+jules-dispatch auto "Migrate the Express API to Fastify and add request-validation tests" \
+  --max 8 --parallel 4
+```
+
+`auto` shows the proposed tasks and asks for confirmation before dispatching them. Use `plan-tasks` instead when you want to save and edit the generated YAML before anything is sent to Jules.
+
+**Why it helps:** the planner reduces the cost of decomposing a broad goal while keeping the task boundaries visible and reviewable.
+
+### 3. Roll out the same change across multiple repositories
+
+To add a shared CI check, security baseline, or contribution policy across several Jules-connected repositories, give each task its own `source`:
+
+```yaml
+title: "Add the security baseline to the API"
+prompt: "Add the agreed security checks and open a focused PR."
+source: "sources/github/acme/api"
+branch: "main"
+---
+title: "Add the security baseline to the worker"
+prompt: "Add the agreed security checks and open a focused PR."
+source: "sources/github/acme/worker"
+branch: "main"
+```
+
+Place the task file in a dedicated batch directory and dispatch it with controlled concurrency and launch pacing:
+
+```bash
+jules-dispatch batch tasks/security-baseline --parallel 6 --pace-ms 250
+```
+
+**Why it helps:** one command coordinates the rollout while preserving a separate session and PR for each repository plus an audit log for the batch.
+
+### 4. Keep a human approval gate for risky changes
+
+Authentication, authorization, and database migrations often need review before implementation begins. Require Jules to stop after planning:
+
+```yaml
+title: "Refactor authorization checks"
+prompt: "Centralize API authorization checks without changing the public API."
+requirePlanApproval: true
+```
+
+Inspect the plan, send corrections if needed, approve it, and then continue monitoring:
+
+```bash
+jules-dispatch plan abc123
+jules-dispatch message abc123 "Do not change the public API"
+jules-dispatch plan abc123       # inspect the revised plan
+jules-dispatch approve abc123
+jules-dispatch wait abc123
+```
+
+**Why it helps:** you keep control of high-impact decisions without giving up delegated execution.
+
+### 5. Let Claude Code or Codex orchestrate the whole run
+
+After configuring the MCP server, describe the outcome instead of operating each session yourself:
+
+> Analyze this repository, split its test gaps into independent tasks, and dispatch them to Jules. Ask me before approving plans or answering feedback requests. When every session finishes, summarize the outcome and PR URL for each task.
+
+The coding assistant can call `jules_dispatch`, wait with `jules_monitor`, inspect action-required sessions with `jules_interact`, and return a final PR summary.
+
+**Why it helps:** you manage the goal and the important decisions while the assistant handles dispatch, follow-up, and result collection.
+
+---
+
 ## 🤖 Use Inside Claude Code or Codex (MCP)
 
 The MCP server exposes Jules as a set of tools your coding AI can call directly.
@@ -171,7 +259,7 @@ sequenceDiagram
 ### Install for Claude Code
 
 ```bash
-npm install -g jules-dispatch
+npm install -g @yuuqq/jules-dispatch
 ```
 
 > **Full setup guide** (including GSD integration): [docs/MCP-INTEGRATION.md](docs/MCP-INTEGRATION.md)
@@ -342,7 +430,7 @@ Errors return:
 ### 1. Install
 
 ```bash
-npm install -g jules-dispatch
+npm install -g @yuuqq/jules-dispatch
 ```
 
 ### 2. Set up (interactive wizard)

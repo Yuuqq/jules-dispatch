@@ -2,7 +2,8 @@
 
 > **批量并发派发任务到 [Google Jules](https://jules.google.com/)，并作为 MCP 工具直接接入 [Claude Code](https://docs.anthropic.com/en/docs/claude-code) 和 [OpenAI Codex CLI](https://github.com/openai/codex)。**
 
-[![npm version](https://img.shields.io/badge/npm-1.2.0-blue)](https://www.npmjs.com/package/jules-dispatch)
+[![npm version](https://img.shields.io/npm/v/%40yuuqq%2Fjules-dispatch?logo=npm&color=cb3837)](https://www.npmjs.com/package/@yuuqq/jules-dispatch)
+[![CI](https://github.com/Yuuqq/jules-dispatch/actions/workflows/ci.yml/badge.svg)](https://github.com/Yuuqq/jules-dispatch/actions/workflows/ci.yml)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue?logo=typescript)](https://www.typescriptlang.org/)
 [![MCP](https://img.shields.io/badge/MCP-server-purple)](https://modelcontextprotocol.io/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
@@ -129,6 +130,93 @@ Dispatch all 6 task(s)? [y/N]
 
 ---
 
+## 💡 五个典型使用案例
+
+`jules-dispatch` 最适合可以拆成独立、PR 规模任务的工作。如果多个任务会修改同一批文件，或者后一个任务依赖前一个任务的输出，应分批派发，而不是让它们并发执行。
+
+### 1. 并行补齐多个模块的测试
+
+假设 auth、billing、users 和 audit 模块都缺少测试。为每个模块准备一个自包含的任务文件，放进同一个专用目录，再批量派发：
+
+```bash
+jules-dispatch batch tasks/add-tests --parallel 4
+```
+
+每个 Jules 会话只负责一个模块。启用 `AUTO_CREATE_PR` 后，它们会产出可以独立审查和合并的聚焦 PR。某个任务失败时，可以单独重试，不必重新启动其余任务。
+
+**价值：**让彼此独立的测试工作同时进行，又不会形成一个难以审查的巨型改动。
+
+### 2. 把大型迁移拆成可执行任务
+
+面对“将 Express API 迁移到 Fastify”这类目标，可以用可选的 LLM 规划器识别彼此独立的路由、中间件、启动逻辑和测试任务：
+
+```bash
+jules-dispatch auto "把 Express API 迁移到 Fastify，并补齐请求校验测试" \
+  --max 8 --parallel 4
+```
+
+`auto` 会先展示任务规划，得到确认后才派发。如果希望在派发前保存并编辑生成的 YAML，可以先用 `plan-tasks`。
+
+**价值：**降低拆解宽泛目标的成本，同时让任务边界保持可见、可审查。
+
+### 3. 在多个仓库中推广统一改造
+
+需要为多个已连接 Jules 的仓库添加同一套 CI 检查、安全基线或贡献规范时，可以为每个任务指定独立的 `source`：
+
+```yaml
+title: "为 API 仓库添加安全基线"
+prompt: "添加约定的安全检查，并提交一个聚焦 PR。"
+source: "sources/github/acme/api"
+branch: "main"
+---
+title: "为 worker 仓库添加安全基线"
+prompt: "添加约定的安全检查，并提交一个聚焦 PR。"
+source: "sources/github/acme/worker"
+branch: "main"
+```
+
+把任务文件放进专用的批次目录，再用受控的并发数和启动间隔派发：
+
+```bash
+jules-dispatch batch tasks/security-baseline --parallel 6 --pace-ms 250
+```
+
+**价值：**用一条命令协调整个改造过程，同时为每个仓库保留独立的会话和 PR，并为整个批次留下审计日志。
+
+### 4. 为高风险修改保留人工审批
+
+身份认证、权限控制和数据库迁移通常需要在实施前审查。可以要求 Jules 生成计划后暂停：
+
+```yaml
+title: "重构权限检查"
+prompt: "统一 API 权限检查，但不改变公开 API。"
+requirePlanApproval: true
+```
+
+查看计划，必要时追加纠正说明，然后审批并继续监控：
+
+```bash
+jules-dispatch plan abc123
+jules-dispatch message abc123 "不要修改公开 API"
+jules-dispatch plan abc123       # 查看更新后的计划
+jules-dispatch approve abc123
+jules-dispatch wait abc123
+```
+
+**价值：**在不放弃委托执行的同时，把高影响决策留在人手中。
+
+### 5. 让 Claude Code 或 Codex 编排整个过程
+
+配置 MCP 服务器后，可以直接描述最终目标，而不必自己操作每个会话：
+
+> 分析这个仓库，把测试缺口拆成独立任务并派给 Jules。审批计划或回答反馈前先问我；所有会话完成后，汇总每个任务的结果和 PR 链接。
+
+编码助手可以调用 `jules_dispatch`，用 `jules_monitor` 等待进展，用 `jules_interact` 检查需要操作的会话，最后返回 PR 汇总。
+
+**价值：**你只需管理目标和重要决策，派发、跟进和结果收集交给编码助手。
+
+---
+
 ## 🤖 在 Claude Code 或 Codex 里使用（MCP）
 
 MCP 服务器把 Jules 暴露成一组工具，让你的编码 AI 直接调用。
@@ -168,7 +256,7 @@ sequenceDiagram
 ### 配置 Claude Code
 
 ```bash
-npm install -g jules-dispatch
+npm install -g @yuuqq/jules-dispatch
 ```
 
 > **完整安装指南**（含 GSD 集成）：[docs/MCP-INTEGRATION.md](docs/MCP-INTEGRATION.md)
@@ -272,7 +360,7 @@ cp -R skills/jules-dispatch "${CODEX_HOME:-$HOME/.codex}/skills/jules-dispatch"
 ```bash
 npm install
 # 或全局安装：
-npm install -g jules-dispatch
+npm install -g @yuuqq/jules-dispatch
 ```
 
 ### 2. 配置

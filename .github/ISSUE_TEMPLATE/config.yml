@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Questions & ideas (Discussions)
+    url: https://github.com/Yuuqq/jules-dispatch/discussions
+    about: Ask questions, share use cases, and discuss ideas that aren't concrete bugs or feature requests yet.
+  - name: Google Jules product issues
+    url: https://jules.google.com/
+    about: Problems with Jules itself (session quality, quotas, connected repos) belong to Google Jules, not this dispatcher.

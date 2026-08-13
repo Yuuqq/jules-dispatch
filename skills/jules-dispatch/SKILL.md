@@ -20,7 +20,7 @@ jules-dispatch doctor
 If the command is unavailable, install the package first:
 
 ```bash
-npm install -g jules-dispatch
+npm install -g @yuuqq/jules-dispatch
 ```
 
 Required environment:

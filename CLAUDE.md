@@ -2,7 +2,7 @@
 
 ## Project
 
-CLI + MCP server for batch-dispatching coding tasks to Google Jules in parallel. Published on npm as `jules-dispatch` (v1.2.0). TypeScript, Node 20+, ESM.
+CLI + MCP server for batch-dispatching coding tasks to Google Jules in parallel. Published on npm as `@yuuqq/jules-dispatch` (bin: `jules-dispatch`). TypeScript, Node 20+, ESM. Note: the unscoped npm name `jules-dispatch` is taken by an unrelated package — always use the scoped name in install instructions.
 
 ## GSD Workflow
 
