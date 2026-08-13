@@ -1,0 +1,50 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.Yuuqq/jules-dispatch",
+  "description": "Batch-dispatch coding tasks to Google Jules: 50 parallel sessions, plan approval, PR collection.",
+  "repository": {
+    "url": "https://github.com/Yuuqq/jules-dispatch",
+    "source": "github"
+  },
+  "version": "1.3.2",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "@yuuqq/jules-dispatch",
+      "version": "1.3.2",
+      "transport": {
+        "type": "stdio"
+      },
+      "packageArguments": [
+        {
+          "type": "positional",
+          "value": "mcp",
+          "description": "Run jules-dispatch as an MCP server over stdio"
+        }
+      ],
+      "environmentVariables": [
+        {
+          "name": "JULES_API_KEY",
+          "description": "Google Jules API key",
+          "isRequired": true,
+          "isSecret": true,
+          "format": "string"
+        },
+        {
+          "name": "JULES_DEFAULT_SOURCE",
+          "description": "Default Jules source, e.g. sources/github/owner/repo (optional if every task sets source)",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "string"
+        },
+        {
+          "name": "JULES_DEFAULT_BRANCH",
+          "description": "Default git branch for sessions (defaults to main)",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "string"
+        }
+      ]
+    }
+  ]
+}
