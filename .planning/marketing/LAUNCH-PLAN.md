@@ -39,12 +39,14 @@ npm publish          # prepublishOnly 会自动构建；publishConfig 已设 acc
 
 | 渠道 | 方式 | 状态 |
 |---|---|---|
-| [modelcontextprotocol/servers](https://github.com/modelcontextprotocol/servers) | PR 加到 Community Servers 列表 | ☐ |
-| [Smithery](https://smithery.ai/) | 网站提交 / GitHub 集成 | ☐ |
-| [Glama MCP](https://glama.ai/mcp/servers) | 自动收录 + 可主动提交 | ☐ |
-| [PulseMCP](https://www.pulsemcp.com/) | 网站提交 | ☐ |
-| [mcp.so](https://mcp.so/) | 网站提交 | ☐ |
-| awesome-mcp-servers（punkpeye 等多个） | PR | ☐ |
+| **官方 MCP Registry** (`registry.modelcontextprotocol.io`) | `mcp-publisher publish` CLI + `server.json` | ✅ **已发布** `io.github.Yuuqq/jules-dispatch@1.3.2` |
+| [modelcontextprotocol/servers](https://github.com/modelcontextprotocol/servers) | PR 加到 Community Servers 列表 | ☐ （官方仓库已改为只维护参考服务器，社区服务器走 Registry） |
+| [Smithery](https://smithery.ai/) | 网站提交 / GitHub 集成 | ☐ （需要托管 HTTP 端点或 MCPB bundle，stdio 服务器需额外打包） |
+| [Glama MCP](https://glama.ai/mcp/servers) | 自动从 GitHub topics 索引 | ✅ **自动收录**（已加 topics: mcp, mcp-server 等） |
+| [PulseMCP](https://www.pulsemcp.com/) | 自动从官方 Registry 同步 | ✅ **自动收录**（约 7 天内出现；可发邮件 hello@pulsemcp.com 催） |
+| [mcp.so](https://mcp.so/) | 网站提交（需 GitHub 登录） | ☐ （需浏览器操作） |
+| awesome-mcp-servers（punkpeye 等多个） | PR | ✅ **PR 已提交** [#12048](https://github.com/punkpeye/awesome-mcp-servers/pull/12048) |
+| awesome-claude-code（hesreallyhim） | PR | ⚠️ gh CLI 权限被拒，需在网页手动创建：fork 已建好，分支 `add-jules-dispatch` 已推送，去 https://github.com/hesreallyhim/awesome-claude-code/compare/main...Yuuqq:awesome-claude-code:add-jules-dispatch 创建 PR |
 
 一句话介绍（复制即用）：
 
