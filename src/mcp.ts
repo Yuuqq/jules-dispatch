@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
@@ -35,6 +38,10 @@ type ToolAnnotations = {
 
 const nonEmptyString = z.string().trim().min(1);
 
+const { version: packageVersion } = JSON.parse(
+  readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'package.json'), 'utf8'),
+) as { version: string };
+
 export function createMcpServer(
   config: JulesConfig,
   client: JulesClient,
@@ -42,7 +49,7 @@ export function createMcpServer(
 ): McpServer {
   const server = new McpServer({
     name: 'jules-dispatch',
-    version: '1.2.0',
+    version: packageVersion,
   });
 
   // Helper: wrap any handler so thrown errors become MCP isError responses

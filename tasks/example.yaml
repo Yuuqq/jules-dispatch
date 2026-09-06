@@ -1,0 +1,11 @@
+title: "Add a README section for local development"
+source: "sources/github/your-org/your-repo"
+branch: "main"
+prompt: |
+  Add a "Local development" section to the project README:
+
+  1. Document how to install dependencies
+  2. Document how to run tests
+  3. Document how to start the app locally
+  4. Keep the existing README structure and tone
+  5. Open a pull request with only that documentation change

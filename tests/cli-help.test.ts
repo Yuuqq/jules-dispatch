@@ -20,6 +20,7 @@ describe('CLI-01: Command examples', () => {
     const out = run('batch --help');
     expect(out).toContain('Examples:');
     expect(out).toContain('--parallel');
+    expect(out).toContain('--recursive');
   });
 
   it('status help includes examples', () => {
@@ -93,6 +94,7 @@ describe('CLI-02: Root help footer', () => {
   it('root help includes getting-started section', () => {
     const out = run('--help');
     expect(out).toContain('Getting started:');
+    expect(out).toContain('jules-dispatch init');
     expect(out).toContain('dispatch task.yaml');
     expect(out).toContain('doctor');
   });

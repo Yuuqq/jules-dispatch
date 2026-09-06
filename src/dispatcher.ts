@@ -8,6 +8,8 @@ import { isJson, emit, info } from './output.js';
 import { translateError } from './errors.js';
 import { runBatches, validateBatchSize, validatePaceMs } from './batch.js';
 
+const AUTH_STOP_CODES = new Set(['AUTH_FAILED', 'AUTH_MISSING']);
+
 export async function dispatchTask(
   client: JulesClient,
   config: JulesConfig,
@@ -39,6 +41,7 @@ export async function dispatchTaskDefinition(
       title: task.title,
       status: 'failed',
       error: 'No source configured. Set JULES_DEFAULT_SOURCE in .env or add "source" to the task file.',
+      errorCode: 'VALIDATION',
     };
   }
 
@@ -61,6 +64,7 @@ export async function dispatchTaskDefinition(
       status: 'dispatched',
     };
   } catch (err) {
+    const translated = translateError(err);
     return {
       taskFile,
       taskTitle: task.title,
@@ -68,7 +72,8 @@ export async function dispatchTaskDefinition(
       sessionUrl: '',
       title: task.title,
       status: 'failed',
-      error: translateError(err).problem,
+      error: translated.problem,
+      errorCode: translated.code,
     };
   }
 }
@@ -81,6 +86,8 @@ export interface DispatchBatchOptions {
   paceMs?: number;
   /** Where to write the dispatch log JSON. Default: `<projectDir>/.dispatch-logs`. Pass `false` to disable. */
   logDir?: string | false;
+  /** Include task files in subdirectories. Default: false. */
+  recursive?: boolean;
 }
 
 export async function dispatchBatch(
@@ -89,7 +96,7 @@ export async function dispatchBatch(
   taskDir: string,
   options: DispatchBatchOptions = {},
 ): Promise<DispatchResult[]> {
-  const taskFiles = loadTasksFromDir(taskDir);
+  const taskFiles = loadTasksFromDir(taskDir, { recursive: options.recursive });
 
   if (taskFiles.length === 0) {
     info(chalk.yellow('No task files found in ') + taskDir);
@@ -112,6 +119,9 @@ export async function dispatchBatch(
   let completedCount = 0;
   let dispatchedCount = 0;
   let failedCount = 0;
+  let skippedCount = 0;
+  let stopLaunching = false;
+  let authStopMessage: string | undefined;
 
   const results = await runBatches(
     allTasks,
@@ -122,6 +132,11 @@ export async function dispatchBatch(
       if (result.status === 'dispatched') dispatchedCount += 1;
       else failedCount += 1;
 
+      if (result.errorCode && AUTH_STOP_CODES.has(result.errorCode)) {
+        stopLaunching = true;
+        authStopMessage ??= result.error;
+      }
+
       if (!isJson()) {
         const tail = result.status === 'dispatched'
           ? chalk.green('dispatched')
@@ -131,14 +146,38 @@ export async function dispatchBatch(
         const pending = allTasks.length - completedCount;
         const parts = [chalk.green(`DONE ${dispatchedCount}`)];
         if (failedCount > 0) parts.push(chalk.red(`FAILED ${failedCount}`));
+        if (skippedCount > 0) parts.push(chalk.dim(`SKIPPED ${skippedCount}`));
         if (pending > 0) parts.push(chalk.dim(`PENDING ${pending}`));
         console.log(`  ${parts.join(' | ')}`);
       }
 
       return result;
     },
-    { paceMs },
+    { paceMs, shouldStop: () => stopLaunching },
   );
+
+  for (let i = 0; i < results.length; i++) {
+    if (results[i] !== undefined) continue;
+    const { file, task } = allTasks[i];
+    skippedCount += 1;
+    results[i] = {
+      taskFile: file,
+      taskTitle: task.title,
+      sessionId: '',
+      sessionUrl: '',
+      title: task.title,
+      status: 'skipped',
+      error: `Skipped after authentication failure${authStopMessage ? ` (${authStopMessage})` : ''}. Fix JULES_API_KEY and retry.`,
+      errorCode: 'AUTH_FAILED',
+    };
+  }
+
+  if (authStopMessage && !isJson()) {
+    console.error(chalk.red(
+      `\nStopped launching more tasks after authentication failure. ${skippedCount} remaining task(s) were skipped.`,
+    ));
+    console.error(chalk.dim('Fix: run `jules-dispatch init` or check `JULES_API_KEY`, then retry.'));
+  }
 
   // Write dispatch log under the project dir, not next to taskDir.
   let logFile: string | null = null;
@@ -159,6 +198,7 @@ export async function dispatchBatch(
 
   const dispatched = results.filter(r => r.status === 'dispatched');
   const failed = results.filter(r => r.status === 'failed');
+  const skipped = results.filter(r => r.status === 'skipped');
 
   emit(
     () => {
@@ -166,17 +206,23 @@ export async function dispatchBatch(
       console.log(
         ` ${chalk.green.bold(`Dispatched: ${dispatched.length}`)}, ${
           failed.length > 0 ? chalk.red.bold(`Failed: ${failed.length}`) : `Failed: 0`
-        }`,
+        }${skipped.length > 0 ? `, ${chalk.yellow.bold(`Skipped: ${skipped.length}`)}` : ''}`,
       );
       console.log(`${chalk.dim('━'.repeat(36))}`);
       if (logFile) console.log(chalk.dim(`\nDispatch log: ${logFile}`));
       if (logWarning) console.warn(chalk.yellow(`\nWarning: ${logWarning}`));
     },
     {
-      summary: { total: results.length, dispatched: dispatched.length, failed: failed.length },
+      summary: {
+        total: results.length,
+        dispatched: dispatched.length,
+        failed: failed.length,
+        skipped: skipped.length,
+      },
       results,
       logFile,
       ...(logWarning ? { warning: logWarning } : {}),
+      ...(authStopMessage ? { stoppedForAuth: true } : {}),
     },
   );
 

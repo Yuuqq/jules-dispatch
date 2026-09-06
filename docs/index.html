@@ -558,7 +558,7 @@
                 <div>
                     <h3 class="feat__title" data-i18n="features.f5t">Native MCP server</h3>
                     <p class="feat__desc" data-i18n-html="features.f5d">Run <code>jules-dispatch mcp</code> to expose Jules as a tool for Claude Code and Codex. Your agent now has real parallel execution.</p>
-                    <div class="feat__tag" data-i18n="features.f5tag">12 tools exposed</div>
+                    <div class="feat__tag" data-i18n="features.f5tag">15 tools exposed</div>
                 </div>
             </div>
             <div class="feat">
@@ -740,7 +740,7 @@
                         </div>
                         <pre><code data-i18n-html="start.s3code"># tasks/migrate-to-fastify.yaml
 title: "Migrate auth routes to Fastify"
-repo: "your-org/your-repo"
+source: "sources/github/your-org/your-repo"
 branch: "main"
 prompt: |
   Migrate every Express route under /api/auth to Fastify.
@@ -802,7 +802,7 @@ prompt: |
                 <ul class="mcp-list">
                     <li><span class="ico">▸</span><span data-i18n-html="mcp.b1">Claude Code can call <code>jules_dispatch</code> and friends directly</span></li>
                     <li><span class="ico">▸</span><span data-i18n="mcp.b2">Codex CLI integrates the same way</span></li>
-                    <li><span class="ico">▸</span><span data-i18n="mcp.b3">12 tools exposed: dispatch, wait, approve, cancel, plan, and more</span></li>
+                    <li><span class="ico">▸</span><span data-i18n="mcp.b3">15 tools exposed: dispatch, wait, approve, cancel, plan, and more</span></li>
                 </ul>
             </div>
             <div>
@@ -819,8 +819,7 @@ prompt: |
       "command": "jules-dispatch",
       "args": ["mcp"],
       "env": {
-        "JULES_API_KEY": "your-jules-api-key-here",
-        "LLM_API_KEY": "sk-..."   <span class="c-mut">// optional, for AI planning</span>
+        "JULES_API_KEY": "your-jules-api-key-here"
       }
     }
   }
@@ -914,7 +913,7 @@ const I18N = {
     "features.f4d": 'Live <code>tail</code> log streams, plan approval, follow-up messages, cancel runaway sessions, smart retry with backoff. Human-in-the-loop or fully autonomous.',
     "features.f5t": "Native MCP server",
     "features.f5d": 'Run <code>jules-dispatch mcp</code> to expose Jules as a tool for Claude Code and Codex. Your agent now has real parallel execution.',
-    "features.f5tag": "12 tools exposed",
+    "features.f5tag": "15 tools exposed",
     "features.f6t": "Built for agents and CI",
     "features.f6d": '<code>--json</code> structured output, audit logs, <code>doctor</code> diagnostics, per-call API keys, stdin support. Designed for scripts, CI, and agents.',
 
@@ -943,7 +942,7 @@ const I18N = {
     "start.s2note": 'Interactive wizard sets <strong>JULES_API_KEY</strong>. Pass <code>--api-key</code> for a single run.',
     "start.s3t": "Declare a task (YAML)", "start.s3d": "Version-controlled, shareable",
     "start.s3lead": 'Create a <code>tasks/</code> directory and define tasks in simple YAML (multi-document <code>---</code> supported):',
-    "start.s3code": '# tasks/migrate-to-fastify.yaml\ntitle: "Migrate auth routes to Fastify"\nrepo: "your-org/your-repo"\nbranch: "main"\nprompt: |\n  Migrate every Express route under /api/auth to Fastify.\n  Use the Fastify plugin system; preserve existing middleware.\n  Add schema validation where appropriate.',
+    "start.s3code": '# tasks/migrate-to-fastify.yaml\ntitle: "Migrate auth routes to Fastify"\nsource: "sources/github/your-org/your-repo"\nbranch: "main"\nprompt: |\n  Migrate every Express route under /api/auth to Fastify.\n  Use the Fastify plugin system; preserve existing middleware.\n  Add schema validation where appropriate.',
     "start.s4t": "Dispatch in parallel", "start.s4d": "Start your swarm",
     "start.s4label": "Single · batch · AI-planned",
     "start.s4code3": 'jules-dispatch auto "Add full TypeScript types and Vitest tests across the project"',
@@ -954,7 +953,7 @@ const I18N = {
     "mcp.body": "jules-dispatch isn't just a CLI — it's an <strong>MCP server</strong>.",
     "mcp.b1": 'Claude Code can call <code>jules_dispatch</code> and friends directly',
     "mcp.b2": "Codex CLI integrates the same way",
-    "mcp.b3": "12 tools exposed: dispatch, wait, approve, cancel, plan, and more",
+    "mcp.b3": "15 tools exposed: dispatch, wait, approve, cancel, plan, and more",
     "mcp.configlabel": "Configure in Claude Code (example)",
     "mcp.note": 'Once configured, just say in Claude Code: <q>Use Jules to refactor the user and order modules in parallel.</q>',
     "mcp.footer": 'See <a href="https://github.com/Yuuqq/jules-dispatch/blob/main/docs/MCP-INTEGRATION.md" target="_blank" rel="noopener">MCP-INTEGRATION.md</a> or <a href="https://github.com/Yuuqq/jules-dispatch/blob/main/CLAUDE.md" target="_blank" rel="noopener">CLAUDE.md</a> for details.',
@@ -1045,7 +1044,7 @@ const I18N = {
     "start.s2note": '交互式向导配置 <strong>JULES_API_KEY</strong>，可用 <code>--api-key</code> 按次传入。',
     "start.s3t": "声明任务（YAML）", "start.s3d": "可版本控制、可协作",
     "start.s3lead": '创建 <code>tasks/</code> 目录，用简单的 YAML 定义任务（支持多文档 <code>---</code>）：',
-    "start.s3code": '# tasks/migrate-to-fastify.yaml\ntitle: "把认证路由迁移到 Fastify"\nrepo: "your-org/your-repo"\nbranch: "main"\nprompt: |\n  把 /api/auth 下所有 Express 路由迁移到 Fastify。\n  使用 Fastify 插件系统，保留原有中间件逻辑。\n  在合适的地方添加 schema 校验。',
+    "start.s3code": '# tasks/migrate-to-fastify.yaml\ntitle: "把认证路由迁移到 Fastify"\nsource: "sources/github/your-org/your-repo"\nbranch: "main"\nprompt: |\n  把 /api/auth 下所有 Express 路由迁移到 Fastify。\n  使用 Fastify 插件系统，保留原有中间件逻辑。\n  在合适的地方添加 schema 校验。',
     "start.s4t": "并行调度执行", "start.s4d": "启动你的代理集群",
     "start.s4label": "单任务 · 批量 · AI 规划",
     "start.s4code3": 'jules-dispatch auto "为整个项目补齐完整的 TypeScript 类型与 Vitest 测试"',
@@ -1056,7 +1055,7 @@ const I18N = {
     "mcp.body": "jules-dispatch 不仅是 CLI，更是一个 <strong>MCP 服务器</strong>。",
     "mcp.b1": 'Claude Code 可直接调用 <code>jules_dispatch</code> 等工具',
     "mcp.b2": "Codex CLI 同样无缝集成",
-    "mcp.b3": "暴露 12 个工具：调度、等待、审批、取消、规划等",
+    "mcp.b3": "暴露 15 个工具：调度、等待、审批、取消、规划等",
     "mcp.configlabel": "在 Claude Code 中配置（示例）",
     "mcp.note": '配置完成后，在 Claude Code 中直接说：<q>用 Jules 并行重构用户模块和订单模块。</q>',
     "mcp.footer": '详见 <a href="https://github.com/Yuuqq/jules-dispatch/blob/main/docs/MCP-INTEGRATION.md" target="_blank" rel="noopener">MCP-INTEGRATION.md</a> 或 <a href="https://github.com/Yuuqq/jules-dispatch/blob/main/CLAUDE.md" target="_blank" rel="noopener">CLAUDE.md</a>。',

@@ -1,14 +1,20 @@
 # Task Catalog
 
-This directory contains Jules task definitions and task batches used with `jules-dispatch`.
+This directory contains Jules task definitions used with `jules-dispatch`.
 
-Root-level `.yaml` files are dispatchable task files. Subdirectories group larger batches by project or experiment. `jules-dispatch batch tasks/` only reads task files directly under `tasks/`; dispatch a grouped batch by passing that subdirectory explicitly.
+**Start here:** `example.yaml` is the canonical first-user sample. Copy it, set `source` to a repo connected in Jules, then:
+
+```bash
+jules-dispatch dispatch tasks/example.yaml
+```
+
+Root-level `.yaml` files are dispatchable. Subdirectories group larger batches by project. `jules-dispatch batch tasks/` only reads files **directly** under `tasks/` — pass `--recursive` to include grouped batches, or dispatch a subdirectory explicitly.
 
 ## Root Tasks
 
 | Path | Purpose |
 | --- | --- |
-| `example.yaml` | Minimal example task. |
+| `example.yaml` | Minimal first-user example. Copy this. |
 | `walkincs-dispatch.yaml` | Existing WalkInCS dispatch task. |
 | `p01-phase*.yaml` | Policy database phase tasks kept at the root for direct dispatch. |
 | `p01-test-single.yaml` | Single-task smoke or validation dispatch. |
@@ -44,6 +50,7 @@ Root-level `.yaml` files are dispatchable task files. Subdirectories group large
 jules-dispatch dispatch tasks/example.yaml
 jules-dispatch batch tasks/pgi-review --parallel 4
 jules-dispatch batch tasks/resume-i18n --parallel 8
+jules-dispatch batch tasks/ --recursive --parallel 4
 ```
 
-Keep task files self-contained: every file should include a clear `title`, detailed `prompt`, and `source` when no project default is configured.
+Keep task files self-contained: every file should include a clear `title`, detailed `prompt`, and `source` (format `sources/github/owner/repo`) when no project default is configured. The field is `source`, not `repo`.

@@ -1,8 +1,11 @@
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { afterEach, describe, expect, it } from 'vitest';
-import { loadConfig, loadTasksFromString, validateTask } from '../src/config.js';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
+import { loadConfig, loadTasks, loadTasksFromDir, loadTasksFromString, validateTask } from '../src/config.js';
 
 const envKeys = [
   'JULES_API_KEY',
@@ -149,5 +152,62 @@ describe('task validation', () => {
       autoMode: 'NONE',
       requirePlanApproval: true,
     });
+  });
+
+  it('interprets repo owner/repo as sources/github/owner/repo', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      expect(validateTask({
+        title: 'Task',
+        prompt: 'Do work',
+        repo: 'acme/api',
+      }, 'task.yaml')).toMatchObject({
+        source: 'sources/github/acme/api',
+      });
+      expect(warn.mock.calls.some(call => String(call[0]).includes('"repo"'))).toBe(true);
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it('warns about unknown fields without failing', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      const task = validateTask({
+        title: 'Task',
+        prompt: 'Do work',
+        assignee: 'jules',
+      }, 'task.yaml');
+      expect(task.title).toBe('Task');
+      expect(warn.mock.calls.some(call => String(call[0]).includes('assignee'))).toBe(true);
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it('throws a clear error when the task file is missing', () => {
+    expect(() => loadTasks(join(tmpdir(), 'jules-dispatch-missing-task.yaml'))).toThrow(/Task file not found/);
+  });
+});
+
+describe('loadTasksFromDir', () => {
+  it('skips nested files unless recursive is set', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'jules-tasks-'));
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      mkdirSync(join(dir, 'nested'));
+      writeFileSync(join(dir, 'root.yaml'), 'title: Root\nprompt: do root\n');
+      writeFileSync(join(dir, 'nested', 'child.yaml'), 'title: Child\nprompt: do child\n');
+
+      const top = loadTasksFromDir(dir);
+      expect(top.map(entry => entry.file)).toEqual(['root.yaml']);
+      expect(warn.mock.calls.some(call => String(call[0]).includes('--recursive'))).toBe(true);
+
+      const all = loadTasksFromDir(dir, { recursive: true });
+      expect(all.map(entry => entry.file).sort()).toEqual(['nested/child.yaml', 'root.yaml']);
+    } finally {
+      warn.mockRestore();
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });

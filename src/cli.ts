@@ -140,6 +140,12 @@ program
       const content = readFileSync(0, 'utf8');
       const tasks = loadTasksFromString(content, opts.format);
       if (tasks.length === 0) fail('No tasks found in stdin', ExitCode.VALIDATION, 'NO_TASKS');
+      if (tasks.length > 1) {
+        console.warn(
+          `Warning: stdin contains ${tasks.length} task documents. ` +
+          `Only the first will be dispatched. Use "batch" to dispatch all.`,
+        );
+      }
       info(chalk.dim('Dispatching from stdin\n'));
       result = await dispatchTaskDefinition(client, config, tasks[0], '<stdin>', {
         source: opts.source,
@@ -184,8 +190,9 @@ program
   .option('-b, --branch <branch>', 'override branch for all tasks')
   .option('-n, --parallel <n>', 'max parallel dispatches', '10')
   .option('--pace-ms <ms>', 'minimum delay between dispatch starts', '0')
+  .option('--recursive', 'include task files in subdirectories', false)
   .option('--no-log', 'do not write dispatch log file')
-  .action(async (taskDir: string | undefined, opts: { source?: string; branch?: string; parallel: string; paceMs: string; log: boolean }) => {
+  .action(async (taskDir: string | undefined, opts: { source?: string; branch?: string; parallel: string; paceMs: string; recursive?: boolean; log: boolean }) => {
     const { config, client } = getConfig();
     const projectDir = (program.opts() as { project: string }).project;
     const dir = resolve(taskDir ?? resolve(projectDir, 'tasks'));
@@ -195,17 +202,29 @@ program
       branch: opts.branch,
       parallel: parseIntegerOption(opts.parallel, '--parallel', 1, 50),
       paceMs: parseIntegerOption(opts.paceMs, '--pace-ms', 0, 60_000),
+      recursive: Boolean(opts.recursive),
       logDir: opts.log === false ? false : undefined,
     });
 
-    const failed = results.filter(r => r.status === 'failed').length;
-    if (failed > 0 && results.length > failed) process.exit(ExitCode.PARTIAL);
-    if (failed > 0) process.exit(ExitCode.GENERIC);
+    if (results.length === 0) {
+      fail(
+        `No task files found in ${dir}. Place .yaml/.yml/.json files in that directory, or pass --recursive to include subdirectories.`,
+        ExitCode.VALIDATION,
+        'NO_TASKS',
+      );
+    }
+
+    const unresolved = results.filter(r => r.status !== 'dispatched');
+    const authStopped = results.some(r => r.errorCode === 'AUTH_FAILED' || r.errorCode === 'AUTH_MISSING');
+    if (authStopped) process.exit(ExitCode.AUTH);
+    if (unresolved.length > 0 && unresolved.length < results.length) process.exit(ExitCode.PARTIAL);
+    if (unresolved.length > 0) process.exit(ExitCode.GENERIC);
   })
   .addHelpText('after', `
 Examples:
   $ jules-dispatch batch
   $ jules-dispatch batch ./my-tasks --parallel 5 --pace-ms 250
+  $ jules-dispatch batch ./my-tasks --recursive
   $ jules-dispatch batch --no-log
 `);
 
@@ -557,9 +576,16 @@ Examples:
           console.log(chalk.dim(`  API key: ${'*'.repeat(8)}${result.values.apiKey.slice(-4)}`));
           console.log(chalk.dim(`  Source:  ${result.values.source || '(none)'}`));
           console.log(chalk.dim(`  Branch:  ${result.values.branch}`));
-          console.log(chalk.dim('\nNext: jules-dispatch dispatch task.yaml'));
+          console.log(chalk.dim('\nNext: jules-dispatch doctor'));
         },
-        result,
+        {
+          ...result,
+          values: {
+            apiKey: `${'*'.repeat(8)}${result.values.apiKey.slice(-4)}`,
+            source: result.values.source,
+            branch: result.values.branch,
+          },
+        },
       );
     } catch (err) {
       fail(err);
@@ -934,9 +960,10 @@ Examples:
 
 program.addHelpText('after', `
 Getting started:
+  $ jules-dispatch init                   # save your Jules API key
+  $ jules-dispatch doctor                 # validate your setup
   $ jules-dispatch dispatch task.yaml     # dispatch your first task
   $ jules-dispatch status                 # check progress
-  $ jules-dispatch doctor                 # validate your setup
 
 Docs: https://github.com/Yuuqq/jules-dispatch
 `);

@@ -100,8 +100,9 @@ export interface DispatchResult {
   sessionId: string;
   sessionUrl: string;
   title: string;
-  status: 'dispatched' | 'failed';
+  status: 'dispatched' | 'failed' | 'skipped';
   error?: string;
+  errorCode?: string;
 }
 
 export interface CollectResult {

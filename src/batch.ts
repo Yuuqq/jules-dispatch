@@ -13,6 +13,8 @@ export function validatePaceMs(value: number): void {
 export interface RunBatchesOptions {
   /** Minimum interval between worker starts. Zero disables pacing. */
   paceMs?: number;
+  /** When true, workers stop claiming new items. In-flight work still finishes. */
+  shouldStop?: () => boolean;
 }
 
 export async function runBatches<T, R>(
@@ -48,12 +50,13 @@ export async function runBatches<T, R>(
 
   const runWorker = async (): Promise<void> => {
     while (!stopped) {
+      if (options.shouldStop?.()) return;
       const index = nextIndex;
       if (index >= items.length) return;
       nextIndex += 1;
 
       await waitForLaunchSlot();
-      if (stopped) return;
+      if (stopped || options.shouldStop?.()) return;
 
       try {
         results[index] = await worker(items[index], index);
