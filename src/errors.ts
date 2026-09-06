@@ -11,6 +11,8 @@ export interface TranslatedError {
   context?: ErrorContext;
 }
 
+const SETUP_DOCS = 'https://github.com/Yuuqq/jules-dispatch#2-set-up-interactive-wizard';
+
 function getHttpStatus(err: unknown): number | undefined {
   if (err && typeof err === 'object' && 'status' in err) {
     const s = (err as { status?: unknown }).status;
@@ -40,7 +42,7 @@ export function translateError(err: unknown): TranslatedError {
       cause: addPollingSessionContext('API key is invalid, expired, or missing', message),
       fix: 'Run `jules-dispatch init` or check `JULES_API_KEY` in `.env`',
       code: 'AUTH_FAILED',
-      context: { docsUrl: 'https://github.com/Yuuqq/jules-dispatch#authentication' },
+      context: { docsUrl: SETUP_DOCS },
     };
   }
 
@@ -92,18 +94,28 @@ export function translateError(err: unknown): TranslatedError {
     };
   }
 
+  if (/No LLM API key found|planner is OPTIONAL/i.test(message)) {
+    return {
+      problem: 'LLM API key not configured',
+      cause: 'The optional planner needs an LLM key (`plan-tasks`, `auto`, and MCP planning tools)',
+      fix: 'Set `LLM_API_KEY` (or `OPENAI_API_KEY`) in `.env`, or pass `--llm-key`. Core dispatch commands do not need this.',
+      code: 'AUTH_MISSING',
+      context: { docsUrl: 'https://github.com/Yuuqq/jules-dispatch#-whats-new-in-12--optional-ai-task-planning-byo-llm' },
+    };
+  }
+
   if (/JULES_API_KEY/i.test(message)) {
     return {
       problem: 'API key not configured',
       cause: 'No Jules API key was found',
       fix: 'Set `JULES_API_KEY` in `.env` or pass `--api-key`',
       code: 'AUTH_MISSING',
-      context: { docsUrl: 'https://github.com/Yuuqq/jules-dispatch#setup' },
+      context: { docsUrl: SETUP_DOCS },
     };
   }
 
   if (
-    /\b(?:YAML|JSON|title|prompt|source|branch|autoMode|requirePlanApproval)\b|JULES_AUTO_MODE|Invalid task|No (tasks|YAML|documents)|Task directory (not found|is empty)|Expected a directory/i.test(message)
+    /Invalid task|No (tasks|YAML|documents)|Task directory (not found|is empty)|Expected a directory|Task file not found|Invalid "(?:title|prompt|source|branch|autoMode|requirePlanApproval)"|Missing "(?:title|prompt)"|JULES_AUTO_MODE|YAML documents/i.test(message)
   ) {
     return {
       problem: 'Task file validation failed',

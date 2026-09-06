@@ -96,7 +96,17 @@ describe('translateError', () => {
       const result = translateError(new Error('JULES_API_KEY is required. Set it in .env'));
       expect(result.code).toBe('AUTH_MISSING');
       expect(result.problem).toBe('API key not configured');
-      expect(result.context?.docsUrl).toBeDefined();
+      expect(result.context?.docsUrl).toContain('jules-dispatch');
+    });
+
+    it('translates missing LLM planner key to AUTH_MISSING without an unknown-error cause', () => {
+      const result = translateError(new Error(
+        'No LLM API key found. The planner is OPTIONAL — only needed for `plan-tasks`.',
+      ));
+      expect(result.code).toBe('AUTH_MISSING');
+      expect(result.problem).toBe('LLM API key not configured');
+      expect(result.cause).not.toBe('An unknown error occurred');
+      expect(result.fix).toMatch(/LLM_API_KEY|OPENAI_API_KEY/);
     });
   });
 

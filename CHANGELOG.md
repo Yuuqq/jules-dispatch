@@ -4,6 +4,30 @@ All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- `tasks/example.yaml` — canonical first-user sample referenced by the task catalog
+- `batch --recursive` — include task files in subdirectories
+- Batch dispatch now fail-fasts on authentication errors instead of retrying every remaining task
+- `repo` in a task file is interpreted as `source` (with a warning) so copy-paste from older docs still works
+- Unknown task-file fields are warned on stderr instead of silently dropped
+
+### Fixed
+
+- Landing-page YAML used `repo:` instead of `source: sources/github/...`, so following the official quick start could not dispatch
+- Landing-page MCP snippet was invalid JSON (`//` comments); copy-paste into Claude Code / Codex would fail
+- Landing page and MCP copy said "12 tools"; the server exposes 15 always-on tools (plus 2 optional planner tools)
+- `auto` / `plan-tasks` without an LLM key reported a clear problem then a contradictory "unknown error" cause
+- Missing task files surfaced as raw `ENOENT` wrapped in "validation failed"
+- Empty `batch` directories exited 0, looking like success
+- `dispatch -` with multi-document YAML silently dropped every task after the first
+- `init --json` leaked the full API key
+- MCP server advertised version `1.2.0` regardless of the installed package
+- Docs URLs in structured errors pointed at `#setup` / `#authentication` anchors that do not exist
+- Root `--help` getting-started block started with `dispatch` instead of `init`
+
 ## [1.3.2] - 2026-08-13
 
 ### Fixed

@@ -87,4 +87,18 @@ describe('runBatches', () => {
     expect(() => validatePaceMs(60_001)).toThrow('Invalid paceMs value');
     expect(() => validatePaceMs(1.5)).toThrow('Invalid paceMs value');
   });
+
+  it('stops claiming new items when shouldStop becomes true', async () => {
+    let stop = false;
+    const started: number[] = [];
+    const results = await runBatches([1, 2, 3, 4, 5], 1, async item => {
+      started.push(item);
+      stop = true;
+      return item * 10;
+    }, { shouldStop: () => stop });
+
+    expect(started).toEqual([1]);
+    expect(results[0]).toBe(10);
+    expect(results.slice(1).every(value => value === undefined)).toBe(true);
+  });
 });

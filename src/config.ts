@@ -1,5 +1,5 @@
 import { readFileSync, existsSync, readdirSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { join, resolve } from 'node:path';
 import { parseAllDocuments } from 'yaml';
 import { parse as parseDotenv } from 'dotenv';
 import type { JulesConfig, TaskDefinition } from './types.js';
@@ -9,6 +9,16 @@ export interface LoadConfigOptions {
   /** When true, do not exit on missing API key; throw instead. Used by MCP server. */
   noExit?: boolean;
 }
+
+const TASK_FILE_EXT = /\.(ya?ml|json)$/i;
+const KNOWN_TASK_FIELDS = new Set([
+  'title',
+  'prompt',
+  'source',
+  'branch',
+  'autoMode',
+  'requirePlanApproval',
+]);
 
 export function loadProjectEnv(projectDir: string): Record<string, string> {
   const envPath = resolve(projectDir, '.env');
@@ -55,8 +65,20 @@ export function loadConfig(projectDir: string, options: LoadConfigOptions = {}):
   };
 }
 
+function readTaskFile(filePath: string): string {
+  try {
+    return readFileSync(filePath, 'utf8');
+  } catch (err) {
+    const code = (err as NodeJS.ErrnoException).code;
+    if (code === 'ENOENT') {
+      throw new Error(`Task file not found: ${filePath}`);
+    }
+    throw err;
+  }
+}
+
 export function loadTasks(filePath: string): TaskDefinition[] {
-  const content = readFileSync(filePath, 'utf8');
+  const content = readTaskFile(filePath);
 
   if (filePath.endsWith('.yaml') || filePath.endsWith('.yml')) {
     const docs = parseAllDocuments(content).filter(d => d.contents !== null);
@@ -94,12 +116,18 @@ export function loadTasksFromString(content: string, format: 'yaml' | 'json' = '
   return tasks.map(t => validateTask(t, '<stdin>'));
 }
 
-export function loadTasksFromDir(dir: string): Array<{ file: string; tasks: TaskDefinition[] }> {
+export interface LoadTasksFromDirOptions {
+  /** When true, include .yaml/.yml/.json files in subdirectories. Default: false. */
+  recursive?: boolean;
+}
+
+export function loadTasksFromDir(
+  dir: string,
+  options: LoadTasksFromDirOptions = {},
+): Array<{ file: string; tasks: TaskDefinition[] }> {
   let files: string[];
   try {
-    files = readdirSync(dir)
-      .filter(f => f.endsWith('.yaml') || f.endsWith('.yml') || f.endsWith('.json'))
-      .sort();
+    files = listTaskFiles(dir, Boolean(options.recursive));
   } catch (err) {
     // readdirSync throws ENOENT for a missing dir and ENOTDIR when `dir` is a
     // file. Surface a clear, actionable message instead of a raw syscall.
@@ -113,10 +141,43 @@ export function loadTasksFromDir(dir: string): Array<{ file: string; tasks: Task
     throw err;
   }
 
+  if (!options.recursive) {
+    const nested = countNestedTaskFiles(dir);
+    if (nested > 0) {
+      console.warn(
+        `Warning: ${nested} task file(s) in subdirectories of ${dir} were skipped. ` +
+        `Pass --recursive to include them.`,
+      );
+    }
+  }
+
   return files.map(f => ({
     file: f,
     tasks: loadTasks(resolve(dir, f)),
   }));
+}
+
+/** Count task files in subdirectories (not the directory itself). */
+export function countNestedTaskFiles(dir: string): number {
+  return listTaskFiles(dir, true).filter(f => f.includes('/')).length;
+}
+
+function listTaskFiles(dir: string, recursive: boolean): string[] {
+  const out: string[] = [];
+  const walk = (current: string, prefix: string): void => {
+    const entries = readdirSync(current, { withFileTypes: true });
+    for (const entry of entries) {
+      if (entry.name.startsWith('.')) continue;
+      const rel = prefix ? `${prefix}/${entry.name}` : entry.name;
+      if (entry.isDirectory()) {
+        if (recursive) walk(join(current, entry.name), rel);
+        continue;
+      }
+      if (TASK_FILE_EXT.test(entry.name)) out.push(rel);
+    }
+  };
+  walk(dir, '');
+  return out.sort();
 }
 
 export function validateTask(task: unknown, filePath: string): TaskDefinition {
@@ -125,9 +186,11 @@ export function validateTask(task: unknown, filePath: string): TaskDefinition {
   }
 
   const input = task as Record<string, unknown>;
+  warnUnknownTaskFields(input, filePath);
+
   const title = requiredTaskString(input.title, 'title', filePath);
   const prompt = requiredTaskString(input.prompt, 'prompt', filePath);
-  const source = optionalTaskString(input.source, 'source', filePath);
+  const source = resolveTaskSource(input, filePath);
   const branch = optionalTaskString(input.branch, 'branch', filePath);
 
   let autoMode: TaskDefinition['autoMode'];
@@ -156,6 +219,49 @@ export function validateTask(task: unknown, filePath: string): TaskDefinition {
     ...(autoMode !== undefined ? { autoMode } : {}),
     ...(requirePlanApproval !== undefined ? { requirePlanApproval } : {}),
   };
+}
+
+/**
+ * Accept the documented `source` field, and recover from the common first-user
+ * mistake of writing `repo: owner/repo` (as used on some older docs pages).
+ */
+export function resolveTaskSource(
+  input: Record<string, unknown>,
+  filePath: string,
+): string | undefined {
+  const source = optionalTaskString(input.source, 'source', filePath);
+  if (source !== undefined) {
+    if (input.repo !== undefined) {
+      console.warn(
+        `Warning: ${filePath} has both "source" and "repo". Using "source" and ignoring "repo". ` +
+        `Task files use source: sources/github/owner/repo.`,
+      );
+    }
+    return source;
+  }
+
+  if (input.repo === undefined) return undefined;
+  if (typeof input.repo !== 'string' || !input.repo.trim()) {
+    throw new Error(`Invalid "repo" in ${filePath}: expected a string like owner/repo`);
+  }
+
+  const raw = input.repo.trim();
+  const interpreted = raw.startsWith('sources/')
+    ? raw
+    : `sources/github/${raw.replace(/^github\//, '')}`;
+  console.warn(
+    `Warning: ${filePath} uses "repo" which is not a task field. ` +
+    `Interpreted as source "${interpreted}". Use "source: sources/github/owner/repo" instead.`,
+  );
+  return interpreted;
+}
+
+function warnUnknownTaskFields(input: Record<string, unknown>, filePath: string): void {
+  const extra = Object.keys(input).filter(key => !KNOWN_TASK_FIELDS.has(key) && key !== 'repo');
+  if (extra.length === 0) return;
+  console.warn(
+    `Warning: ${filePath} has unknown field(s) ${extra.map(k => `"${k}"`).join(', ')} which will be ignored.`,
+  );
 }
 
 function requiredTaskString(value: unknown, field: string, filePath: string): string {

@@ -195,4 +195,31 @@ describe('CLI safety and structured failures', () => {
       error: expect.objectContaining({ code: 'INVALID_FORMAT' }),
     }]);
   });
+
+  it('redacts the API key in init --json output', async () => {
+    const dir = makeTempDir();
+    const result = await runCli(
+      ['--json', '--project', dir, 'init', '--api-key', 'sk-super-secret-key'],
+      { env: cleanEnv() },
+    );
+
+    expect(result.code).toBe(0);
+    const payload = parseJsonLines(result.stdout)[0] as { values?: { apiKey?: string } };
+    expect(payload.values?.apiKey).toBe('********-key');
+    expect(JSON.stringify(payload)).not.toContain('sk-super-secret-key');
+  });
+
+  it('exits 3 when batch finds no task files', async () => {
+    const dir = makeTempDir();
+    const env = { ...cleanEnv(), JULES_API_KEY: 'jules-key' };
+    const result = await runCli(
+      ['--json', '--project', dir, 'batch', dir],
+      { env },
+    );
+
+    expect(result.code).toBe(3);
+    expect(parseJsonLines(result.stdout)).toEqual([{
+      error: expect.objectContaining({ code: 'NO_TASKS' }),
+    }]);
+  });
 });

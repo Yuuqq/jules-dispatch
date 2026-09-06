@@ -457,6 +457,7 @@ jules-dispatch doctor
 ```yaml
 # tasks/add-dark-mode.yaml
 title: "Add Dark Mode Support"
+source: "sources/github/owner/repo"
 prompt: |
   Add a dark mode toggle to the React app:
   1. Add a ThemeContext with light/dark state

@@ -156,6 +156,22 @@ describe('partial failure', () => {
     expect(client.createSession).toHaveBeenCalledTimes(3);
   });
 
+  it('stops launching remaining tasks after AUTH_FAILED', async () => {
+    loadTasks(...Array.from({ length: 8 }, (_, i) => makeTask(`task-${i + 1}`)));
+    const authError = Object.assign(new Error('Jules API 401 at /sessions'), { status: 401 });
+    const client = mockClient(async () => {
+      await new Promise(resolve => setTimeout(resolve, 5));
+      throw authError;
+    });
+
+    const results = await dispatchBatch(client, baseConfig, 'task-dir', { parallel: 2, logDir: false });
+
+    expect(client.createSession.mock.calls.length).toBeLessThan(8);
+    expect(results.some(result => result.status === 'skipped')).toBe(true);
+    expect(results.every(result => result.status === 'failed' || result.status === 'skipped')).toBe(true);
+    expect(results.filter(result => result.status === 'failed').every(result => result.errorCode === 'AUTH_FAILED')).toBe(true);
+  });
+
   it('returns dispatched results when all API calls succeed', async () => {
     loadTasks(makeTask('one'), makeTask('two'), makeTask('three'));
     const client = mockClient(params => successfulSession(params.title));
