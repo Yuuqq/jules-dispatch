@@ -11,6 +11,9 @@ import { ok, fail, computeRecoveryHint } from './mcp-helpers.js';
 import { runBatches } from './batch.js';
 import { summarizeSession, summarizeSessionLegacy } from './session-summary.js';
 import { fetchActivityHistory } from './activity-history.js';
+import { dirname, join } from 'node:path';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 export interface McpServerOptions {
   projectDir: string;
@@ -40,9 +43,18 @@ export function createMcpServer(
   client: JulesClient,
   options: CreateMcpServerOptions = {},
 ): McpServer {
+  let packageVersion = '1.3.2';
+  try {
+    const __dirname = dirname(fileURLToPath(import.meta.url));
+    const pkg = JSON.parse(readFileSync(join(__dirname, '..', 'package.json'), 'utf8')) as { version: string };
+    packageVersion = pkg.version;
+  } catch (e) {
+    // Ignore error and fallback to default version
+  }
+
   const server = new McpServer({
     name: 'jules-dispatch',
-    version: '1.2.0',
+    version: packageVersion,
   });
 
   // Helper: wrap any handler so thrown errors become MCP isError responses
