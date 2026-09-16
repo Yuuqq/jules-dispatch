@@ -8,7 +8,7 @@ import chalk from 'chalk';
 import { loadConfig, loadProjectEnv, loadTasksFromString } from './config.js';
 import { JulesClient } from './client.js';
 import { dispatchTask, dispatchBatch, dispatchTaskDefinition } from './dispatcher.js';
-import { collectStatus, waitForCompletion } from './collector.js';
+import { collectStatus, waitForCompletion, type CachedActivityState } from './collector.js';
 import { setOutputMode, isJson, emit, emitError, info, ExitCode } from './output.js';
 import { setVerbose } from './log.js';
 import { translateError, type TranslatedError } from './errors.js';
@@ -140,6 +140,12 @@ program
       const content = readFileSync(0, 'utf8');
       const tasks = loadTasksFromString(content, opts.format);
       if (tasks.length === 0) fail('No tasks found in stdin', ExitCode.VALIDATION, 'NO_TASKS');
+      if (tasks.length > 1) {
+        console.warn(chalk.yellow(
+          `Warning: stdin contains ${tasks.length} tasks; only the first will be dispatched. ` +
+          'Save them to a directory and use "batch" to dispatch all.',
+        ));
+      }
       info(chalk.dim('Dispatching from stdin\n'));
       result = await dispatchTaskDefinition(client, config, tasks[0], '<stdin>', {
         source: opts.source,
@@ -221,21 +227,26 @@ program
   .option('--interval <ms>', 'refresh interval in milliseconds (default: 5000)', '5000')
   .action(async (opts: { ids?: string[]; output?: string; scan: string; watch?: boolean; interval: string }) => {
     const { config, client } = getConfig();
+    const activityCache = new Map<string, CachedActivityState>();
     const initialResults = await collectStatus(client, config, {
       sessionIds: opts.ids,
       output: opts.output,
       scanLimit: parseIntegerOption(opts.scan, '--scan', 1, 200),
+      activityCache,
     });
     const initialHasErrors = reportStatusErrors(initialResults);
 
     if (opts.watch) {
-      if (initialHasErrors) return;
       if (reportActionRequired(initialResults)) return;
       // Watch mode keeps the initial report write, but refreshes only render status.
       const interval = parseIntegerOption(opts.interval, '--interval', 1000);
       // Parse once outside the loop so a bad value fails fast instead of
       // re-validating (and potentially process.exit-ing) on every refresh.
       const scanLimit = parseIntegerOption(opts.scan, '--scan', 1, 200);
+      // Transient API hiccups (rate limits, network blips) must not kill the
+      // watch — only give up after this many consecutive all-error refreshes.
+      const maxConsecutiveErrorRounds = 5;
+      let consecutiveErrorRounds = initialHasErrors ? 1 : 0;
       const abort = new AbortController();
       const onSigint = () => { abort.abort(); };
       process.on('SIGINT', onSigint);
@@ -252,9 +263,17 @@ program
             sessionIds: opts.ids,
             output: undefined,
             scanLimit,
+            activityCache,
           });
 
-          if (reportStatusErrors(results)) break;
+          if (reportStatusErrors(results)) {
+            consecutiveErrorRounds += 1;
+            if (consecutiveErrorRounds >= maxConsecutiveErrorRounds) break;
+          } else {
+            consecutiveErrorRounds = 0;
+            // A clean refresh clears the exit code a transient round left behind.
+            process.exitCode = ExitCode.OK;
+          }
           if (reportActionRequired(results)) break;
 
           // Empty results must NOT count as "all resolved" (Array.every on an
@@ -333,7 +352,7 @@ program
     });
 
     if (result.timedOut) process.exit(ExitCode.TIMEOUT);
-    if (result.failed.length > 0) process.exit(ExitCode.GENERIC);
+    if (result.failed.length > 0 || result.errors.length > 0) process.exit(ExitCode.GENERIC);
   })
   .addHelpText('after', `
 Examples:

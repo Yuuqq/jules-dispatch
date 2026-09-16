@@ -130,6 +130,8 @@ describe('pollSessions', () => {
       awaitingUserFeedback: [],
       paused: [],
       actionRequired: [],
+      errored: [],
+      errors: [],
       stillRunning: ['s1'],
       timedOut: true,
     });
@@ -267,24 +269,48 @@ describe('pollSessions', () => {
     expect(result.timedOut).toBe(false);
   });
 
-  it('rejects permanent polling errors immediately with session context', async () => {
+  it('parks un-pollable sessions in the errored bucket and keeps polling the rest', async () => {
     const client = mockClient();
-    client.getSession.mockRejectedValue(Object.assign(new Error('not found'), { status: 404 }));
+    client.getSession.mockImplementation(async (id: string) => {
+      if (id === 'missing-session') {
+        throw Object.assign(new Error('not found'), { status: 404 });
+      }
+      return completedSession(id);
+    });
+    client.listActivities.mockResolvedValue(successActivities());
     const onError = vi.fn();
 
-    const rejection = expect(pollSessions(
+    const result = await pollSessions(
       client as unknown as Parameters<typeof pollSessions>[0],
-      ['missing-session'],
+      ['missing-session', 's1'],
       { interval: 100, timeout: 5000 },
       { onError },
-    )).rejects.toThrow('Failed to poll Jules session missing-session: not found');
+    );
 
-    await rejection;
+    expect(result.errored).toEqual(['missing-session']);
+    expect(result.errors).toEqual([
+      expect.objectContaining({
+        sessionId: 'missing-session',
+        message: expect.stringContaining('Failed to poll Jules session missing-session'),
+      }),
+    ]);
+    expect(result.completed).toEqual(['s1']);
+    expect(result.stillRunning).toEqual([]);
+    expect(result.timedOut).toBe(false);
     expect(onError).toHaveBeenCalledWith('missing-session', expect.objectContaining({
       message: 'not found',
     }));
-    expect(client.getSession).toHaveBeenCalledTimes(1);
-    expect(client.listActivities).not.toHaveBeenCalled();
+  });
+
+  it('aborts the whole poll on auth errors that affect every session', async () => {
+    const client = mockClient();
+    client.getSession.mockRejectedValue(Object.assign(new Error('bad key'), { status: 401 }));
+
+    await expect(pollSessions(
+      client as unknown as Parameters<typeof pollSessions>[0],
+      ['s1', 's2'],
+      { interval: 100, timeout: 5000 },
+    )).rejects.toThrow('Failed to poll Jules session s1: bad key');
   });
 
   it('keeps polling a stale COMPLETED state until resumed work completes again', async () => {

@@ -96,6 +96,37 @@ describe('fetchActivityHistory', () => {
     })).rejects.toBe(serverError);
     expect(listActivities).toHaveBeenCalledTimes(1);
   });
+
+  it('reports how many activities arrived after the re-read overlap page', async () => {
+    const listActivities = vi.fn()
+      // Re-read of the previous final page (pure overlap: act-0, act-1)
+      .mockResolvedValueOnce({
+        activities: [activity(0), activity(1)],
+        nextPageToken: 'page-2',
+      })
+      // New activity appended since the last scan
+      .mockResolvedValueOnce({ activities: [activity(2)] });
+
+    const result = await fetchActivityHistory({ listActivities }, 'sess-1', {
+      cursor: { pageToken: 'page-1' },
+      pageSize: 2,
+    });
+
+    expect(result.newActivities).toBe(1);
+    expect(result.totalActivities).toBeUndefined();
+    expect(result.cursor.pageToken).toBe('page-2');
+  });
+
+  it('omits newActivities on a full scan', async () => {
+    const listActivities = vi.fn()
+      .mockResolvedValueOnce({ activities: [activity(0)], nextPageToken: 'page-2' })
+      .mockResolvedValueOnce({ activities: [activity(1)] });
+
+    const result = await fetchActivityHistory({ listActivities }, 'sess-1', { pageSize: 2 });
+
+    expect(result.newActivities).toBeUndefined();
+    expect(result.totalActivities).toBe(2);
+  });
 });
 
 describe('activity lifecycle', () => {

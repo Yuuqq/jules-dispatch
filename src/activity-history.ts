@@ -46,6 +46,11 @@ export interface ActivityHistoryResult {
   cursor: ActivityHistoryCursor;
   /** Available after an initial full scan; incremental scans only cover an overlap window. */
   totalActivities?: number;
+  /**
+   * Activities fetched beyond the re-read overlap page when resuming from a
+   * cursor. Callers tracking a running total add this to their previous count.
+   */
+  newActivities?: number;
   latestPlan: JulesPlan | null;
 }
 
@@ -168,10 +173,13 @@ async function fetchActivityHistoryPages(
   options: ActivityHistoryScanOptions,
 ): Promise<ActivityHistoryResult> {
   const cursor: ActivityHistoryCursor = { ...options.cursor };
+  const resuming = options.cursor?.pageToken !== undefined;
   const activities: JulesActivity[] = [];
   const seenPageTokens = new Set<string>();
   let pageToken = options.cursor?.pageToken;
   let totalActivities = 0;
+  let overlapCount = 0;
+  let seenFirstPage = false;
   let latestPlanActivity: JulesActivity | undefined;
 
   if (pageToken) seenPageTokens.add(pageToken);
@@ -180,8 +188,12 @@ async function fetchActivityHistoryPages(
     const currentPageToken = pageToken;
     const page = await client.listActivities(sessionId, options.pageSize, currentPageToken);
 
+    if (!seenFirstPage) {
+      overlapCount = page.activities.length;
+      seenFirstPage = true;
+    }
+    totalActivities += page.activities.length;
     for (const activity of page.activities) {
-      totalActivities += 1;
       updateActivityLifecycle(cursor, activity);
       activities.push(activity);
 
@@ -219,6 +231,7 @@ async function fetchActivityHistoryPages(
     activities,
     cursor,
     ...(options.includeTotalActivities ? { totalActivities } : {}),
+    ...(resuming ? { newActivities: Math.max(0, totalActivities - overlapCount) } : {}),
     latestPlan: latestPlanActivity?.planGenerated?.plan ?? null,
   };
 }

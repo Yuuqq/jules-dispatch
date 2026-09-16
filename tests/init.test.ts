@@ -2,7 +2,8 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { mkdtempSync, existsSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { buildPromptText, parseEnv, runInit } from '../src/init.js';
+import { PassThrough } from 'node:stream';
+import { buildPromptText, parseEnv, promptFor, runInit } from '../src/init.js';
 
 describe('parseEnv', () => {
   it('returns empty object for non-existent file', () => {
@@ -181,6 +182,30 @@ describe('interactive prompt rendering', () => {
     const text = buildPromptText('Jules API key', 'secret-existing-key', false);
     expect(text).toContain('keep existing');
     expect(text).not.toContain('secret-existing-key');
+  });
+});
+
+describe('promptFor', () => {
+  it('resolves with the default when stdin hits EOF before an answer', async () => {
+    const input = new PassThrough();
+    const output = new PassThrough();
+    output.resume();
+
+    const promise = promptFor('Default branch', 'main', true, input, output);
+    input.end();
+
+    await expect(promise).resolves.toBe('main');
+  });
+
+  it('resolves with the typed answer', async () => {
+    const input = new PassThrough();
+    const output = new PassThrough();
+    output.resume();
+
+    const promise = promptFor('Default branch', 'main', true, input, output);
+    input.end('develop\n');
+
+    await expect(promise).resolves.toBe('develop');
   });
 });
 
