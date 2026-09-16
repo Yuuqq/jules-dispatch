@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { dispatchBatch, dispatchTaskDefinition } from '../src/dispatcher.js';
+import { dispatchBatch, dispatchTaskDefinition, pruneDispatchLogs } from '../src/dispatcher.js';
 import type { JulesClient } from '../src/client.js';
 import * as taskConfig from '../src/config.js';
 import type { JulesConfig, TaskDefinition } from '../src/types.js';
@@ -225,5 +225,33 @@ describe('error aggregation', () => {
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
+  });
+});
+
+describe('pruneDispatchLogs', () => {
+  it('keeps only the newest dispatch logs and leaves other files alone', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'dispatch-logs-'));
+    for (let i = 0; i < 55; i++) {
+      writeFileSync(join(dir, `dispatch-2026-01-01T00-00-${String(i).padStart(2, '0')}.json`), '{}');
+    }
+    writeFileSync(join(dir, 'unrelated.txt'), 'x');
+
+    try {
+      pruneDispatchLogs(dir, 50);
+
+      const remaining = readdirSync(dir);
+      const logs = remaining.filter(f => f.endsWith('.json'));
+      expect(logs).toHaveLength(50);
+      expect(remaining).toContain('unrelated.txt');
+      // Oldest pruned, newest kept.
+      expect(logs).not.toContain('dispatch-2026-01-01T00-00-00.json');
+      expect(logs).toContain('dispatch-2026-01-01T00-00-54.json');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('tolerates a missing directory', () => {
+    expect(() => pruneDispatchLogs(join(tmpdir(), 'dispatch-logs-missing-xyz'), 10)).not.toThrow();
   });
 });

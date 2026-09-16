@@ -173,7 +173,6 @@ function printStatusText(results: CollectResult[]): void {
 
   const groupOrder = [
     'running',
-    'pending',
     'awaiting_plan',
     'awaiting_user_feedback',
     'paused',
@@ -190,7 +189,6 @@ function printStatusText(results: CollectResult[]): void {
 
   const stateFormat: Record<string, { icon: string; label: string; color: (s: string) => string }> = {
     running: { icon: '●', label: 'Running', color: chalk.green },
-    pending: { icon: '●', label: 'Pending', color: chalk.yellow },
     awaiting_plan: { icon: '⏸', label: 'Await Plan', color: chalk.magenta },
     awaiting_user_feedback: { icon: '!', label: 'Needs Input', color: chalk.yellow },
     paused: { icon: '⏸', label: 'Paused', color: chalk.yellow },
@@ -216,7 +214,7 @@ function printStatusText(results: CollectResult[]): void {
     const fmt = stateFormat[r.status] ?? { icon: '?', label: r.status, color: chalk.white };
     const stateCell = fmt.color(`${fmt.icon} ${fmt.label}`);
     const idCell = chalk.dim(r.sessionId.slice(0, 8));
-    const titleCell = r.title.length > 23 ? r.title.slice(0, 22) + '…' : r.title;
+    const titleCell = truncateDisplayText(r.title, 22);
     const elapsed = r.createTime ? formatElapsed(r.createTime) : '—';
     const prCell = r.prUrl ? r.prUrl.replace('https://github.com/', 'gh:') : '';
     const prTruncated = prCell.length > 28 ? prCell.slice(0, 27) + '…' : prCell;
@@ -234,6 +232,12 @@ function printStatusText(results: CollectResult[]): void {
       return fmt ? fmt.color(`${n} ${fmt.label.toLowerCase()}`) : `${n} ${g}`;
     });
   console.log(chalk.bold(`\n${counts.join(chalk.dim(' · '))}`));
+}
+
+/** Truncate by Unicode code points so surrogate pairs (emoji) survive intact. */
+function truncateDisplayText(text: string, max: number): string {
+  const chars = Array.from(text);
+  return chars.length > max ? chars.slice(0, max).join('') + '…' : text;
 }
 
 function formatElapsed(createTime: string): string {

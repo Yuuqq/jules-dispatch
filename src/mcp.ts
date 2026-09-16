@@ -11,6 +11,7 @@ import { ok, fail, computeRecoveryHint } from './mcp-helpers.js';
 import { runBatches } from './batch.js';
 import { summarizeSession, summarizeSessionLegacy } from './session-summary.js';
 import { fetchActivityHistory } from './activity-history.js';
+import { packageVersion } from './version.js';
 
 export interface McpServerOptions {
   projectDir: string;
@@ -42,7 +43,7 @@ export function createMcpServer(
 ): McpServer {
   const server = new McpServer({
     name: 'jules-dispatch',
-    version: '1.2.0',
+    version: packageVersion(),
   });
 
   // Helper: wrap any handler so thrown errors become MCP isError responses

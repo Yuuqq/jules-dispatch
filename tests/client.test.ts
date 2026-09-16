@@ -519,3 +519,40 @@ describe('edge cases', () => {
     expect(deriveStatus({ state: null } as any)).toBe('running');
   });
 });
+
+describe('response normalization', () => {
+  it('coerces a malformed session to safe defaults instead of crashing callers', async () => {
+    mockFetch().mockResolvedValue(jsonResponse({ id: '', title: null, url: 42 }));
+    const client = new JulesClient({ apiKey: 'test-key' });
+
+    const session = await client.getSession('abc');
+
+    expect(session.title).toBe('(untitled)');
+    expect(session.url).toBe('');
+    expect(session.id).toBe('');
+    expect(session.name).toBe('');
+  });
+
+  it('falls back to deriving the session id from the name field', async () => {
+    mockFetch().mockResolvedValue(jsonResponse({ name: 'sessions/abc-123' }));
+    const client = new JulesClient({ apiKey: 'test-key' });
+
+    const session = await client.getSession('ignored');
+
+    expect(session.id).toBe('abc-123');
+  });
+
+  it('coerces malformed activities so sorting and display cannot crash', async () => {
+    mockFetch().mockResolvedValue(jsonResponse({
+      activities: [{ id: 7, createTime: null, originator: 'robot' }],
+    }));
+    const client = new JulesClient({ apiKey: 'test-key' });
+
+    const page = await client.listActivities('abc');
+
+    expect(page.activities).toHaveLength(1);
+    expect(page.activities[0].id).toBe('');
+    expect(page.activities[0].createTime).toBe('');
+    expect(page.activities[0].originator).toBe('system');
+  });
+});

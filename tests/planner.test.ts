@@ -90,6 +90,24 @@ describe('planTasks contract', () => {
       .rejects.toThrow('Planner task #1 missing title or prompt');
   });
 
+  it('retries rate limits and server errors before succeeding', async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response('rate limited', { status: 429 }))
+      .mockResolvedValueOnce(new Response('server error', { status: 500 }))
+      .mockResolvedValueOnce(completion({ tasks: [{ title: 'One', prompt: 'Do one.' }] }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const resultPromise = planTasks(config, { description: 'Plan work' });
+    // Backoff: 500ms after the first failure, 1000ms after the second.
+    await vi.advanceTimersByTimeAsync(1500);
+    const result = await resultPromise;
+
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(result.tasks[0].title).toBe('One');
+  });
+
   it('validates direct request inputs before making a network request', async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);

@@ -237,20 +237,41 @@ async function requestCompletion(
   const timeoutMs = Number.isFinite(cfg.requestTimeoutMs) && cfg.requestTimeoutMs! > 0
     ? Math.trunc(cfg.requestTimeoutMs!)
     : 60000;
-  const signal = AbortSignal.timeout(timeoutMs);
-  try {
-    return await fetch(`${cfg.baseUrl}/chat/completions`, {
-      method: 'POST',
-      headers,
-      body,
-      signal,
-    });
-  } catch (err) {
-    if (signal.aborted) {
-      throw new Error(`LLM request timed out after ${timeoutMs}ms at ${cfg.baseUrl}`);
+
+  for (let attempt = 0; ; attempt++) {
+    const signal = AbortSignal.timeout(timeoutMs);
+    let resp: Response;
+    try {
+      resp = await fetch(`${cfg.baseUrl}/chat/completions`, {
+        method: 'POST',
+        headers,
+        body,
+        signal,
+      });
+    } catch (err) {
+      if (signal.aborted) {
+        throw new Error(`LLM request timed out after ${timeoutMs}ms at ${cfg.baseUrl}`);
+      }
+      throw err;
     }
-    throw err;
+
+    // Retry rate limits and server errors with backoff — these mean the
+    // request was not processed, so re-sending is safe. Mirrors the
+    // JulesClient retry policy for planner traffic.
+    if ((resp.status === 429 || resp.status >= 500) && attempt < PLANNER_MAX_RETRIES) {
+      await resp.body?.cancel().catch(() => undefined);
+      await sleep(PLANNER_BASE_DELAY_MS * 2 ** attempt + Math.random() * 250);
+      continue;
+    }
+    return resp;
   }
+}
+
+const PLANNER_MAX_RETRIES = 2;
+const PLANNER_BASE_DELAY_MS = 500;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 function buildUserPrompt(req: PlanRequest): string {
