@@ -158,13 +158,22 @@ export async function promptFor(
   label: string,
   defaultVal: string,
   revealDefault = true,
+  input: NodeJS.ReadableStream = process.stdin,
+  output: NodeJS.WritableStream = process.stdout,
 ): Promise<string> {
-  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  const rl = createInterface({ input, output });
   return new Promise((resolve) => {
-    rl.question(buildPromptText(label, defaultVal, revealDefault), (answer) => {
+    let settled = false;
+    const finish = (answer: string | null | undefined) => {
+      if (settled) return;
+      settled = true;
       rl.close();
-      resolve(answer.trim() || defaultVal);
-    });
+      resolve((answer ?? '').trim() || defaultVal);
+    };
+    // Node never invokes the question callback when stdin reaches EOF first,
+    // so also settle on 'close' — otherwise `init` hangs until Ctrl+C.
+    rl.question(buildPromptText(label, defaultVal, revealDefault), finish);
+    rl.on('close', () => finish(undefined));
   });
 }
 

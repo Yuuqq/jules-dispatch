@@ -137,6 +137,42 @@ describe('collectStatus error handling', () => {
   it('no empty catch blocks remain', () => {
     expect(fs.readFileSync('src/collector.ts', 'utf-8')).not.toContain('catch {\n');
   });
+
+  it('reuses cached activity cursors across scans and accumulates totals', async () => {
+    const client = mockClient();
+    client.getSession.mockResolvedValue(session({ id: 'session-1', state: 'RUNNING' }));
+
+    const act = (index: number) => ({
+      id: `act-${index}`,
+      name: `activities/act-${index}`,
+      createTime: new Date(Date.parse('2026-01-01T00:00:00Z') + index * 1000).toISOString(),
+      originator: 'agent' as const,
+    });
+
+    // Initial full scan: two pages, 6 activities total.
+    client.listActivities
+      .mockResolvedValueOnce({ activities: [act(0), act(1), act(2)], nextPageToken: 'page-2' })
+      .mockResolvedValueOnce({ activities: [act(3), act(4), act(5)] })
+      // Incremental scan: re-read of the final page plus one new activity.
+      .mockResolvedValueOnce({ activities: [act(3), act(4), act(5)], nextPageToken: 'page-3' })
+      .mockResolvedValueOnce({ activities: [act(6)] });
+
+    const cache = new Map();
+    const first = await collectStatus(client as unknown as JulesClient, config, {
+      sessionIds: ['session-1'],
+      activityCache: cache,
+    });
+    expect(first[0].activities).toBe(6);
+
+    const second = await collectStatus(client as unknown as JulesClient, config, {
+      sessionIds: ['session-1'],
+      activityCache: cache,
+    });
+
+    expect(second[0].activities).toBe(7);
+    // The second scan resumed from the saved page token instead of rescanning.
+    expect(client.listActivities).toHaveBeenNthCalledWith(3, 'session-1', 100, 'page-2');
+  });
 });
 
 describe('waitForCompletion error handling', () => {

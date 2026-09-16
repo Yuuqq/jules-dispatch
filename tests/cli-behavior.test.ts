@@ -195,4 +195,29 @@ describe('CLI safety and structured failures', () => {
       error: expect.objectContaining({ code: 'INVALID_FORMAT' }),
     }]);
   });
+
+  it('warns when stdin contains multiple tasks and dispatches only the first', async () => {
+    const dir = makeTempDir();
+    const env = { ...cleanEnv(), JULES_API_KEY: 'jules-key' };
+    const stdin = [
+      'title: First task',
+      'prompt: Do the first thing',
+      '---',
+      'title: Second task',
+      'prompt: Do the second thing',
+    ].join('\n');
+
+    const result = await runCli(
+      ['--json', '--project', dir, 'dispatch', '-'],
+      { env, input: stdin },
+    );
+
+    // No source configured anywhere, so the dispatch fails fast offline.
+    expect(result.code).toBe(1);
+    expect(result.stderr).toContain('only the first will be dispatched');
+    expect(parseJsonLines(result.stdout)).toEqual([expect.objectContaining({
+      taskTitle: 'First task',
+      status: 'failed',
+    })]);
+  });
 });

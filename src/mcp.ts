@@ -11,6 +11,7 @@ import { ok, fail, computeRecoveryHint } from './mcp-helpers.js';
 import { runBatches } from './batch.js';
 import { summarizeSession, summarizeSessionLegacy } from './session-summary.js';
 import { fetchActivityHistory } from './activity-history.js';
+import { packageVersion } from './version.js';
 
 export interface McpServerOptions {
   projectDir: string;
@@ -42,7 +43,7 @@ export function createMcpServer(
 ): McpServer {
   const server = new McpServer({
     name: 'jules-dispatch',
-    version: '1.2.0',
+    version: packageVersion(),
   });
 
   // Helper: wrap any handler so thrown errors become MCP isError responses
@@ -286,11 +287,12 @@ export function createMcpServer(
 
   tool(
     'jules_wait_for_completion',
-    '[DEPRECATED: Use jules_monitor instead.] Poll one or more Jules sessions until every session reaches a terminal status, a session requires action, or the timeout expires.\n\nUse this after dispatching work when an AI agent needs to coordinate follow-up actions around completed, failed, cancelled, plan approval, user feedback, paused, or still-running sessions.\n\nReturns: { success: true, data: { completed, failed, cancelled, awaitingPlan, awaitingUserFeedback, paused, actionRequired, stillRunning, timedOut } }\n\nSee also: jules_dispatch_task, jules_dispatch_batch, jules_status, jules_list_activities',
+    '[DEPRECATED: Use jules_monitor instead.] Poll one or more Jules sessions until every session reaches a terminal status, a session requires action, or the timeout expires. Sessions that cannot be polled at all (e.g. unknown IDs) are reported in the errored bucket while the rest keep polling.\n\nUse this after dispatching work when an AI agent needs to coordinate follow-up actions around completed, failed, cancelled, plan approval, user feedback, paused, errored, or still-running sessions.\n\nReturns: { success: true, data: { completed, failed, cancelled, awaitingPlan, awaitingUserFeedback, paused, actionRequired, errored, errors: [{ sessionId, message }], stillRunning, timedOut } }\n\nSee also: jules_dispatch_task, jules_dispatch_batch, jules_status, jules_list_activities',
     {
       sessionIds: z.array(nonEmptyString).min(1),
       intervalMs: z.number().int().min(1000).optional().default(10000),
-      timeoutMs: z.number().int().min(1000).optional().default(600000),
+      timeoutMs: z.number().int().min(1000).max(3_600_000).optional().default(600000)
+        .describe('Max wait time in ms, capped at 3600000 (1 hour) so the tool call cannot block indefinitely'),
       failFast: z.boolean().optional().default(false),
     },
     async (args) => {
@@ -368,12 +370,13 @@ export function createMcpServer(
 
   tool(
     'jules_monitor',
-    'Monitor one or more Jules sessions with optional waiting until terminal or action-required state.\n\nUse this for consolidated status checks, or set wait=true after dispatching when an AI agent needs completed/failed/cancelled/action-required/still-running buckets before the next orchestration step.\n\nReturns without wait: { success: true, data: { sessions: [{ sessionId, title, state, status, prUrl?, lastActivity? }] } }\n\nReturns with wait: { success: true, data: { sessions, wait: { completed, failed, cancelled, awaitingPlan, awaitingUserFeedback, paused, actionRequired, stillRunning, timedOut } } }\n\nSee also: jules_dispatch (create sessions), jules_interact (inspect one session in full context), jules_wait_for_completion (wait-only legacy helper)',
+    'Monitor one or more Jules sessions with optional waiting until terminal or action-required state. Sessions that cannot be polled at all (e.g. unknown IDs) are reported in the errored bucket while the rest keep polling.\n\nUse this for consolidated status checks, or set wait=true after dispatching when an AI agent needs completed/failed/cancelled/action-required/errored/still-running buckets before the next orchestration step.\n\nReturns without wait: { success: true, data: { sessions: [{ sessionId, title, state, status, prUrl?, lastActivity? }] } }\n\nReturns with wait: { success: true, data: { sessions, wait: { completed, failed, cancelled, awaitingPlan, awaitingUserFeedback, paused, actionRequired, errored, errors: [{ sessionId, message }], stillRunning, timedOut } } }\n\nSee also: jules_dispatch (create sessions), jules_interact (inspect one session in full context), jules_wait_for_completion (wait-only legacy helper)',
     {
       sessionIds: z.array(nonEmptyString).min(1),
       wait: z.boolean().optional().default(false),
       intervalMs: z.number().int().min(1000).optional().default(10000),
-      timeoutMs: z.number().int().min(1000).optional().default(600000),
+      timeoutMs: z.number().int().min(1000).max(3_600_000).optional().default(600000)
+        .describe('Max wait time in ms, capped at 3600000 (1 hour) so the tool call cannot block indefinitely'),
       failFast: z.boolean().optional().default(false),
     },
     async (args) => {

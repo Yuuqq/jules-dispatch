@@ -1,12 +1,16 @@
 import { resolve } from 'node:path';
-import { writeFileSync, existsSync, mkdirSync } from 'node:fs';
+import { writeFileSync, existsSync, mkdirSync, readdirSync, rmSync } from 'node:fs';
 import chalk from 'chalk';
 import type { JulesConfig, DispatchResult, TaskDefinition } from './types.js';
 import { JulesClient } from './client.js';
 import { loadTask, loadTasksFromDir } from './config.js';
 import { isJson, emit, info } from './output.js';
+import { debug } from './log.js';
 import { translateError } from './errors.js';
 import { runBatches, validateBatchSize, validatePaceMs } from './batch.js';
+
+/** How many dispatch logs to retain; older ones are pruned after each batch. */
+export const MAX_DISPATCH_LOGS = 50;
 
 export async function dispatchTask(
   client: JulesClient,
@@ -151,6 +155,7 @@ export async function dispatchBatch(
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
       logFile = resolve(logDir, `dispatch-${timestamp}.json`);
       writeFileSync(logFile, JSON.stringify(results, null, 2));
+      pruneDispatchLogs(logDir);
     } catch (err) {
       logFile = null;
       logWarning = `Dispatch succeeded, but the log could not be written: ${(err as Error).message}`;
@@ -181,4 +186,35 @@ export async function dispatchBatch(
   );
 
   return results;
+}
+
+/**
+ * Keep only the newest MAX_DISPATCH_LOGS dispatch logs (ISO timestamps in the
+ * names sort lexicographically) so the log directory cannot grow without
+ * bound across repeated batches. Best effort: pruning problems are surfaced
+ * via debug logging and never fail the dispatch itself.
+ */
+export function pruneDispatchLogs(
+  logDir: string,
+  keep: number = MAX_DISPATCH_LOGS,
+): void {
+  let files: string[];
+  try {
+    files = readdirSync(logDir)
+      .filter(f => f.startsWith('dispatch-') && f.endsWith('.json'))
+      .sort();
+  } catch (err) {
+    debug('dispatch log prune skipped', { logDir, error: (err as Error).message });
+    return;
+  }
+
+  const stale = files.slice(0, Math.max(0, files.length - keep));
+  for (const name of stale) {
+    try {
+      rmSync(resolve(logDir, name), { force: true });
+      debug('pruned old dispatch log', { file: name });
+    } catch (err) {
+      debug('dispatch log prune failed', { file: name, error: (err as Error).message });
+    }
+  }
 }

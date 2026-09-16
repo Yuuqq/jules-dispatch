@@ -21,11 +21,17 @@ export interface PollCallbacks {
     awaitingUserFeedback: number;
     paused: number;
     actionRequired: number;
+    errored: number;
     remaining: number;
   }) => void;
   onTerminal?: (sessionId: string, status: 'completed' | 'failed' | 'cancelled') => void;
   onActionRequired?: (sessionId: string, status: ActionRequiredStatus) => void;
   onError?: (sessionId: string, error: Error) => void;
+}
+
+export interface PollSessionError {
+  sessionId: string;
+  message: string;
 }
 
 export interface PollResult {
@@ -36,6 +42,9 @@ export interface PollResult {
   awaitingUserFeedback: string[];
   paused: string[];
   actionRequired: string[];
+  /** Sessions that could not be polled at all (e.g. unknown ID); the rest keep polling. */
+  errored: string[];
+  errors: PollSessionError[];
   stillRunning: string[];
   timedOut: boolean;
 }
@@ -68,6 +77,8 @@ export async function pollSessions(
   const awaitingPlan = new Set<string>();
   const awaitingUserFeedback = new Set<string>();
   const paused = new Set<string>();
+  const errored = new Set<string>();
+  const errorMessages = new Map<string, string>();
   const activityCursors = new Map<string, ActivityHistoryCursor>();
   let stoppedByFailFast = false;
 
@@ -91,7 +102,8 @@ export async function pollSessions(
     cancelled.has(id) ||
     awaitingPlan.has(id) ||
     awaitingUserFeedback.has(id) ||
-    paused.has(id)
+    paused.has(id) ||
+    errored.has(id)
   );
 
   const hasActionRequired = (): boolean => (
@@ -131,9 +143,19 @@ export async function pollSessions(
         } catch (err) {
           const error = toError(err);
           callbacks?.onError?.(id, error);
-          if (!isTransientPollingError(error)) {
-            throw contextualizePollingError(id, error);
+          const failure = classifyPollingFailure(error);
+          if (failure === 'transient') return;
+          if (failure === 'session') {
+            // The session itself is un-pollable (unknown ID, malformed
+            // request), but the others are fine — park it in the errored
+            // bucket instead of aborting the wait for everyone.
+            errored.add(id);
+            errorMessages.set(id, contextualizePollingError(id, error).message);
+            return;
           }
+          // Auth problems and unexpected errors affect every session or
+          // indicate a bug — fail the whole poll with context.
+          throw contextualizePollingError(id, error);
         }
       }));
 
@@ -152,6 +174,7 @@ export async function pollSessions(
       awaitingUserFeedback: awaitingUserFeedback.size,
       paused: paused.size,
       actionRequired: awaitingPlan.size + awaitingUserFeedback.size + paused.size,
+      errored: errored.size,
       remaining: getStillRunning().length,
     });
 
@@ -170,6 +193,9 @@ export async function pollSessions(
   const actionRequired = sessionIds.filter(id => (
     awaitingPlan.has(id) || awaitingUserFeedback.has(id) || paused.has(id)
   ));
+  const errors = sessionIds.flatMap(id => (
+    errorMessages.has(id) ? [{ sessionId: id, message: errorMessages.get(id)! }] : []
+  ));
 
   return {
     completed: inInputOrder(completed),
@@ -179,6 +205,8 @@ export async function pollSessions(
     awaitingUserFeedback: inInputOrder(awaitingUserFeedback),
     paused: inInputOrder(paused),
     actionRequired,
+    errored: inInputOrder(errored),
+    errors,
     stillRunning,
     timedOut: (
       stillRunning.length > 0 &&
@@ -193,9 +221,20 @@ function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-function isTransientPollingError(err: Error): boolean {
+/**
+ * How a polling failure should be handled:
+ *   transient — network/rate-limit/server hiccups; keep polling that session
+ *   session   — the session itself is un-pollable (404, bad request); park it
+ *               in the errored bucket and keep polling the others
+ *   fatal     — auth or unexpected errors affect every session; abort the poll
+ */
+function classifyPollingFailure(err: Error): 'transient' | 'session' | 'fatal' {
   const code = translateError(err).code;
-  return code === 'NETWORK_ERROR' || code === 'RATE_LIMITED' || code === 'SERVER_ERROR';
+  if (code === 'NETWORK_ERROR' || code === 'RATE_LIMITED' || code === 'SERVER_ERROR') {
+    return 'transient';
+  }
+  if (code === 'NOT_FOUND' || code === 'INVALID_REQUEST') return 'session';
+  return 'fatal';
 }
 
 function contextualizePollingError(sessionId: string, err: Error): Error {

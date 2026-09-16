@@ -9,13 +9,24 @@ import { isJson, emit, info } from './output.js';
 import { pollSessions, type PollResult } from './polling.js';
 import { runBatches } from './batch.js';
 import { getLastActivity } from './session-summary.js';
-import { fetchActivityHistory } from './activity-history.js';
+import { fetchActivityHistory, type ActivityHistoryCursor } from './activity-history.js';
+
+/** Per-session activity state reused across repeated scans (watch mode). */
+export interface CachedActivityState {
+  cursor: ActivityHistoryCursor;
+  totalActivities: number;
+}
 
 export interface CollectStatusOptions {
   sessionIds?: string[];
   output?: string;
   /** Cap how many recent sessions to scan when no IDs given. Default 100. */
   scanLimit?: number;
+  /**
+   * Reuse activity cursors and totals between calls so refreshes fetch only
+   * new activity pages instead of rescanning each session's full history.
+   */
+  activityCache?: Map<string, CachedActivityState>;
 }
 
 export async function collectStatus(
@@ -33,7 +44,7 @@ export async function collectStatus(
     results = await runBatches(
       targetIds,
       10,
-      id => summarizeCollectSessionId(client, id),
+      id => summarizeCollectSessionId(client, id, options.activityCache),
     );
   } else {
     // Paginate until we hit scanLimit. A single listSessions() call only
@@ -50,7 +61,7 @@ export async function collectStatus(
     results = await runBatches(
       sessionsToCheck,
       10,
-      session => summarizeCollectResult(client, session),
+      session => summarizeCollectResult(client, session, options.activityCache),
     );
   }
 
@@ -85,10 +96,11 @@ export async function collectStatus(
 async function summarizeCollectSessionId(
   client: JulesClient,
   id: string,
+  activityCache?: Map<string, CachedActivityState>,
 ): Promise<CollectResult> {
   try {
     const session = await client.getSession(id);
-    return summarizeCollectResult(client, session);
+    return summarizeCollectResult(client, session, activityCache);
   } catch (err) {
     const message = (err as Error).message;
     if (!isJson()) console.error(chalk.red(`Failed to fetch session ${id}: ${message}`));
@@ -103,15 +115,30 @@ async function summarizeCollectSessionId(
   }
 }
 
-async function summarizeCollectResult(client: JulesClient, session: JulesSession): Promise<CollectResult> {
+async function summarizeCollectResult(
+  client: JulesClient,
+  session: JulesSession,
+  activityCache?: Map<string, CachedActivityState>,
+): Promise<CollectResult> {
   let lastActivity = '';
   let activityCount = 0;
   let status: CollectResult['status'] = 'running';
   let activityError: string | undefined;
 
   try {
-    const history = await fetchActivityHistory(client, session.id, { initialLimit: 10 });
-    activityCount = history.totalActivities ?? history.activities.length;
+    // Resume from the cached cursor when it actually points at a page; a
+    // cursor without a pageToken means the history was a single page, and a
+    // fresh full scan is both correct and cheap.
+    const cached = activityCache?.get(session.id);
+    const resumeCursor = cached?.cursor.pageToken ? cached.cursor : undefined;
+    const history = await fetchActivityHistory(client, session.id, resumeCursor
+      ? { cursor: resumeCursor, initialLimit: 10 }
+      : { initialLimit: 10 });
+    const totalActivities = resumeCursor && cached
+      ? cached.totalActivities + (history.newActivities ?? 0)
+      : history.totalActivities ?? history.activities.length;
+    activityCache?.set(session.id, { cursor: history.cursor, totalActivities });
+    activityCount = totalActivities;
 
     status = deriveStatus(session, history.activities, history.cursor);
     lastActivity = getLastActivity(status, history.activities);
@@ -146,7 +173,6 @@ function printStatusText(results: CollectResult[]): void {
 
   const groupOrder = [
     'running',
-    'pending',
     'awaiting_plan',
     'awaiting_user_feedback',
     'paused',
@@ -163,7 +189,6 @@ function printStatusText(results: CollectResult[]): void {
 
   const stateFormat: Record<string, { icon: string; label: string; color: (s: string) => string }> = {
     running: { icon: '●', label: 'Running', color: chalk.green },
-    pending: { icon: '●', label: 'Pending', color: chalk.yellow },
     awaiting_plan: { icon: '⏸', label: 'Await Plan', color: chalk.magenta },
     awaiting_user_feedback: { icon: '!', label: 'Needs Input', color: chalk.yellow },
     paused: { icon: '⏸', label: 'Paused', color: chalk.yellow },
@@ -189,7 +214,7 @@ function printStatusText(results: CollectResult[]): void {
     const fmt = stateFormat[r.status] ?? { icon: '?', label: r.status, color: chalk.white };
     const stateCell = fmt.color(`${fmt.icon} ${fmt.label}`);
     const idCell = chalk.dim(r.sessionId.slice(0, 8));
-    const titleCell = r.title.length > 23 ? r.title.slice(0, 22) + '…' : r.title;
+    const titleCell = truncateDisplayText(r.title, 22);
     const elapsed = r.createTime ? formatElapsed(r.createTime) : '—';
     const prCell = r.prUrl ? r.prUrl.replace('https://github.com/', 'gh:') : '';
     const prTruncated = prCell.length > 28 ? prCell.slice(0, 27) + '…' : prCell;
@@ -207,6 +232,12 @@ function printStatusText(results: CollectResult[]): void {
       return fmt ? fmt.color(`${n} ${fmt.label.toLowerCase()}`) : `${n} ${g}`;
     });
   console.log(chalk.bold(`\n${counts.join(chalk.dim(' · '))}`));
+}
+
+/** Truncate by Unicode code points so surrogate pairs (emoji) survive intact. */
+function truncateDisplayText(text: string, max: number): string {
+  const chars = Array.from(text);
+  return chars.length > max ? chars.slice(0, max).join('') + '…' : text;
 }
 
 function formatElapsed(createTime: string): string {
@@ -275,6 +306,7 @@ export async function waitForCompletion(
       console.log(
         `  ${chalk.green(`completed: ${result.completed.length}`)}` +
         (result.failed.length > 0 ? `, ${chalk.red(`failed: ${result.failed.length}`)}` : '') +
+        (result.errors.length > 0 ? `, ${chalk.red(`errored: ${result.errors.length}`)}` : '') +
         (result.cancelled.length > 0 ? `, ${chalk.dim(`cancelled: ${result.cancelled.length}`)}` : '') +
         (result.awaitingPlan.length > 0 ? `, ${chalk.yellow(`awaiting plan: ${result.awaitingPlan.length}`)}` : '') +
         (result.awaitingUserFeedback.length > 0 ? `, ${chalk.yellow(`needs input: ${result.awaitingUserFeedback.length}`)}` : '') +

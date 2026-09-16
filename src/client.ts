@@ -7,8 +7,8 @@ import type {
   JulesSessionStatus,
 } from './types.js';
 import {
-  compareActivityPositions,
   deriveActivityLifecycle,
+  fetchActivityHistory,
   hasResumedAfterTerminal,
   type ActivityHistoryCursor,
 } from './activity-history.js';
@@ -72,6 +72,11 @@ export class JulesClient {
 
     verbose(`← ${res.status} ${method} ${path}`);
 
+    // 429 is retried for every method: the request was throttled before
+    // processing, so re-sending cannot duplicate work — and session creation
+    // is exactly what must survive rate limits in a batch dispatch. Ambiguous
+    // 5xx responses, by contrast, are only retried for idempotent methods to
+    // avoid double-applying a mutation that may have gone through.
     const retryableResponse = res.status === 429 || (
       res.status >= 500 && canRetryAmbiguousFailure
     );
@@ -163,7 +168,7 @@ export class JulesClient {
     );
     return {
       ...page,
-      sessions: Array.isArray(page?.sessions) ? page.sessions : [],
+      sessions: Array.isArray(page?.sessions) ? page.sessions.map(normalizeSession) : [],
     };
   }
 
@@ -179,7 +184,7 @@ export class JulesClient {
   }
 
   async getSession(sessionId: string): Promise<JulesSession> {
-    return this.request(`/sessions/${encodeURIComponent(sessionId)}`);
+    return normalizeSession(await this.request(`/sessions/${encodeURIComponent(sessionId)}`));
   }
 
   async cancelSession(sessionId: string): Promise<void> {
@@ -202,7 +207,7 @@ export class JulesClient {
     );
     return {
       ...page,
-      activities: Array.isArray(page?.activities) ? page.activities : [],
+      activities: Array.isArray(page?.activities) ? page.activities.map(normalizeActivity) : [],
     };
   }
 
@@ -222,12 +227,8 @@ export class JulesClient {
 
   /** Returns the most recent generated plan, or null if none exists yet. */
   async getLatestPlan(sessionId: string): Promise<JulesPlan | null> {
-    let latest: JulesActivity | undefined;
-    for await (const activity of this.iterateActivities(sessionId, MAX_PAGE_SIZE)) {
-      if (!activity.planGenerated?.plan) continue;
-      if (!latest || compareActivityPositions(activity, latest) > 0) latest = activity;
-    }
-    return latest?.planGenerated?.plan ?? null;
+    const history = await fetchActivityHistory(this, sessionId, { initialLimit: 10 });
+    return history.latestPlan;
   }
 
   // ---------- messaging / approval ----------
@@ -249,6 +250,35 @@ export class JulesClient {
 
 function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function asString(value: unknown): string {
+  return typeof value === 'string' ? value : '';
+}
+
+/**
+ * Coerce the API's string fields so a malformed or partial response degrades
+ * to "(untitled)" / "system" instead of crashing callers downstream (sorting,
+ * slicing, and display all assume these are strings).
+ */
+function normalizeSession(raw: JulesSession): JulesSession {
+  return {
+    ...raw,
+    id: asString(raw?.id) || asString(raw?.name).replace(/^sessions\//, ''),
+    name: asString(raw?.name),
+    title: asString(raw?.title) || '(untitled)',
+    url: asString(raw?.url),
+  };
+}
+
+function normalizeActivity(raw: JulesActivity): JulesActivity {
+  return {
+    ...raw,
+    id: asString(raw?.id),
+    name: asString(raw?.name),
+    createTime: asString(raw?.createTime),
+    originator: raw?.originator === 'user' || raw?.originator === 'agent' ? raw.originator : 'system',
+  };
 }
 
 function normalizePageSize(pageSize: number): number {
