@@ -282,7 +282,7 @@ function buildUserPrompt(req: PlanRequest): string {
   if (typeof req.maxTasks === 'number') {
     parts.push(`# Constraint\nReturn at most ${req.maxTasks} tasks.`);
   }
-  if (req.context && req.context.trim()) {
+  if (req.context?.trim()) {
     parts.push(`# Repository context (for grounding only — do not echo)\n${req.context.trim().slice(0, 8000)}`);
   }
   parts.push(

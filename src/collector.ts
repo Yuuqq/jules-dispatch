@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 import chalk from 'chalk';
 import Table from 'cli-table3';
 import type { JulesConfig, CollectResult, JulesSession } from './types.js';
-import { JulesClient, deriveStatus } from './client.js';
+import { type JulesClient, deriveStatus } from './client.js';
 import { debug } from './log.js';
 import { isJson, emit, info } from './output.js';
 import { pollSessions, type PollResult } from './polling.js';
@@ -217,7 +217,7 @@ function printStatusText(results: CollectResult[]): void {
     const titleCell = truncateDisplayText(r.title, 22);
     const elapsed = r.createTime ? formatElapsed(r.createTime) : '—';
     const prCell = r.prUrl ? r.prUrl.replace('https://github.com/', 'gh:') : '';
-    const prTruncated = prCell.length > 28 ? prCell.slice(0, 27) + '…' : prCell;
+    const prTruncated = prCell.length > 28 ? `${prCell.slice(0, 27)}…` : prCell;
 
     table.push([idCell, titleCell, stateCell, elapsed, prTruncated]);
   }
@@ -237,7 +237,7 @@ function printStatusText(results: CollectResult[]): void {
 /** Truncate by Unicode code points so surrogate pairs (emoji) survive intact. */
 function truncateDisplayText(text: string, max: number): string {
   const chars = Array.from(text);
-  return chars.length > max ? chars.slice(0, max).join('') + '…' : text;
+  return chars.length > max ? `${chars.slice(0, max).join('')}…` : text;
 }
 
 function formatElapsed(createTime: string): string {

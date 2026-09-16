@@ -8,7 +8,6 @@ import {
   checkTaskFile,
   runDoctor,
 } from '../src/doctor.js';
-import { JulesClient } from '../src/client.js';
 
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status });

@@ -1,6 +1,6 @@
 import * as fs from 'node:fs';
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { JulesClient } from '../src/client.js';
+import type { JulesClient } from '../src/client.js';
 import { collectStatus, waitForCompletion } from '../src/collector.js';
 import * as log from '../src/log.js';
 import type { JulesConfig, JulesSession } from '../src/types.js';

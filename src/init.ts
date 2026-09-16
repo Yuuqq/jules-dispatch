@@ -119,9 +119,9 @@ function updateManagedEnv(
   values: Record<ManagedEnvKey, string>,
 ): string {
   if (!existingContent) {
-    return MANAGED_ENV_KEYS
+    return `${MANAGED_ENV_KEYS
       .map(key => `${key}=${formatEnvValue(values[key])}`)
-      .join('\n') + '\n';
+      .join('\n')}\n`;
   }
 
   const eol = existingContent.includes('\r\n') ? '\r\n' : '\n';

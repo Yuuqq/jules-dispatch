@@ -106,12 +106,14 @@ describe('CLI-02: Root help footer', () => {
 describe('CLI-03: Color detection', () => {
   it('NO_COLOR=1 produces no ANSI escape codes', () => {
     const out = run('--help', { NO_COLOR: '1' });
+    // biome-ignore lint/suspicious/noControlCharactersInRegex: matching the ANSI escape byte is the point of this assertion
     const ansiCount = (out.match(/\x1b\[/g) || []).length;
     expect(ansiCount).toBe(0);
   });
 
   it('TERM=dumb produces no ANSI escape codes', () => {
     const out = run('--help', { TERM: 'dumb' });
+    // biome-ignore lint/suspicious/noControlCharactersInRegex: matching the ANSI escape byte is the point of this assertion
     const ansiCount = (out.match(/\x1b\[/g) || []).length;
     expect(ansiCount).toBe(0);
   });

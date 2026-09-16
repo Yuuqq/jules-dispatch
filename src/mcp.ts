@@ -83,7 +83,7 @@ export function createMcpServer(
         };
       }
     };
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // biome-ignore lint/suspicious/noExplicitAny: the SDK's generic inference does not compose with the error wrapper above
     server.registerTool(name, { description, inputSchema, annotations }, wrapped as any);
   };
 

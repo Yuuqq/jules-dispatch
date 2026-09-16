@@ -216,7 +216,6 @@ describe('Fix R2-2: collectStatus walks pages up to scanLimit', () => {
       id: `p2-${i}`, name: `sessions/p2-${i}`, title: `T2-${i}`, prompt: '', url: '',
       sourceContext: { source: 's', githubRepoContext: { startingBranch: 'main' } }, state: 'COMPLETED',
     }));
-    let calls = 0;
     const client = {
       iterateSessions: async function* () {
         for (const s of page1) yield s;
@@ -380,14 +379,13 @@ describe('Fix R2-4: planner retries 400 only for response_format', () => {
 
 describe('Fix R2-5: loadConfig shows a Fix hint when API key is missing', () => {
   let dir: string;
-  let exitSpy: ReturnType<typeof vi.spyOn>;
   let errSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
     dir = mkdtempSync(join(tmpdir(), 'cfg-hint-'));
     delete process.env.JULES_API_KEY;
     // Make process.exit throw so the function returns instead of killing the test runner.
-    exitSpy = vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+    vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
       throw new Error(`exit:${code}`);
     }) as never);
     errSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
@@ -413,13 +411,13 @@ describe('Fix R2-5: loadConfig shows a Fix hint when API key is missing', () => 
 describe('Fix R2-8: loadTasksFromDir gives actionable errors', () => {
   it('throws "Task directory not found" for a missing path', async () => {
     const { loadTasksFromDir } = await import('../src/config.js');
-    expect(() => loadTasksFromDir(join(tmpdir(), 'definitely-missing-' + Date.now())))
+    expect(() => loadTasksFromDir(join(tmpdir(), `definitely-missing-${Date.now()}`)))
       .toThrow(/Task directory not found/);
   });
 
   it('throws ENOTDIR-style message when the path is a file', async () => {
     const { loadTasksFromDir } = await import('../src/config.js');
-    const file = join(tmpdir(), 'not-a-dir-' + Date.now() + '.txt');
+    const file = join(tmpdir(), `not-a-dir-${Date.now()}.txt`);
     writeFileSync(file, 'hello');
     try {
       expect(() => loadTasksFromDir(file)).toThrow(/Expected a directory/);
