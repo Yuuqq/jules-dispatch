@@ -63,7 +63,7 @@ export class JulesClient {
       if (retries > 0 && canRetryAmbiguousFailure && err instanceof TypeError) {
         debug('retrying network error', { retriesLeft: retries - 1 });
         const attempt = MAX_RETRIES - retries;
-        const delay = BASE_DELAY_MS * Math.pow(2, attempt) + Math.random() * 250;
+        const delay = BASE_DELAY_MS * 2 ** attempt + Math.random() * 250;
         await sleep(delay);
         return this.request<T>(path, options, retries - 1);
       }
@@ -84,7 +84,7 @@ export class JulesClient {
       debug('retrying', { status: res.status, retriesLeft: retries - 1 });
       const retryAfter = res.headers.get('retry-after');
       const attempt = MAX_RETRIES - retries;
-      const expBackoff = BASE_DELAY_MS * Math.pow(2, attempt);
+      const expBackoff = BASE_DELAY_MS * 2 ** attempt;
       const jitter = Math.random() * 250;
       const retryAfterMs = parseRetryAfterMs(retryAfter);
       const delay = (retryAfterMs ?? expBackoff) + jitter;

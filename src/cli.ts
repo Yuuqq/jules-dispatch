@@ -23,7 +23,8 @@ import {
   waitForTailPoll,
   type TailCursor,
 } from './tail.js';
-import type { JulesActivity } from './types.js';
+import type { JulesActivity, DispatchResult } from './types.js';
+import type { PlannerConfig, PlanResult } from './planner.js';
 
 const program = new Command();
 
@@ -129,7 +130,7 @@ program
     }
     const { config, client } = getConfig();
 
-    let result;
+    let result: DispatchResult;
     if (taskFile === '-') {
       const content = readFileSync(0, 'utf8');
       const tasks = loadTasksFromString(content, opts.format);
@@ -246,7 +247,6 @@ program
       process.on('SIGINT', onSigint);
 
       try {
-        // eslint-disable-next-line no-constant-condition
         while (true) {
           await new Promise(resolve => setTimeout(resolve, interval));
           if (abort.signal.aborted) break;
@@ -613,7 +613,7 @@ program
           for (const a of newActs) {
             seen.add(a.id);
             if (isJson()) {
-              process.stdout.write(JSON.stringify({ event: 'activity', activity: a }) + '\n');
+              process.stdout.write(`${JSON.stringify({ event: 'activity', activity: a })}\n`);
             } else {
               console.log(formatTailActivity(a));
             }
@@ -624,13 +624,13 @@ program
           if (isTailSessionTerminal(state, tailCursor)) {
             const pr = session.outputs?.find(output => output.pullRequest)?.pullRequest;
             if (isJson()) {
-              process.stdout.write(JSON.stringify({
+              process.stdout.write(`${JSON.stringify({
                 event: 'ended',
                 state,
                 session: { id: session.id, title: session.title, url: session.url },
                 ...(lastFailure ? { failure: lastFailure } : {}),
                 ...(pr ? { pr } : {}),
-              }) + '\n');
+              })}\n`);
             } else {
               info(chalk.bold(`\nSession ended: ${state}`));
               if (lastFailure) console.error(chalk.red(`Failure: ${lastFailure}`));
@@ -646,7 +646,7 @@ program
             // In JSON mode the catch was previously a no-op, which made a
             // persistent API failure look like the command had hung. Emit
             // an error event so consumers can react / decide to stop.
-            process.stdout.write(JSON.stringify({ event: 'error', error: t.problem, code: t.code }) + '\n');
+            process.stdout.write(`${JSON.stringify({ event: 'error', error: t.problem, code: t.code })}\n`);
           } else {
             console.error(chalk.red(`Tail error: ${t.problem}`));
             console.error(chalk.dim(`  ${t.fix}`));
@@ -661,7 +661,7 @@ program
       }
       // Aborted via Ctrl+C — exit cleanly.
       if (isJson()) {
-        process.stdout.write(JSON.stringify({ event: 'interrupted' }) + '\n');
+        process.stdout.write(`${JSON.stringify({ event: 'interrupted' })}\n`);
       } else {
         info(chalk.dim('\nStopped.'));
       }
@@ -731,7 +731,7 @@ program
     let context = opts.context;
     if (opts.contextFile) context = readFileSync(resolve(opts.contextFile), 'utf8');
 
-    let plannerCfg;
+    let plannerCfg: PlannerConfig;
     try {
       plannerCfg = loadPlannerConfig({
         apiKeyOverride: programOpts.llmKey,
@@ -744,7 +744,7 @@ program
 
     info(chalk.dim(`Planning with ${plannerCfg.model}...\n`));
 
-    let result;
+    let result: PlanResult;
     try {
       result = await planTasks(plannerCfg, {
         description: desc,
@@ -819,7 +819,7 @@ program
     let context = opts.context;
     if (opts.contextFile) context = readFileSync(resolve(opts.contextFile), 'utf8');
 
-    let plannerCfg;
+    let plannerCfg: PlannerConfig;
     try {
       plannerCfg = loadPlannerConfig({
         apiKeyOverride: programOpts.llmKey,
@@ -832,7 +832,7 @@ program
 
     info(chalk.dim(`Planning with ${plannerCfg.model}...\n`));
 
-    let plan;
+    let plan: PlanResult;
     try {
       plan = await planTasks(plannerCfg, {
         description: desc,

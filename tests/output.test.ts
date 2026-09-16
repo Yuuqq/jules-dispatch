@@ -70,7 +70,7 @@ describe('output module', () => {
       const jsonObj = { foo: 'bar' };
       outputModule.emit(textFn, jsonObj);
       expect(textFn).not.toHaveBeenCalled();
-      expect(stdoutWriteSpy).toHaveBeenCalledWith(JSON.stringify(jsonObj) + '\n');
+      expect(stdoutWriteSpy).toHaveBeenCalledWith(`${JSON.stringify(jsonObj)}\n`);
     });
   });
 
@@ -95,7 +95,7 @@ describe('output module', () => {
           docsUrl: 'http://example.com'
         }
       };
-      expect(stdoutWriteSpy).toHaveBeenCalledWith(JSON.stringify(expectedPayload) + '\n');
+      expect(stdoutWriteSpy).toHaveBeenCalledWith(`${JSON.stringify(expectedPayload)}\n`);
     });
   });
 

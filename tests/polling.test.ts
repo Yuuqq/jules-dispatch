@@ -61,12 +61,6 @@ function successActivities(): { activities: JulesActivity[] } {
   return { activities: [] };
 }
 
-function failedActivities(): { activities: JulesActivity[] } {
-  return {
-    activities: [{ sessionFailed: { message: 'boom' } }] as unknown as JulesActivity[],
-  };
-}
-
 function mockClient() {
   return {
     getSession: vi.fn(),

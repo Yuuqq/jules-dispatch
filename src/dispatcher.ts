@@ -2,7 +2,7 @@ import { resolve } from 'node:path';
 import { writeFileSync, existsSync, mkdirSync, readdirSync, rmSync } from 'node:fs';
 import chalk from 'chalk';
 import type { JulesConfig, DispatchResult, TaskDefinition } from './types.js';
-import { JulesClient } from './client.js';
+import type { JulesClient } from './client.js';
 import { loadTask, loadTasksFromDir } from './config.js';
 import { isJson, emit, info } from './output.js';
 import { debug } from './log.js';

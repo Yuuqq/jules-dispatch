@@ -26,7 +26,7 @@ export function isJson(): boolean {
 
 export function emit(textFn: () => void, jsonObj: unknown): void {
   if (mode === 'json') {
-    process.stdout.write(JSON.stringify(jsonObj) + '\n');
+    process.stdout.write(`${JSON.stringify(jsonObj)}\n`);
   } else {
     textFn();
   }
@@ -37,7 +37,7 @@ export function emitError(message: string, code?: string, details?: unknown, con
     const payload: Record<string, unknown> = { code: code ?? 'ERROR', message, details };
     if (context?.hint) payload.hint = context.hint;
     if (context?.docsUrl) payload.docsUrl = context.docsUrl;
-    process.stdout.write(JSON.stringify({ error: payload }) + '\n');
+    process.stdout.write(`${JSON.stringify({ error: payload })}\n`);
   } else {
     console.error(chalk.red(`✗ ${message}`));
     if (details) console.error(chalk.dim(typeof details === 'string' ? details : JSON.stringify(details)));
