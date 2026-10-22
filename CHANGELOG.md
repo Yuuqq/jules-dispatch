@@ -4,6 +4,26 @@ All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-10-22
+
+### Changed
+
+- **MCP: the 7 deprecated tool aliases are no longer registered by default.** The default surface is now 8 tools (`jules_dispatch`, `jules_monitor`, `jules_interact`, `jules_list_sources`, `jules_list_sessions`, `jules_approve_plan`, `jules_send_message`, `jules_cancel_session`), cutting the `tools/list` payload from ~16.4 KB to ~8.4 KB (~2000 tokens per host request).
+  - Restore the old surface with `jules-dispatch mcp --legacy-tools` or `JULES_MCP_LEGACY_TOOLS=1`. The aliases themselves are unchanged and remain supported.
+  - `jules_dispatch_task`, `jules_dispatch_batch`, `jules_get_session`, `jules_list_activities`, `jules_get_plan`, `jules_status`, and `jules_wait_for_completion` are the affected names.
+- `dispatch`, `batch`, and `auto` now share one exit-code mapper instead of collapsing every failure to 1.
+
+### Fixed
+
+- Dispatch results now carry the translated error code, so auth failures exit `2` and validation failures exit `3` as documented. Previously a 401 during dispatch exited `1`. A missing source now exits `3` instead of `1`.
+- A timeout while reading a response body (server sends headers, then stalls) is reported as a network timeout and classified as `NETWORK_ERROR`. It previously surfaced as a raw `TimeoutError` translated to `UNKNOWN`, advising users to file an issue. The optional LLM planner had the same defect on completion bodies.
+- Retried requests now cancel the discarded response body before backing off, so rate-limited bursts no longer hold sockets out of the connection pool.
+- `jules_monitor` with `wait: true` no longer scans every session twice; the pre-wait summary that was immediately discarded has been removed.
+
+### Added
+
+- `tests/release-metadata.test.ts` fails CI when `package.json`, `server.json`, and `CHANGELOG.md` versions drift apart.
+
 ## [1.3.2] - 2026-08-13
 
 ### Fixed
