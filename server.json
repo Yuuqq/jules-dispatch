@@ -6,12 +6,12 @@
     "url": "https://github.com/Yuuqq/jules-dispatch",
     "source": "github"
   },
-  "version": "1.3.2",
+  "version": "1.4.0",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "@yuuqq/jules-dispatch",
-      "version": "1.3.2",
+      "version": "1.4.0",
       "transport": {
         "type": "stdio"
       },
