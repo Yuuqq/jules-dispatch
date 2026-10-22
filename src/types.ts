@@ -102,6 +102,8 @@ export interface DispatchResult {
   title: string;
   status: 'dispatched' | 'failed';
   error?: string;
+  /** Translated error code (e.g. AUTH_FAILED, NO_SOURCE) for exit-code mapping. */
+  code?: string;
 }
 
 export interface CollectResult {

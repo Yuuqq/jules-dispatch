@@ -82,6 +82,10 @@ export class JulesClient {
     );
     if (retryableResponse && retries > 0) {
       debug('retrying', { status: res.status, retriesLeft: retries - 1 });
+      // Release the socket for the discarded response before sleeping; an
+      // unread body keeps the connection checked out of the pool, which can
+      // exhaust it under a paced 50-worker dispatch.
+      await res.body?.cancel().catch(() => undefined);
       const retryAfter = res.headers.get('retry-after');
       const attempt = MAX_RETRIES - retries;
       const expBackoff = BASE_DELAY_MS * 2 ** attempt;
@@ -92,8 +96,22 @@ export class JulesClient {
       return this.request<T>(path, options, retries - 1);
     }
 
+    // The request signal covers the body as well as the headers: a server that
+    // sends headers and then stalls must surface as a timeout, not as a raw
+    // TimeoutError that error translation cannot classify.
+    const readBody = async (): Promise<string> => {
+      try {
+        return await res.text();
+      } catch (err) {
+        if (timeoutSignal.aborted || isTimeoutError(err)) {
+          throw new Error(`Jules API request timed out after ${this.requestTimeoutMs}ms at ${path}`);
+        }
+        throw err;
+      }
+    };
+
     if (!res.ok) {
-      const body = await res.text();
+      const body = await readBody();
       debug('error response', { status: res.status, body: body.slice(0, 300) });
       const err = new Error(`Jules API ${res.status} at ${path}: ${body.slice(0, 400)}`) as Error & { status?: number };
       err.status = res.status;
@@ -101,7 +119,7 @@ export class JulesClient {
     }
 
     if (res.status === 204) return undefined as T;
-    const text = await res.text();
+    const text = await readBody();
     if (!text) return undefined as T;
     try {
       return JSON.parse(text) as T;
@@ -292,6 +310,14 @@ function normalizeRequestTimeout(value: number | undefined, fallback: number): n
 
 function isIdempotentMethod(method: string): boolean {
   return ['GET', 'HEAD', 'OPTIONS', 'PUT', 'DELETE'].includes(method);
+}
+
+/** AbortSignal.timeout rejects with a DOMException named TimeoutError. */
+function isTimeoutError(err: unknown): boolean {
+  return err instanceof Error && (
+    err.name === 'TimeoutError' ||
+    /aborted due to timeout/i.test(err.message)
+  );
 }
 
 function guardPageToken(token: string | undefined, seen: Set<string>, resource: string): void {

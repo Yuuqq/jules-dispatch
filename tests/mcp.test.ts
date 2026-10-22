@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
-import { createMcpServer } from '../src/mcp.js';
+import { createMcpServer, isLegacyToolsEnabled } from '../src/mcp.js';
 import type { JulesConfig } from '../src/types.js';
 import type { JulesClient } from '../src/client.js';
 
@@ -19,14 +19,14 @@ vi.mock('../src/dispatcher.js', () => ({
 
 import { dispatchTaskDefinition } from '../src/dispatcher.js';
 
-async function createTestServer(mockClient: JulesClient) {
+async function createTestServer(mockClient: JulesClient, legacyTools = true) {
   const config: JulesConfig = {
     apiKey: 'test-key',
     defaultSource: 'sources/github/owner/repo',
     defaultBranch: 'main',
     autoMode: 'AUTO_CREATE_PR',
   };
-  const server = createMcpServer(config, mockClient);
+  const server = createMcpServer(config, mockClient, { legacyTools });
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
   // Server must connect first so it can handle the client's initialize request
   await server.connect(serverTransport);
@@ -256,17 +256,128 @@ describe('planner tool registration', () => {
   });
 });
 
-describe('tool annotations', () => {
-  it('marks external tools as open-world and wait-for-completion as read-only', async () => {
-    const server = await createTestServer(createMockClient());
+describe('legacy tool env switch', () => {
+  afterEach(() => {
+    delete process.env.JULES_MCP_LEGACY_TOOLS;
+  });
+
+  it.each(['1', 'true', 'YES', ' yes '])('enables legacy tools for %j', (value) => {
+    process.env.JULES_MCP_LEGACY_TOOLS = value;
+    expect(isLegacyToolsEnabled()).toBe(true);
+  });
+
+  it.each(['', '0', 'false', 'no'])('leaves legacy tools disabled for %j', (value) => {
+    process.env.JULES_MCP_LEGACY_TOOLS = value;
+    expect(isLegacyToolsEnabled()).toBe(false);
+  });
+
+  it('registers legacy tools from the environment when no option is passed', async () => {
+    process.env.JULES_MCP_LEGACY_TOOLS = '1';
+    const config: JulesConfig = {
+      apiKey: 'test-key',
+      defaultSource: 'sources/github/owner/repo',
+      defaultBranch: 'main',
+      autoMode: 'AUTO_CREATE_PR',
+    };
+    const server = createMcpServer(config, createMockClient());
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    await server.connect(serverTransport);
+    const client = new Client({ name: 'test', version: '1.0.0' });
+    await client.connect(clientTransport);
+
+    try {
+      const names = (await client.listTools()).tools.map(tool => tool.name);
+      expect(names).toHaveLength(15);
+      expect(names).toContain('jules_wait_for_completion');
+    } finally {
+      await client.close();
+      await server.close();
+    }
+  });
+
+  it('lets an explicit option override the environment', async () => {
+    process.env.JULES_MCP_LEGACY_TOOLS = '1';
+    const server = await createTestServer(createMockClient(), false);
+
+    try {
+      expect((await server.client.listTools()).tools).toHaveLength(8);
+    } finally {
+      await server.cleanup();
+    }
+  });
+});
+
+describe('tool surface', () => {
+  it('registers exactly the 8 core tools by default', async () => {
+    const server = await createTestServer(createMockClient(), false);
 
     try {
       const { tools } = await server.client.listTools();
-      expect(tools.length).toBe(15);
+      expect(tools.map(tool => tool.name).sort()).toEqual([
+        'jules_approve_plan',
+        'jules_cancel_session',
+        'jules_dispatch',
+        'jules_interact',
+        'jules_list_sessions',
+        'jules_list_sources',
+        'jules_monitor',
+        'jules_send_message',
+      ]);
       expect(tools.every(tool => tool.annotations?.openWorldHint === true)).toBe(true);
+    } finally {
+      await server.cleanup();
+    }
+  });
 
-      const waitTool = tools.find(tool => tool.name === 'jules_wait_for_completion');
-      expect(waitTool?.annotations).toMatchObject({
+  it('omits deprecated aliases unless legacy tools are enabled', async () => {
+    const modern = await createTestServer(createMockClient(), false);
+    const legacy = await createTestServer(createMockClient(), true);
+
+    try {
+      const modernNames = (await modern.client.listTools()).tools.map(tool => tool.name);
+      const legacyNames = (await legacy.client.listTools()).tools.map(tool => tool.name);
+
+      expect(modernNames).not.toContain('jules_status');
+      expect(modernNames).not.toContain('jules_wait_for_completion');
+      expect(legacyNames).toContain('jules_status');
+      expect(legacyNames).toHaveLength(15);
+    } finally {
+      await modern.cleanup();
+      await legacy.cleanup();
+    }
+  });
+
+  it('does not reference hidden aliases from the core tool descriptions', async () => {
+    const server = await createTestServer(createMockClient(), false);
+    const hidden = [
+      'jules_dispatch_task',
+      'jules_dispatch_batch',
+      'jules_get_session',
+      'jules_status',
+      'jules_list_activities',
+      'jules_get_plan',
+      'jules_wait_for_completion',
+    ];
+
+    try {
+      const { tools } = await server.client.listTools();
+      for (const tool of tools) {
+        for (const alias of hidden) {
+          expect(tool.description).not.toContain(alias);
+        }
+      }
+    } finally {
+      await server.cleanup();
+    }
+  });
+
+  it('marks monitor as read-only', async () => {
+    const server = await createTestServer(createMockClient(), false);
+
+    try {
+      const { tools } = await server.client.listTools();
+      const monitor = tools.find(tool => tool.name === 'jules_monitor');
+      expect(monitor?.annotations).toMatchObject({
         readOnlyHint: true,
         destructiveHint: false,
         idempotentHint: true,
@@ -377,6 +488,29 @@ describe('jules_monitor', () => {
     expect(isError).toBeFalsy();
     expect(data.data.sessions).toHaveLength(25);
     expect(maxInFlight).toBe(10);
+  });
+
+  it('summarizes sessions once when wait=true instead of scanning twice', async () => {
+    vi.mocked(mockClient.getSession).mockResolvedValue({
+      id: 'sess-1',
+      title: 'Test Session',
+      url: 'https://jules.google/sess-1',
+      state: 'COMPLETED',
+      sourceContext: { source: 'sources/github/owner/repo', githubRepoContext: { startingBranch: 'main' } },
+      outputs: [],
+    } as Awaited<ReturnType<JulesClient['getSession']>>);
+
+    const { data } = await callTool(server.client, 'jules_monitor', {
+      sessionIds: ['sess-1'],
+      wait: true,
+      timeoutMs: 1000,
+      intervalMs: 1000,
+    });
+
+    expect(data.data.sessions[0].status).toBe('completed');
+    // One getSession for the poll, one for the final summary — a discarded
+    // pre-wait summary would double this.
+    expect(vi.mocked(mockClient.getSession)).toHaveBeenCalledTimes(2);
   });
 
   it('returns timedOut=true when timeout expires before terminal state', async () => {

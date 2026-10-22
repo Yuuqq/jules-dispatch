@@ -103,7 +103,7 @@ Dispatch all 6 task(s)? [y/N]
 
 ## ✨ 1.1 版本新特性
 
-- 🧰 **MCP 服务器**（`jules-dispatch mcp`）— 始终注册 15 个工具；配置 LLM key 后再增加 2 个可选规划工具
+- 🧰 **MCP 服务器**（`jules-dispatch mcp`）— 默认注册 8 个工具；配置 LLM key 后增加 2 个可选规划工具，另有 7 个需显式开启的旧版别名
 - 🤖 **`--json` 模式** — 每个命令输出机器可读的结构化数据，便于 AI agent 和 shell 管道使用
 - ✅ **计划审批工作流** — `plan`、`approve` 命令 + 任务级 `requirePlanApproval: true` 选项
 - 📡 **实时追踪** — `tail <id>` 流式打印活动事件
@@ -306,7 +306,7 @@ cp -R skills/jules-dispatch "${CODEX_HOME:-$HOME/.codex}/skills/jules-dispatch"
 
 ### 暴露的 MCP 工具
 
-服务器始终注册 15 个工具：3 个推荐的聚合工具、5 个实用工具和 7 个已弃用别名。配置 LLM key 后会额外注册 2 个规划工具。
+服务器默认注册 8 个工具：3 个推荐的聚合工具和 5 个实用工具。配置 LLM key 后会额外注册 2 个规划工具。7 个已弃用别名可通过 `--legacy-tools` / `JULES_MCP_LEGACY_TOOLS=1` 开启，默认不注册，因此不占用上下文。
 
 #### 聚合工具（推荐）
 
@@ -339,9 +339,16 @@ cp -R skills/jules-dispatch "${CODEX_HOME:-$HOME/.codex}/skills/jules-dispatch"
 | `jules_plan_tasks` | 用 OpenAI 兼容模型把高层意图展开成任务草稿 |
 | `jules_auto` | 规划后直接并发派发 |
 
-#### 已弃用别名
+#### 已弃用别名（需显式开启）
 
-`jules_dispatch_task`、`jules_dispatch_batch`、`jules_get_session`、`jules_list_activities`、`jules_get_plan`、`jules_status`、`jules_wait_for_completion` 仍可使用，但新工作流应优先使用聚合工具。
+`jules_dispatch_task`、`jules_dispatch_batch`、`jules_get_session`、`jules_list_activities`、`jules_get_plan`、`jules_status`、`jules_wait_for_completion` 仍可使用，但默认**不会注册**。任选一种方式开启：
+
+```bash
+jules-dispatch mcp --legacy-tools
+JULES_MCP_LEGACY_TOOLS=1 jules-dispatch mcp
+```
+
+新工作流应优先使用聚合工具。
 
 所有工具都返回结构化 JSON。成功响应为 `{success: true, data: ...}`；错误以 MCP `isError` 形式返回，并包含结构化错误和恢复提示。
 
@@ -590,7 +597,7 @@ jules-dispatch/
 │   ├── dispatcher.ts   任务派发逻辑
 │   ├── collector.ts    状态轮询与等待
 │   ├── output.ts       文本 / JSON 输出模式
-│   ├── mcp.ts          MCP 服务器（15 个工具 + 2 个可选规划工具）
+│   ├── mcp.ts          MCP 服务器（8 个工具 + 2 个可选规划工具 + 7 个需显式开启的别名）
 │   ├── tail.ts         有界、游标感知的活动追踪
 │   └── types.ts        TypeScript 类型定义
 ├── tasks/              你的任务 YAML 放这里

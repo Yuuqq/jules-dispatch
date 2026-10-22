@@ -208,7 +208,7 @@ If `jules_monitor` returns an `actionRequired` bucket instead, inspect each list
 
 ## 4. MCP Tools Reference
 
-The server always registers 15 tools: 3 recommended consolidated tools, 5 utility tools, and 7 deprecated aliases. When an LLM key is configured, it also registers 2 optional planning tools.
+The server registers 8 tools by default: 3 recommended consolidated tools and 5 utility tools. When an LLM key is configured, it also registers 2 optional planning tools. Seven deprecated aliases are available behind `--legacy-tools` / `JULES_MCP_LEGACY_TOOLS=1` but stay unregistered by default.
 
 ### Core tools (use these)
 

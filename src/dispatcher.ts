@@ -4,7 +4,7 @@ import chalk from 'chalk';
 import type { JulesConfig, DispatchResult, TaskDefinition } from './types.js';
 import type { JulesClient } from './client.js';
 import { loadTask, loadTasksFromDir } from './config.js';
-import { isJson, emit, info } from './output.js';
+import { ExitCode, exitCodeForErrorCode, isJson, emit, info } from './output.js';
 import { debug } from './log.js';
 import { translateError } from './errors.js';
 import { runBatches, validateBatchSize, validatePaceMs } from './batch.js';
@@ -43,6 +43,7 @@ export async function dispatchTaskDefinition(
       title: task.title,
       status: 'failed',
       error: 'No source configured. Set JULES_DEFAULT_SOURCE in .env or add "source" to the task file.',
+      code: 'NO_SOURCE',
     };
   }
 
@@ -65,6 +66,7 @@ export async function dispatchTaskDefinition(
       status: 'dispatched',
     };
   } catch (err) {
+    const translated = translateError(err);
     return {
       taskFile,
       taskTitle: task.title,
@@ -72,9 +74,27 @@ export async function dispatchTaskDefinition(
       sessionUrl: '',
       title: task.title,
       status: 'failed',
-      error: translateError(err).problem,
+      error: translated.problem,
+      code: translated.code,
     };
   }
+}
+
+/**
+ * Map a dispatch run to the documented exit-code contract:
+ *   0 all dispatched · 4 partial · 2 auth · 3 validation-only · 1 otherwise
+ */
+export function dispatchExitCode(results: DispatchResult[]): number {
+  const failed = results.filter(result => result.status === 'failed');
+  if (failed.length === 0) return ExitCode.OK;
+  if (failed.length < results.length) return ExitCode.PARTIAL;
+  if (failed.some(result => exitCodeForErrorCode(result.code) === ExitCode.AUTH)) {
+    return ExitCode.AUTH;
+  }
+  if (failed.every(result => exitCodeForErrorCode(result.code) === ExitCode.VALIDATION)) {
+    return ExitCode.VALIDATION;
+  }
+  return ExitCode.GENERIC;
 }
 
 export interface DispatchBatchOptions {

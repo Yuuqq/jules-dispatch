@@ -106,7 +106,7 @@ Configure via env vars (`LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL`) or per-invoc
 
 ## ✨ What's New in 1.1
 
-- 🧰 **MCP server** (`jules-dispatch mcp`) — 15 always-registered tools, plus 2 optional planning tools when an LLM key is configured
+- 🧰 **MCP server** (`jules-dispatch mcp`) — 8 always-registered tools, plus 2 optional planning tools when an LLM key is configured, and 7 opt-in legacy aliases
 - 🤖 **`--json` mode** — machine-readable output on every command for AI agents and shell pipelines
 - ✅ **Plan approval workflow** — `plan`, `approve` commands + `requirePlanApproval: true` task option
 - 📡 **Live tailing** — `tail <id>` streams activity events as they happen
@@ -311,7 +311,7 @@ For Agent Skills-compatible hosts that use a shared skills directory, copy the s
 
 #### Consolidated tools (recommended)
 
-The server always registers 15 tools: 3 recommended consolidated tools, 5 utility tools, and 7 deprecated aliases. Two additional planning tools are registered when an LLM key is configured.
+The server registers 8 tools by default: 3 recommended consolidated tools and 5 utility tools. Two additional planning tools are registered when an LLM key is configured. Seven deprecated aliases are available behind `--legacy-tools` / `JULES_MCP_LEGACY_TOOLS=1` but are not registered by default, so they cost no context unless you need them.
 
 ##### `jules_dispatch` — Create one or more sessions
 
@@ -413,9 +413,16 @@ Errors return:
 }
 ```
 
-#### Legacy tools (deprecated aliases)
+#### Legacy tools (deprecated aliases, opt-in)
 
-`jules_dispatch_task`, `jules_dispatch_batch`, `jules_get_session`, `jules_list_activities`, `jules_get_plan`, `jules_status`, and `jules_wait_for_completion` remain functional for compatibility. New integrations should use the consolidated tools.
+`jules_dispatch_task`, `jules_dispatch_batch`, `jules_get_session`, `jules_list_activities`, `jules_get_plan`, `jules_status`, and `jules_wait_for_completion` remain functional for compatibility but are **not registered by default**. Enable them with either:
+
+```bash
+jules-dispatch mcp --legacy-tools
+JULES_MCP_LEGACY_TOOLS=1 jules-dispatch mcp
+```
+
+New integrations should use the consolidated tools.
 
 ---
 
@@ -706,7 +713,7 @@ jules-dispatch/
 │   ├── output.ts       Text vs JSON output mode, color detection
 │   ├── init.ts         Interactive init wizard
 │   ├── doctor.ts       Environment validation (doctor command)
-│   ├── mcp.ts          MCP server (15 tools + 2 optional planner tools)
+│   ├── mcp.ts          MCP server (8 tools + 2 optional planner tools + 7 opt-in aliases)
 │   ├── mcp-helpers.ts  MCP response helpers (ok/fail/recovery hints)
 │   ├── polling.ts      Shared poll-with-callback engine
 │   ├── tail.ts         Bounded, cursor-aware activity tailing

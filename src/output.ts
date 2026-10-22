@@ -66,3 +66,12 @@ export const ExitCode = {
   PARTIAL: 4,
   TIMEOUT: 5,
 } as const;
+
+/** Map a translated error code to the documented CLI exit-code contract. */
+export function exitCodeForErrorCode(code: string | undefined): number {
+  if (code === 'AUTH_FAILED' || code === 'AUTH_MISSING') return ExitCode.AUTH;
+  if (code === 'VALIDATION' || code === 'INVALID_REQUEST' || code === 'NO_SOURCE') {
+    return ExitCode.VALIDATION;
+  }
+  return ExitCode.GENERIC;
+}

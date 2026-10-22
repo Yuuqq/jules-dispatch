@@ -196,6 +196,24 @@ describe('CLI safety and structured failures', () => {
     }]);
   });
 
+  it('fails a dispatch with exit code 3 when no source is configured', async () => {
+    const dir = makeTempDir();
+    const taskFile = join(dir, 'task.yaml');
+    writeFileSync(taskFile, 'title: No source\nprompt: Do work\n');
+    const env = { ...cleanEnv(), JULES_API_KEY: 'jules-key' };
+
+    const result = await runCli(
+      ['--json', '--project', dir, 'dispatch', taskFile],
+      { env },
+    );
+
+    expect(result.code).toBe(3);
+    expect(parseJsonLines(result.stdout)).toEqual([expect.objectContaining({
+      status: 'failed',
+      code: 'NO_SOURCE',
+    })]);
+  });
+
   it('warns when stdin contains multiple tasks and dispatches only the first', async () => {
     const dir = makeTempDir();
     const env = { ...cleanEnv(), JULES_API_KEY: 'jules-key' };
@@ -213,7 +231,7 @@ describe('CLI safety and structured failures', () => {
     );
 
     // No source configured anywhere, so the dispatch fails fast offline.
-    expect(result.code).toBe(1);
+    expect(result.code).toBe(3);
     expect(result.stderr).toContain('only the first will be dispatched');
     expect(parseJsonLines(result.stdout)).toEqual([expect.objectContaining({
       taskTitle: 'First task',

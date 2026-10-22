@@ -19,12 +19,15 @@ export interface McpServerOptions {
   llmApiKeyOverride?: string;
   llmBaseUrlOverride?: string;
   llmModelOverride?: string;
+  /** Also register the 7 deprecated aliases (default: JULES_MCP_LEGACY_TOOLS). */
+  legacyTools?: boolean;
 }
 
 export interface CreateMcpServerOptions {
   llmApiKeyOverride?: string;
   llmBaseUrlOverride?: string;
   llmModelOverride?: string;
+  legacyTools?: boolean;
 }
 
 type ToolAnnotations = {
@@ -87,6 +90,12 @@ export function createMcpServer(
     server.registerTool(name, { description, inputSchema, annotations }, wrapped as any);
   };
 
+  // Deprecated aliases are opt-in: every registered tool costs context on
+  // every host request, and the consolidated tools cover the same ground.
+  // JULES_MCP_LEGACY_TOOLS=1 (or --legacy-tools) restores the old surface.
+  const legacyTools = options.legacyTools ?? isLegacyToolsEnabled();
+  const legacyTool: typeof tool = legacyTools ? tool : () => undefined;
+
   const readOnlyAnnotations: ToolAnnotations = {
     readOnlyHint: true,
     destructiveHint: false,
@@ -116,7 +125,7 @@ export function createMcpServer(
 
   tool(
     'jules_list_sources',
-    'List all GitHub repositories connected to Jules.\n\nUse this to discover available source identifiers before dispatching or planning Jules work.\n\nReturns: { success: true, data: { sources: [{ id, name, githubRepo? }] } }\n\nSee also: jules_dispatch_task (uses source identifiers), jules_dispatch_batch, jules_plan_tasks',
+    'List all GitHub repositories connected to Jules.\n\nUse this to discover available source identifiers before dispatching or planning Jules work.\n\nReturns: { success: true, data: { sources: [{ id, name, githubRepo? }] } }\n\nSee also: jules_dispatch (uses source identifiers), jules_list_sessions, jules_plan_tasks',
     {},
     async () => {
       const sources = [];
@@ -128,7 +137,7 @@ export function createMcpServer(
 
   // ---------- Sessions: create / dispatch ----------
 
-  tool(
+  legacyTool(
     'jules_dispatch_task',
     '[DEPRECATED: Use jules_dispatch instead.] Dispatch a single self-contained task to Jules and create one session.\n\nUse this when an AI agent has one concrete coding task and can rely on explicit source/branch values or configured defaults.\n\nReturns: { success: true, data: { taskFile, taskTitle, sessionId, sessionUrl, title, status, error? } }\n\nSee also: jules_list_sources (find source identifiers), jules_get_session, jules_wait_for_completion, jules_dispatch_batch',
     {
@@ -154,7 +163,7 @@ export function createMcpServer(
     mutationAnnotations,
   );
 
-  tool(
+  legacyTool(
     'jules_dispatch_batch',
     '[DEPRECATED: Use jules_dispatch instead.] Dispatch multiple independent tasks to Jules through a continuously replenished worker pool with optional global launch pacing.\n\nUse this when an AI agent has decomposed work into separate task definitions or has a YAML/JSON task payload ready to fan out.\n\nReturns: { success: true, data: { summary: { total, dispatched, failed }, results: [{ taskFile, taskTitle, sessionId, sessionUrl, title, status, error? }] } }\n\nSee also: jules_list_sources (find source identifiers), jules_dispatch_task, jules_wait_for_completion, jules_plan_tasks',
     {
@@ -190,7 +199,7 @@ export function createMcpServer(
 
   // ---------- Sessions: read ----------
 
-  tool(
+  legacyTool(
     'jules_get_session',
     '[DEPRECATED: Use jules_interact instead.] Fetch full details for a single Jules session, including state, source context, and created PR output.\n\nUse this when an AI agent needs the authoritative session record instead of a compact status summary.\n\nReturns: { success: true, data: { name, id, title, prompt, url, sourceContext, automationMode?, outputs?, createTime?, state? } }\n\nSee also: jules_status (compact summary), jules_list_activities, jules_get_plan, jules_list_sessions',
     { sessionId: nonEmptyString },
@@ -200,7 +209,7 @@ export function createMcpServer(
 
   tool(
     'jules_list_sessions',
-    'List recent Jules sessions with optional pagination.\n\nUse this when an AI agent needs to discover recent sessions before selecting IDs for inspection or status checks.\n\nReturns: { success: true, data: { sessions: [{ name, id, title, url, state?, createTime? }], nextPageToken? } }\n\nSee also: jules_get_session, jules_status, jules_wait_for_completion',
+    'List recent Jules sessions with optional pagination.\n\nUse this when an AI agent needs to discover recent sessions before selecting IDs for inspection or status checks.\n\nReturns: { success: true, data: { sessions: [{ name, id, title, url, state?, createTime? }], nextPageToken? } }\n\nSee also: jules_monitor (status for known IDs), jules_interact (full session record)',
     {
       pageSize: z.number().int().min(1).max(100).optional().default(50),
       pageToken: nonEmptyString.optional(),
@@ -209,7 +218,7 @@ export function createMcpServer(
     readOnlyAnnotations,
   );
 
-  tool(
+  legacyTool(
     'jules_status',
     '[DEPRECATED: Use jules_monitor instead.] Summarize the state, derived status, activity count, and PR metadata for one or more sessions.\n\nUse this when an AI agent needs a compact progress view for known session IDs, including sessions outside the recent page.\n\nReturns: { success: true, data: { results: [{ sessionId, title?, state?, status?, prUrl?, prTitle?, activities?, error? }] } }\n\nSee also: jules_get_session (full record), jules_list_activities, jules_wait_for_completion',
     { sessionIds: z.array(nonEmptyString).min(1) },
@@ -226,7 +235,7 @@ export function createMcpServer(
 
   // ---------- Activities ----------
 
-  tool(
+  legacyTool(
     'jules_list_activities',
     '[DEPRECATED: Use jules_interact instead.] List the activity log for a Jules session, including plans, progress updates, messages, and terminal events.\n\nUse this when an AI agent needs detailed execution history or must inspect why a session is waiting, failed, or completed.\n\nReturns: { success: true, data: { activities: [{ id, createTime, originator, planGenerated?, progressUpdated?, message?, sessionCompleted?, sessionFailed? }], nextPageToken? } }\n\nSee also: jules_get_session, jules_status, jules_get_plan',
     {
@@ -240,7 +249,7 @@ export function createMcpServer(
 
   // ---------- Plan ----------
 
-  tool(
+  legacyTool(
     'jules_get_plan',
     '[DEPRECATED: Use jules_interact instead.] Get the most recently generated plan for a Jules session, or null if no plan exists yet.\n\nUse this before approving a plan-gated session or when an AI agent needs to review planned steps without scanning all activities.\n\nReturns: { success: true, data: { plan: { id, steps: [{ id, title, description?, index? }] } | null } }\n\nSee also: jules_approve_plan, jules_list_activities, jules_get_session',
     { sessionId: nonEmptyString },
@@ -250,7 +259,7 @@ export function createMcpServer(
 
   tool(
     'jules_approve_plan',
-    'Approve the current plan for a Jules session that is awaiting plan approval.\n\nUse this only after an AI agent has reviewed the latest plan and decided the session should continue executing.\n\nReturns: { success: true, data: { sessionId } }\n\nSee also: jules_get_plan (review before approving), jules_get_session, jules_wait_for_completion',
+    'Approve the current plan for a Jules session that is awaiting plan approval.\n\nUse this only after an AI agent has reviewed the latest plan and decided the session should continue executing.\n\nReturns: { success: true, data: { sessionId } }\n\nSee also: jules_interact (review the latest plan before approving), jules_monitor',
     { sessionId: nonEmptyString },
     async (args) => {
       await client.approvePlan(args.sessionId);
@@ -263,7 +272,7 @@ export function createMcpServer(
 
   tool(
     'jules_send_message',
-    'Send a follow-up message to a running Jules session.\n\nUse this when an AI agent needs to unblock a session, answer a question, clarify requirements, or provide revised instructions.\n\nReturns: { success: true, data: { sessionId } }\n\nSee also: jules_get_session, jules_list_activities, jules_cancel_session',
+    'Send a follow-up message to a running Jules session.\n\nUse this when an AI agent needs to unblock a session, answer a question, clarify requirements, or provide revised instructions.\n\nReturns: { success: true, data: { sessionId } }\n\nSee also: jules_interact (inspect the conversation), jules_cancel_session',
     { sessionId: nonEmptyString, text: nonEmptyString },
     async (args) => {
       await client.sendMessage(args.sessionId, args.text);
@@ -274,7 +283,7 @@ export function createMcpServer(
 
   tool(
     'jules_cancel_session',
-    'Cancel a running Jules session.\n\nUse this when an AI agent determines a session is no longer wanted, is blocked beyond recovery, or should be stopped before it makes further changes.\n\nReturns: { success: true, data: { sessionId } }\n\nSee also: jules_status, jules_get_session, jules_dispatch_task',
+    'Cancel a running Jules session.\n\nUse this when an AI agent determines a session is no longer wanted, is blocked beyond recovery, or should be stopped before it makes further changes.\n\nReturns: { success: true, data: { sessionId } }\n\nSee also: jules_monitor (check before cancelling), jules_dispatch (start replacement work)',
     { sessionId: nonEmptyString },
     async (args) => {
       await client.cancelSession(args.sessionId);
@@ -285,7 +294,7 @@ export function createMcpServer(
 
   // ---------- Wait ----------
 
-  tool(
+  legacyTool(
     'jules_wait_for_completion',
     '[DEPRECATED: Use jules_monitor instead.] Poll one or more Jules sessions until every session reaches a terminal status, a session requires action, or the timeout expires. Sessions that cannot be polled at all (e.g. unknown IDs) are reported in the errored bucket while the rest keep polling.\n\nUse this after dispatching work when an AI agent needs to coordinate follow-up actions around completed, failed, cancelled, plan approval, user feedback, paused, errored, or still-running sessions.\n\nReturns: { success: true, data: { completed, failed, cancelled, awaitingPlan, awaitingUserFeedback, paused, actionRequired, errored, errors: [{ sessionId, message }], stillRunning, timedOut } }\n\nSee also: jules_dispatch_task, jules_dispatch_batch, jules_status, jules_list_activities',
     {
@@ -370,7 +379,7 @@ export function createMcpServer(
 
   tool(
     'jules_monitor',
-    'Monitor one or more Jules sessions with optional waiting until terminal or action-required state. Sessions that cannot be polled at all (e.g. unknown IDs) are reported in the errored bucket while the rest keep polling.\n\nUse this for consolidated status checks, or set wait=true after dispatching when an AI agent needs completed/failed/cancelled/action-required/errored/still-running buckets before the next orchestration step.\n\nReturns without wait: { success: true, data: { sessions: [{ sessionId, title, state, status, prUrl?, lastActivity? }] } }\n\nReturns with wait: { success: true, data: { sessions, wait: { completed, failed, cancelled, awaitingPlan, awaitingUserFeedback, paused, actionRequired, errored, errors: [{ sessionId, message }], stillRunning, timedOut } } }\n\nSee also: jules_dispatch (create sessions), jules_interact (inspect one session in full context), jules_wait_for_completion (wait-only legacy helper)',
+    'Monitor one or more Jules sessions with optional waiting until terminal or action-required state. Sessions that cannot be polled at all (e.g. unknown IDs) are reported in the errored bucket while the rest keep polling.\n\nUse this for consolidated status checks, or set wait=true after dispatching when an AI agent needs completed/failed/cancelled/action-required/errored/still-running buckets before the next orchestration step.\n\nReturns without wait: { success: true, data: { sessions: [{ sessionId, title, state, status, prUrl?, lastActivity? }] } }\n\nReturns with wait: { success: true, data: { sessions, wait: { completed, failed, cancelled, awaitingPlan, awaitingUserFeedback, paused, actionRequired, errored, errors: [{ sessionId, message }], stillRunning, timedOut } } }\n\nSee also: jules_dispatch (create sessions), jules_interact (inspect one session in full context), jules_list_sessions (discover recent IDs)',
     {
       sessionIds: z.array(nonEmptyString).min(1),
       wait: z.boolean().optional().default(false),
@@ -380,12 +389,13 @@ export function createMcpServer(
       failFast: z.boolean().optional().default(false),
     },
     async (args) => {
-      let sessions = await runBatches(
+      const summarize = () => runBatches(
         args.sessionIds as string[],
         10,
         id => summarizeSession(client, id),
       );
-      if (!(args.wait ?? false)) return ok({ sessions });
+
+      if (!(args.wait ?? false)) return ok({ sessions: await summarize() });
 
       const waitResult = await pollSessions(
         client,
@@ -393,15 +403,11 @@ export function createMcpServer(
         { interval: args.intervalMs, timeout: args.timeoutMs, failFast: args.failFast },
       );
 
-      // Re-summarize all sessions after wait completes.
-      sessions = await runBatches(
-        args.sessionIds as string[],
-        10,
-        id => summarizeSession(client, id),
-      );
-
+      // Summarize once, after waiting. A pre-wait snapshot would be stale by
+      // definition and was previously discarded — scanning it first only
+      // doubled the API traffic for every wait call.
       return ok({
-        sessions,
+        sessions: await summarize(),
         wait: waitResult,
       });
     },
@@ -470,7 +476,7 @@ export function createMcpServer(
   function registerPlannerTools(): void {
     tool(
       'jules_plan_tasks',
-      'Expand a high-level intent into independent, parallelizable Jules task definitions without dispatching them.\n\nUse this optional planner when an AI agent needs an LLM-assisted task breakdown to review or pass into jules_dispatch_batch later.\n\nReturns: { success: true, data: { model, rationale?, tasks: [{ title, prompt, source?, branch?, autoMode?, requirePlanApproval? }], usage? } }\n\nSee also: jules_dispatch_batch (dispatch planned tasks), jules_auto, jules_list_sources',
+      'Expand a high-level intent into independent, parallelizable Jules task definitions without dispatching them.\n\nUse this optional planner when an AI agent needs an LLM-assisted task breakdown to review or pass into jules_dispatch later.\n\nReturns: { success: true, data: { model, rationale?, tasks: [{ title, prompt, source?, branch?, autoMode?, requirePlanApproval? }], usage? } }\n\nSee also: jules_dispatch (dispatch planned tasks), jules_auto, jules_list_sources',
       {
         description: nonEmptyString.describe('High-level intent, e.g. "migrate all Express routes to Fastify and add tests"'),
         maxTasks: z.number().int().min(1).max(50).optional().default(8),
@@ -499,7 +505,7 @@ export function createMcpServer(
 
     tool(
       'jules_auto',
-      'Plan a high-level intent with an OpenAI-compatible LLM and dispatch the resulting Jules tasks in one call.\n\nUse this optional one-shot fan-out tool when an AI agent is ready to create sessions immediately instead of reviewing planned tasks first. Dispatch uses the same bounded worker pool and optional global launch pacing as jules_dispatch.\n\nReturns: { success: true, data: { plan: { model, rationale?, tasks, usage? }, summary: { total, dispatched, failed }, results: [{ taskFile, taskTitle, sessionId, sessionUrl, title, status, error? }] } }\n\nSee also: jules_plan_tasks (plan without dispatch), jules_dispatch_batch, jules_wait_for_completion',
+      'Plan a high-level intent with an OpenAI-compatible LLM and dispatch the resulting Jules tasks in one call.\n\nUse this optional one-shot fan-out tool when an AI agent is ready to create sessions immediately instead of reviewing planned tasks first. Dispatch uses the same bounded worker pool and optional global launch pacing as jules_dispatch.\n\nReturns: { success: true, data: { plan: { model, rationale?, tasks, usage? }, summary: { total, dispatched, failed }, results: [{ taskFile, taskTitle, sessionId, sessionUrl, title, status, error? }] } }\n\nSee also: jules_plan_tasks (plan without dispatch), jules_monitor (wait for completion)',
       {
         description: nonEmptyString,
         maxTasks: z.number().int().min(1).max(50).optional().default(8),
@@ -557,6 +563,12 @@ export async function runMcpServer(options: McpServerOptions): Promise<void> {
     llmApiKeyOverride: options.llmApiKeyOverride,
     llmBaseUrlOverride: options.llmBaseUrlOverride,
     llmModelOverride: options.llmModelOverride,
+    legacyTools: options.legacyTools,
   });
   await server.connect(new StdioServerTransport());
+}
+
+/** Truthy values for JULES_MCP_LEGACY_TOOLS. Empty/unset means disabled. */
+export function isLegacyToolsEnabled(): boolean {
+  return /^(1|true|yes)$/i.test((process.env.JULES_MCP_LEGACY_TOOLS ?? '').trim());
 }

@@ -6,9 +6,17 @@ import { readFileSync } from 'node:fs';
 import chalk from 'chalk';
 import { loadConfig, loadProjectEnv, loadTasksFromString } from './config.js';
 import { JulesClient } from './client.js';
-import { dispatchTask, dispatchBatch, dispatchTaskDefinition } from './dispatcher.js';
+import { dispatchExitCode, dispatchTask, dispatchBatch, dispatchTaskDefinition } from './dispatcher.js';
 import { collectStatus, waitForCompletion, type CachedActivityState } from './collector.js';
-import { setOutputMode, isJson, emit, emitError, info, ExitCode } from './output.js';
+import {
+  setOutputMode,
+  isJson,
+  emit,
+  emitError,
+  exitCodeForErrorCode,
+  info,
+  ExitCode,
+} from './output.js';
 import { setVerbose } from './log.js';
 import { translateError, type TranslatedError } from './errors.js';
 import { runBatches } from './batch.js';
@@ -59,9 +67,7 @@ function getConfig(): { config: ReturnType<typeof loadConfig>; client: JulesClie
 }
 
 function exitCodeForTranslated(error: TranslatedError): number {
-  if (error.code === 'AUTH_FAILED' || error.code === 'AUTH_MISSING') return ExitCode.AUTH;
-  if (error.code === 'VALIDATION' || error.code === 'INVALID_REQUEST') return ExitCode.VALIDATION;
-  return ExitCode.GENERIC;
+  return exitCodeForErrorCode(error.code);
 }
 
 function fail(input: string | TranslatedError | unknown, code?: number, errCode?: string): never {
@@ -165,7 +171,7 @@ program
       );
     } else {
       emit(() => console.error(`${chalk.red('✗')} ${chalk.bold(result.title)}: ${result.error}`), result);
-      process.exit(ExitCode.GENERIC);
+      process.exit(dispatchExitCode([result]));
     }
   })
   .addHelpText('after', `
@@ -199,9 +205,8 @@ program
       logDir: opts.log === false ? false : undefined,
     });
 
-    const failed = results.filter(r => r.status === 'failed').length;
-    if (failed > 0 && results.length > failed) process.exit(ExitCode.PARTIAL);
-    if (failed > 0) process.exit(ExitCode.GENERIC);
+    const exitCode = dispatchExitCode(results);
+    if (exitCode !== ExitCode.OK) process.exit(exitCode);
   })
   .addHelpText('after', `
 Examples:
@@ -901,8 +906,8 @@ program
       { plan, results, summary: { total: results.length, dispatched: dispatched.length, failed: failed.length } },
     );
 
-    if (failed.length > 0 && dispatched.length > 0) process.exit(ExitCode.PARTIAL);
-    if (failed.length > 0) process.exit(ExitCode.GENERIC);
+    const exitCode = dispatchExitCode(results);
+    if (exitCode !== ExitCode.OK) process.exit(exitCode);
   })
   .addHelpText('after', `
 Examples:
@@ -916,7 +921,8 @@ Examples:
 program
   .command('mcp')
   .description('Run as an MCP (Model Context Protocol) server over stdio for Claude Code / Codex')
-  .action(async () => {
+  .option('--legacy-tools', 'also register the 7 deprecated tool aliases (or set JULES_MCP_LEGACY_TOOLS=1)')
+  .action(async (mcpOpts: { legacyTools?: boolean }) => {
     // The MCP server is a long-lived process driven by the host (Claude Code /
     // Codex). The global unhandledRejection handler below would otherwise
     // tear it down on the first stray rejection, so opt out here.
@@ -937,6 +943,7 @@ program
       llmApiKeyOverride: opts.llmKey,
       llmBaseUrlOverride: opts.llmBaseUrl,
       llmModelOverride: opts.llmModel,
+      legacyTools: mcpOpts.legacyTools,
     });
   })
   .addHelpText('after', `
