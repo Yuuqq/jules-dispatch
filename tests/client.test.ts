@@ -119,7 +119,8 @@ describe('HTTP retry logic', () => {
   it('throws status 429 after retries are exhausted', async () => {
     vi.useFakeTimers();
     vi.spyOn(Math, 'random').mockReturnValue(0);
-    const fetchMock = mockFetch().mockResolvedValue(jsonResponse({}, 429));
+    // A fresh Response per attempt: real fetch never hands back a consumed body.
+    const fetchMock = mockFetch().mockImplementation(async () => jsonResponse({}, 429));
     const client = new JulesClient({ apiKey: 'test-key' });
 
     const resultPromise = client.listSources();
@@ -202,6 +203,42 @@ describe('network error retry', () => {
 
     await resultExpectation;
     expect(fetchMock).toHaveBeenCalledTimes(5);
+  });
+
+  it('cancels the discarded response body before retrying', async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    const cancel = vi.fn().mockResolvedValue(undefined);
+    const throttled = {
+      status: 429,
+      ok: false,
+      headers: new Headers(),
+      body: { cancel },
+      text: async () => '',
+    } as unknown as Response;
+    const fetchMock = mockFetch()
+      .mockResolvedValueOnce(throttled)
+      .mockResolvedValueOnce(jsonResponse({ sources: [] }));
+    const client = new JulesClient({ apiKey: 'test-key' });
+
+    const resultPromise = client.listSources();
+    await vi.advanceTimersByTimeAsync(500);
+    await resultPromise;
+
+    expect(cancel).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('classifies a timeout while reading the response body as a request timeout', async () => {
+    const stalledBody = new Response(null, { status: 200 });
+    Object.defineProperty(stalledBody, 'text', {
+      value: () => Promise.reject(new DOMException('The operation was aborted due to timeout', 'TimeoutError')),
+    });
+    const fetchMock = mockFetch().mockResolvedValue(stalledBody);
+    const client = new JulesClient({ apiKey: 'test-key', requestTimeoutMs: 25 });
+
+    await expect(client.listSources()).rejects.toThrow('Jules API request timed out after 25ms');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it('does not retry a non-TypeError exception', async () => {

@@ -108,6 +108,17 @@ describe('planTasks contract', () => {
     expect(result.tasks[0].title).toBe('One');
   });
 
+  it('reports a timeout while reading the completion body as an LLM timeout', async () => {
+    const stalled = new Response(null, { status: 200 });
+    Object.defineProperty(stalled, 'json', {
+      value: () => Promise.reject(new DOMException('The operation was aborted due to timeout', 'TimeoutError')),
+    });
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(stalled));
+
+    await expect(planTasks({ ...config, requestTimeoutMs: 40 }, { description: 'Plan work' }))
+      .rejects.toThrow('LLM request timed out after 40ms');
+  });
+
   it('validates direct request inputs before making a network request', async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);

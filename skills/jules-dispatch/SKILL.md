@@ -61,7 +61,7 @@ jules-dispatch --project /path/to/project mcp
 2. Include `title` and a detailed `prompt` for every task. Add `source`, `branch`, `autoMode`, or `requirePlanApproval` only when needed.
 3. Confirm every prerequisite local change is committed and pushed to the remote target branch.
 4. Use `jules_list_sources` first if the source identifier is unknown.
-5. Dispatch with `jules_dispatch`, not deprecated aliases, unless only legacy tools are available. Set `parallel` for the concurrency cap and `paceMs` when launches must be globally spaced; the worker pool continuously starts queued tasks as capacity becomes available.
+5. Dispatch with `jules_dispatch`. Set `parallel` for the concurrency cap and `paceMs` when launches must be globally spaced; the worker pool continuously starts queued tasks as capacity becomes available.
 6. Monitor with `jules_monitor` using `wait: true` when the user asked for completion, PR URLs, or end-to-end orchestration. Waiting returns when all sessions are terminal, any session requires action, or the timeout expires.
 7. When `actionRequired` contains sessions, inspect each with `jules_interact`. Review and approve plans with `jules_approve_plan`, or answer feedback requests and paused sessions with `jules_send_message` when appropriate.
 8. Call `jules_monitor` again for the action-required and still-running session IDs. Repeat the inspect, act, monitor loop until every session is terminal or the user must decide the next action.
@@ -76,9 +76,10 @@ jules-dispatch --project /path/to/project mcp
 - `jules_approve_plan`: approve a plan-gated session after review.
 - `jules_send_message`: send follow-up instructions to a session.
 - `jules_cancel_session`: cancel a running session.
+- `jules_list_sessions`: list recent sessions when IDs must be discovered first.
 - `jules_plan_tasks` and `jules_auto`: optional LLM-backed planning tools, available only when an LLM key is configured.
 
-Avoid deprecated aliases (`jules_dispatch_task`, `jules_dispatch_batch`, `jules_status`, `jules_wait_for_completion`, `jules_get_session`, `jules_list_activities`, `jules_get_plan`) unless the active MCP server exposes only those names.
+That is the complete default tool set. Deprecated aliases (`jules_dispatch_task`, `jules_dispatch_batch`, `jules_status`, `jules_wait_for_completion`, `jules_get_session`, `jules_list_activities`, `jules_get_plan`) appear only when the server was started with `--legacy-tools` or `JULES_MCP_LEGACY_TOOLS=1`; if they are absent, use the core tools above.
 
 ## CLI Fallback
 

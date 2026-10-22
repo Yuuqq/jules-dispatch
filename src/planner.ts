@@ -185,7 +185,7 @@ export async function planTasks(
   // 400 (bad model name, bad key, malformed request) would mask the real
   // error and confuse the user, so inspect the body before falling back.
   if (resp.status === 400) {
-    const firstBody = await resp.text().catch(() => '');
+    const firstBody = await readCompletionBody(cfg, () => resp.text());
     if (/response_format/i.test(firstBody)) {
       resp = await requestCompletion(cfg, headers, JSON.stringify(baseBody));
     } else {
@@ -194,11 +194,13 @@ export async function planTasks(
   }
 
   if (!resp.ok) {
-    const text = await resp.text().catch(() => '');
+    const text = await readCompletionBody(cfg, () => resp.text());
     throw new Error(`LLM request failed (${resp.status}) at ${cfg.baseUrl}: ${text.slice(0, 500)}`);
   }
 
-  const data = (await resp.json()) as ChatCompletionResponse;
+  const data = await readCompletionBody(cfg, async () => (
+    (await resp.json()) as ChatCompletionResponse
+  ));
   if (data.error) throw new Error(`LLM error: ${data.error.message ?? JSON.stringify(data.error)}`);
 
   const content = data.choices?.[0]?.message?.content?.trim();
@@ -229,14 +231,47 @@ export async function planTasks(
   };
 }
 
+const DEFAULT_PLANNER_TIMEOUT_MS = 60000;
+
+/**
+ * Read a completion body with the same timeout contract as the request itself.
+ * Without this, a stalled body leaks the runtime's raw TimeoutError, which
+ * bypasses the actionable "LLM request timed out" message.
+ */
+async function readCompletionBody<T>(
+  cfg: PlannerConfig,
+  read: () => Promise<T>,
+): Promise<T> {
+  try {
+    return await read();
+  } catch (err) {
+    if (isTimeoutError(err)) {
+      throw new Error(`LLM request timed out after ${plannerTimeoutMs(cfg)}ms at ${cfg.baseUrl}`);
+    }
+    throw err;
+  }
+}
+
+function isTimeoutError(err: unknown): boolean {
+  return err instanceof Error && (
+    err.name === 'TimeoutError' ||
+    err.name === 'AbortError' ||
+    /aborted due to timeout/i.test(err.message)
+  );
+}
+
+function plannerTimeoutMs(cfg: PlannerConfig): number {
+  return Number.isFinite(cfg.requestTimeoutMs) && cfg.requestTimeoutMs! > 0
+    ? Math.trunc(cfg.requestTimeoutMs!)
+    : DEFAULT_PLANNER_TIMEOUT_MS;
+}
+
 async function requestCompletion(
   cfg: PlannerConfig,
   headers: Record<string, string>,
   body: string,
 ): Promise<Response> {
-  const timeoutMs = Number.isFinite(cfg.requestTimeoutMs) && cfg.requestTimeoutMs! > 0
-    ? Math.trunc(cfg.requestTimeoutMs!)
-    : 60000;
+  const timeoutMs = plannerTimeoutMs(cfg);
 
   for (let attempt = 0; ; attempt++) {
     const signal = AbortSignal.timeout(timeoutMs);

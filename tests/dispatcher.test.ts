@@ -2,7 +2,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { dispatchBatch, dispatchTaskDefinition, pruneDispatchLogs } from '../src/dispatcher.js';
+import {
+  dispatchBatch,
+  dispatchExitCode,
+  dispatchTaskDefinition,
+  pruneDispatchLogs,
+} from '../src/dispatcher.js';
 import type { JulesClient } from '../src/client.js';
 import * as taskConfig from '../src/config.js';
 import type { JulesConfig, TaskDefinition } from '../src/types.js';
@@ -16,6 +21,12 @@ vi.mock('../src/output.js', () => ({
   isJson: () => true,
   emit: (_text: unknown, json: unknown) => json,
   info: () => undefined,
+  ExitCode: { OK: 0, GENERIC: 1, AUTH: 2, VALIDATION: 3, PARTIAL: 4, TIMEOUT: 5 },
+  exitCodeForErrorCode: (code?: string) => {
+    if (code === 'AUTH_FAILED' || code === 'AUTH_MISSING') return 2;
+    if (code === 'VALIDATION' || code === 'INVALID_REQUEST' || code === 'NO_SOURCE') return 3;
+    return 1;
+  },
 }));
 
 const baseConfig: JulesConfig = {
@@ -225,6 +236,85 @@ describe('error aggregation', () => {
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
+  });
+});
+
+describe('error codes and exit codes', () => {
+  it('keeps the translated error code on the failed result', async () => {
+    const client = mockClient(() => {
+      const err = new Error('Jules API 401 at /sessions: denied') as Error & { status?: number };
+      err.status = 401;
+      throw err;
+    });
+
+    const result = await dispatchTaskDefinition(
+      client,
+      baseConfig,
+      { title: 'auth', prompt: 'p' },
+      'auth.yaml',
+    );
+
+    expect(result).toMatchObject({ status: 'failed', error: 'Authentication failed', code: 'AUTH_FAILED' });
+  });
+
+  it('maps an all-auth-failure batch to exit code 2', () => {
+    const results = [
+      { taskFile: 'a', taskTitle: 'a', sessionId: '', sessionUrl: '', title: 'a', status: 'failed' as const, error: 'Authentication failed', code: 'AUTH_FAILED' },
+      { taskFile: 'b', taskTitle: 'b', sessionId: '', sessionUrl: '', title: 'b', status: 'failed' as const, error: 'Authentication failed', code: 'AUTH_FAILED' },
+    ];
+
+    expect(dispatchExitCode(results)).toBe(2);
+  });
+
+  it('maps a partially failed batch to exit code 4', () => {
+    const results = [
+      { taskFile: 'a', taskTitle: 'a', sessionId: 's', sessionUrl: 'u', title: 'a', status: 'dispatched' as const },
+      { taskFile: 'b', taskTitle: 'b', sessionId: '', sessionUrl: '', title: 'b', status: 'failed' as const, error: 'Authentication failed', code: 'AUTH_FAILED' },
+    ];
+
+    expect(dispatchExitCode(results)).toBe(4);
+  });
+
+  it('maps a single-failure batch with an auth failure to exit code 2', () => {
+    const results = [
+      { taskFile: 'a', taskTitle: 'a', sessionId: '', sessionUrl: '', title: 'a', status: 'failed' as const, error: 'Authentication failed', code: 'AUTH_FAILED' },
+    ];
+
+    expect(dispatchExitCode(results)).toBe(2);
+  });
+
+  it('returns 1 when failures are not auth or validation related', () => {
+    const results = [
+      { taskFile: 'a', taskTitle: 'a', sessionId: '', sessionUrl: '', title: 'a', status: 'failed' as const, error: 'Network error', code: 'NETWORK_ERROR' },
+    ];
+
+    expect(dispatchExitCode(results)).toBe(1);
+  });
+
+  it('returns 3 when the only failures are validation errors', () => {
+    const results = [
+      { taskFile: 'a', taskTitle: 'a', sessionId: '', sessionUrl: '', title: 'a', status: 'failed' as const, error: 'No source configured', code: 'NO_SOURCE' },
+      { taskFile: 'b', taskTitle: 'b', sessionId: '', sessionUrl: '', title: 'b', status: 'failed' as const, error: 'Task file validation failed', code: 'VALIDATION' },
+    ];
+
+    expect(dispatchExitCode(results)).toBe(3);
+  });
+
+  it('prefers the auth exit code over validation when both appear and nothing dispatched', () => {
+    const results = [
+      { taskFile: 'a', taskTitle: 'a', sessionId: '', sessionUrl: '', title: 'a', status: 'failed' as const, error: 'No source configured', code: 'NO_SOURCE' },
+      { taskFile: 'b', taskTitle: 'b', sessionId: '', sessionUrl: '', title: 'b', status: 'failed' as const, error: 'Authentication failed', code: 'AUTH_FAILED' },
+    ];
+
+    expect(dispatchExitCode(results)).toBe(2);
+  });
+
+  it('returns 0 when every task dispatched', () => {
+    const results = [
+      { taskFile: 'a', taskTitle: 'a', sessionId: 's', sessionUrl: 'u', title: 'a', status: 'dispatched' as const },
+    ];
+
+    expect(dispatchExitCode(results)).toBe(0);
   });
 });
 
